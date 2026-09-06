@@ -935,48 +935,119 @@ class Converter:
             return f"{val} {unit}"
         return str(uv)
 
-    def _fill_to_css(self, fill) -> list:
-        """Convert Fill model to CSS lines.
+    def _format_angle_value(self, v) -> str:
+        """Format an Angle/FlexibleAngle as a bare CartoSym-CSS number.
+
+        The grammar's ``UNIT`` token has no angle unit (no ``deg``/``rad``)
+        — an angle can only be written as a unitless number, which
+        ``FlexibleAngle`` itself already treats as "assumed degrees". A
+        radian ``Angle`` can't be represented without silently changing
+        its unit tag, so that raises instead.
 
         Raises:
-            NotImplementedError: If the fill carries a pattern graphic
-                (``hatch``/``dotpattern``/``stipple``/``pattern``). These
-                are not yet emitted on the CS-JSON → CartoSym-CSS path;
-                dropping them silently would break the lossless guarantee.
+            NotImplementedError: If ``v`` is an ``Angle`` in radians.
+        """
+        expr = self._format_numeric_expression(v)
+        if expr is not None:
+            return expr
+        if hasattr(v, "value") and hasattr(v, "unit"):
+            unit = v.unit.value if hasattr(v.unit, "value") else str(v.unit)
+            if unit not in ("deg", "degrees"):
+                raise NotImplementedError(
+                    f"angle unit {unit!r}: only degrees are representable "
+                    "in CartoSym-CSS (no angle-unit grammar token)"
+                )
+            return str(v.value)
+        return str(v)
+
+    def _fill_pattern_block(self, obj, field_formatters: dict) -> str:
+        """Render a Hatch/DotPattern/Stipple sub-object as a ``{...}`` block."""
+
+        def _get(o, k):
+            return o.get(k) if isinstance(o, dict) else getattr(o, k, None)
+
+        parts = []
+        for field, formatter in field_formatters.items():
+            v = _get(obj, field)
+            if v is not None:
+                parts.append(f"{field}: {formatter(v)}")
+        return "{" + "; ".join(parts) + "}"
+
+    def _fill_to_css(self, fill) -> list:
+        """Convert Fill model to CSS lines, including pattern fills.
+
+        Raises:
+            NotImplementedError: If a pattern field (``hatch``/
+                ``dotpattern``/``stipple``/``pattern``) is combined with
+                ``alter`` — there is no ``fill.hatch: ...`` dot-notation
+                grammar syntax, only the compound ``fill: {...}`` block
+                form used below (same restriction color/opacity already
+                have in alter mode).
         """
 
         def _get(o, k):
             return o.get(k) if isinstance(o, dict) else getattr(o, k, None)
 
-        for field in ("hatch", "dotpattern", "stipple", "pattern"):
-            if _get(fill, field) is not None:
-                raise NotImplementedError(
-                    f"fill.{field}: fill pattern graphics are not yet written "
-                    "back to CartoSym-CSS"
-                )
-
-        lines = []
         color = getattr(fill, "color", None)
         opacity = getattr(fill, "opacity", None)
         is_alter = getattr(fill, "alter", None)
+        hatch = _get(fill, "hatch")
+        dotpattern = _get(fill, "dotpattern")
+        stipple = _get(fill, "stipple")
+        pattern = _get(fill, "pattern")
 
         if is_alter:
-            # Alter mode: use dot-notation
+            for value, name in (
+                (hatch, "hatch"),
+                (dotpattern, "dotpattern"),
+                (stipple, "stipple"),
+                (pattern, "pattern"),
+            ):
+                if value is not None:
+                    raise NotImplementedError(
+                        f"fill.{name}: not yet written back to CartoSym-CSS "
+                        "in alter mode (no dot-notation grammar syntax for it)"
+                    )
+            lines = []
             if color is not None:
                 lines.append(f"  fill.color: {self._format_color(color)};")
             if opacity is not None:
                 lines.append(f"  fill.opacity: {opacity};")
-        elif color is not None or opacity is not None:
-            # Normal mode: always use a compound block to avoid injecting
-            # alter on re-parse
-            parts = []
-            if color is not None:
-                parts.append(f"color: {self._format_color(color)}")
-            if opacity is not None:
-                parts.append(f"opacity: {opacity}")
-            lines.append(f"  fill: {{{'; '.join(parts)}}};")
+            return lines
 
-        return lines
+        # Normal mode: always use a compound block to avoid injecting
+        # alter on re-parse
+        parts = []
+        if color is not None:
+            parts.append(f"color: {self._format_color(color)}")
+        if opacity is not None:
+            parts.append(f"opacity: {opacity}")
+        if hatch is not None:
+            block = self._fill_pattern_block(
+                hatch,
+                {
+                    "width": self._format_unit_value,
+                    "angle": self._format_angle_value,
+                    "distance": self._format_unit_value,
+                },
+            )
+            parts.append(f"hatch: {block}")
+        if dotpattern is not None:
+            block = self._fill_pattern_block(
+                dotpattern, {"distance": self._format_unit_value}
+            )
+            parts.append(f"dotpattern: {block}")
+        if stipple is not None:
+            block = self._fill_pattern_block(
+                stipple, {"ratio": self._format_unit_value}
+            )
+            parts.append(f"stipple: {block}")
+        if pattern is not None:
+            parts.append(f"pattern: {self._graphic_element_to_css_block(pattern)}")
+
+        if not parts:
+            return []
+        return [f"  fill: {{{'; '.join(parts)}}};"]
 
     def _stroke_to_css(self, stroke) -> list:
         """Convert Stroke model to CSS lines.

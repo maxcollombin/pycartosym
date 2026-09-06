@@ -21,7 +21,11 @@ from pycartosym.models.symbolizers import Symbolizer as ModelSymbolizer
 
 from .ast import Metadata, StyleSheet, StylingRule, StylingRuleList
 from .ast import PropertyAssignment as AstPropertyAssignment
-from .ast_converter import convert_ast_to_pydantic
+from .ast_converter import (
+    _coerce_unit_scalar,
+    _normalize_graphic_element,
+    convert_ast_to_pydantic,
+)
 from .cql2.from_text import ExpressionParser
 from .cql2.model import (
     BinaryOperationExpression,
@@ -266,10 +270,17 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
     selectors, symbolizers and metadata onto :attr:`stylesheet`.
     """
 
-    def _handle_object_property(self, prop_name: str, prop_value: str, symbolizer):
+    def _handle_object_property(
+        self, prop_name: str, prop_value: str, symbolizer, expr_ctx=None
+    ):
         """Handle object literal property assignments.
 
         E.g. ``fill: {color: gray; opacity: 0.5}``.
+
+        *expr_ctx* (the assignment's ANTLR expression context, when
+        available) lets the ``fill`` branch extract ``hatch``/``dotpattern``/
+        ``stipple``/``pattern`` sub-blocks structurally instead of only the
+        flat ``properties`` dict built below.
         """
         # Remove outer braces and strip whitespace
         content = prop_value.strip()
@@ -365,6 +376,20 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                         symbolizer.fill.opacity = float(v)
                     except ValueError:
                         pass
+                elif k in ("hatch", "dotpattern", "stipple") and expr_ctx is not None:
+                    inner = self._extract_top_level_dict_value(expr_ctx, k)
+                    if inner is not None:
+                        ctx_map = inner.pop("_expr_ctx", {})
+                        for field, field_v in inner.items():
+                            inner[field] = _coerce_unit_scalar(
+                                field_v, ctx_map.get(field)
+                            )
+                        setattr(symbolizer.fill, k, inner)
+                elif k == "pattern" and expr_ctx is not None:
+                    el = self._extract_top_level_named_instance(expr_ctx, "pattern")
+                    if el is not None:
+                        _normalize_graphic_element(el)
+                        symbolizer.fill.pattern = el
         elif prop_name_lower == "stroke":
             if not symbolizer.stroke:
                 symbolizer.stroke = ModelStroke()
@@ -644,6 +669,32 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
             if inner_ctx_map:
                 inner["_expr_ctx"] = inner_ctx_map
             return inner
+        return None
+
+    @classmethod
+    def _extract_top_level_named_instance(cls, expr_ctx, key: str) -> dict | None:
+        """Find ``key: Type {...}`` at the top level of an anonymous ``{...}`` block.
+
+        E.g. ``fill: { pattern: Dot { size: 4 px } }`` — returns the
+        extracted element dict (``type`` + properties, same shape as
+        :meth:`_extract_element_from_instance`), or ``None`` if *key* is
+        absent or isn't a named-instance value.
+        """
+        ei = cls._find_exp_instance(expr_ctx)
+        if ei is None:
+            return None
+        pai_list = ei.propertyAssignmentInferredList()
+        if pai_list is None:
+            return None
+        for pai in cls._collect_inferred_assignments(pai_list):
+            pa = pai.propertyAssignment()
+            if pa is None or pa.lhValue().getText() != key:
+                continue
+            value_expr = pa.expression()
+            nested_ei = cls._find_exp_instance(value_expr) if value_expr else None
+            if nested_ei is None or nested_ei.IDENTIFIER() is None:
+                return None
+            return cls._extract_element_from_instance(nested_ei)
         return None
 
     def enterStyleSheet(self, ctx):
@@ -1065,7 +1116,9 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
             # Handle special property value parsing for complex objects
             if prop_value.startswith("{") and prop_value.endswith("}"):
                 # This is an object literal like {color: gray; opacity: 0.5}
-                self._handle_object_property(prop_name_lower, prop_value, symbolizer)
+                self._handle_object_property(
+                    prop_name_lower, prop_value, symbolizer, expr_ctx
+                )
             else:
                 # Simple property
                 if prop_name_lower == "visibility":

@@ -863,6 +863,16 @@ class AstToPydanticConverter:
             if hasattr(ast_fill, "opacity") and ast_fill.opacity is not None:
                 fill_data["opacity"] = float(ast_fill.opacity)
 
+            # Pattern fields (hatch/dotpattern/stipple/pattern): only ever
+            # arrive here already as typed Pydantic instances — built by
+            # the parser's ANTLR-aware `fill: {...}` handler, which (unlike
+            # this generic AST-shaped fallback) can see the nested
+            # sub-block's expression tree. There is no legacy string form
+            # to fall back to, unlike stroke.width below.
+            for field in ("hatch", "dotpattern", "stipple", "pattern"):
+                if hasattr(ast_fill, field) and getattr(ast_fill, field) is not None:
+                    fill_data[field] = getattr(ast_fill, field)
+
             return Fill(**fill_data) if fill_data else None
 
         except Exception as e:

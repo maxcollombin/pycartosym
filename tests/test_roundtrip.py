@@ -416,16 +416,72 @@ class TestMetadataParsing:
             {"name": "roadColor", "value": "gray"}
         ]
 
-    def test_fill_pattern_writeback_raises(self):
-        """A fill pattern graphic has no CartoSym-CSS write-back yet — the
-        writer must raise (naming the field) rather than drop it silently.
+    def _fill_pattern_roundtrip(self, fill_dict):
+        style = Style.from_dict({"stylingRules": [{"symbolizer": {"fill": fill_dict}}]})
+        css = self.converter.style_to_cscss(style)
+        back = self.converter.cscss_to_csjson(css)
+        return css, back["stylingRules"][0]["symbolizer"]["fill"]
+
+    def test_fill_hatch_writeback_roundtrips(self):
+        """fill.hatch survives CS-JSON -> CartoSym-CSS -> CS-JSON."""
+        css, fill = self._fill_pattern_roundtrip(
+            {
+                "color": [255, 0, 0],
+                "hatch": {
+                    "width": {"px": 2.0},
+                    "angle": 45,
+                    "distance": {"px": 5.0},
+                },
+            }
+        )
+        assert "hatch:" in css
+        assert fill["hatch"] == {
+            "width": {"px": 2.0},
+            "angle": 45.0,
+            "distance": {"px": 5.0},
+        }
+
+    def test_fill_dotpattern_writeback_roundtrips(self):
+        """fill.dotpattern survives CS-JSON -> CartoSym-CSS -> CS-JSON."""
+        css, fill = self._fill_pattern_roundtrip(
+            {"dotpattern": {"distance": {"px": 3.0}}}
+        )
+        assert "dotpattern:" in css
+        assert fill["dotpattern"] == {"distance": {"px": 3.0}}
+
+    def test_fill_stipple_writeback_roundtrips(self):
+        """fill.stipple survives CS-JSON -> CartoSym-CSS -> CS-JSON."""
+        css, fill = self._fill_pattern_roundtrip({"stipple": {"ratio": 0.5}})
+        assert "stipple:" in css
+        assert fill["stipple"] == {"ratio": 0.5}
+
+    def test_fill_pattern_graphic_writeback_roundtrips(self):
+        """fill.pattern (a full graphic, e.g. Dot) survives the round trip."""
+        css, fill = self._fill_pattern_roundtrip(
+            {"pattern": {"type": "Dot", "size": {"px": 4.0}, "color": [1, 2, 3]}}
+        )
+        assert "pattern:" in css
+        assert fill["pattern"] == {
+            "type": "Dot",
+            "size": {"px": 4.0},
+            "color": "#010203",
+        }
+
+    def test_fill_pattern_alter_mode_still_raises(self):
+        """A pattern field has no ``fill.hatch: ...`` dot-notation syntax —
+        combined with ``alter`` the writer must still raise rather than
+        drop it silently.
         """
         style = Style.from_dict(
             {
                 "stylingRules": [
                     {
                         "symbolizer": {
-                            "fill": {"color": [255, 0, 0], "hatch": {"angle": 45}}
+                            "fill": {
+                                "alter": True,
+                                "color": [255, 0, 0],
+                                "hatch": {"angle": 45},
+                            }
                         }
                     }
                 ]
