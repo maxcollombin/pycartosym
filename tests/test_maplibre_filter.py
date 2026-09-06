@@ -157,6 +157,38 @@ def test_selector_with_sysid_operand_raises():
         selector_to_filter({"op": "=", "args": [{"sysId": "dataLayer.id"}, "Landuse"]})
 
 
+def test_selector_with_sysid_comparison_value_raises():
+    """A sysId on the *right*-hand side (e.g. viz.timeInterval.start.date)
+    has no MapLibre filter equivalent — it must raise, not embed a bare
+    object where the expression grammar requires a literal (regression:
+    this used to pass the dict straight through, producing a filter
+    ``gl-style-validate`` rejects as "Bare objects invalid").
+    """
+    selector = {
+        "op": ">=",
+        "args": [
+            {"property": "validDate"},
+            {"sysId": "viz.timeInterval.start.date"},
+        ],
+    }
+    with pytest.raises(NotImplementedError, match="viz.timeInterval.start.date"):
+        selector_to_filter(selector)
+
+
+def test_selector_between_with_sysid_bound_raises():
+    """Same guard for a ``between`` predicate's low/high bounds."""
+    selector = {
+        "op": "between",
+        "args": [
+            {"property": "validDate"},
+            {"sysId": "viz.timeInterval.start.date"},
+            {"sysId": "viz.timeInterval.end.date"},
+        ],
+    }
+    with pytest.raises(NotImplementedError, match="viz.timeInterval"):
+        selector_to_filter(selector)
+
+
 def test_strip_datalayer_id_drops_a_lone_conjunct():
     selector = {"op": "=", "args": [{"sysId": "dataLayer.id"}, "Landuse"]}
     assert strip_datalayer_id(selector) is None

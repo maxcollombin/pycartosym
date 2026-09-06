@@ -235,6 +235,32 @@ def _property_name(arg: Any) -> str:
     )
 
 
+def _comparison_value(value: Any) -> Any:
+    """Validate a comparison's right-hand operand is a plain JSON literal.
+
+    A ``str``/``int``/``float``/``bool``/``list`` passes through
+    unchanged — already valid MapLibre filter syntax. A dict here is a
+    ``sysId``/``property``/expression operand (e.g.
+    ``viz.timeInterval.start.date``, a per-request "current view" value
+    with no MapLibre equivalent — unlike ``viz.sd``, which maps to
+    ``["zoom"]``) — embedding it verbatim would produce a bare object
+    where MapLibre's expression grammar requires a literal, which
+    ``gl-style-validate`` rejects, so this raises instead.
+    """
+    if isinstance(value, dict):
+        sys_id = value.get("sysId")
+        if sys_id is not None:
+            raise NotImplementedError(
+                f"system identifier {sys_id!r} has no MapLibre filter "
+                "mapping (comparison operand)"
+            )
+        raise NotImplementedError(
+            f"selector comparison operand {value!r} → MapLibre filter is "
+            "not a plain literal"
+        )
+    return value
+
+
 def _geometry_dimensions_filter_conjunct(selector: Any) -> list[Any] | None:
     """Map a ``dataLayer.featuresGeometryDimensions`` comparison to a filter.
 
@@ -321,7 +347,7 @@ def selector_to_filter(selector: Any) -> list[Any]:
 
     if op in _CMP_INV:
         left, right = args
-        return [_CMP_INV[op], ["get", _property_name(left)], right]
+        return [_CMP_INV[op], ["get", _property_name(left)], _comparison_value(right)]
 
     if op == "in":
         prop, values = args
@@ -331,7 +357,11 @@ def selector_to_filter(selector: Any) -> list[Any]:
     if op == "between":
         prop, low, high = args
         target = ["get", _property_name(prop)]
-        return ["all", [">=", target, low], ["<=", target, high]]
+        return [
+            "all",
+            [">=", target, _comparison_value(low)],
+            ["<=", target, _comparison_value(high)],
+        ]
     if _is_op(op, "like"):
         raise NotImplementedError(
             "selector operator 'like' → MapLibre filter is not supported — "
