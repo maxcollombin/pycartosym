@@ -193,6 +193,24 @@ class SldReader(CodecReader):
         if name_el is not None and name_el.text:
             rule_dict["stylingRuleName"] = name_el.text
 
+        # se:Rule/se:Title and se:Rule/se:Abstract map to stylingRule.name
+        # and $comment — distinct from se:Rule/se:Name above (stylingRuleName)
+        # so there's no collision. SE 1.1.0 wraps them in se:Description;
+        # SLD 1.0.0 puts them directly under Rule — same asymmetry as
+        # _parse_user_style.
+        desc = (
+            self.d.find(rule_el, "Description")
+            if self.d.description_element
+            else rule_el
+        )
+        if desc is not None:
+            title_el = self.d.find(desc, "Title")
+            abstract_el = self.d.find(desc, "Abstract")
+            if title_el is not None and title_el.text:
+                rule_dict["name"] = title_el.text
+            if abstract_el is not None and abstract_el.text:
+                rule_dict["$comment"] = abstract_el.text
+
         min_sd = _scale_denominator_value(self.d.find(rule_el, "MinScaleDenominator"))
         max_sd = _scale_denominator_value(self.d.find(rule_el, "MaxScaleDenominator"))
 

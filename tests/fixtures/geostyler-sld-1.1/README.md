@@ -26,10 +26,10 @@ They are SE 1.1.0 (`se:` namespace, `se:SvgParameter`).
 `tests/test_sld_se_geostyler.py` reads the split straight from the
 directory layout:
 
-- **`in-scope/`** (25 files) — fully within this codec's vector +
+- **`in-scope/`** (26 files) — fully within this codec's vector +
   Part-1-raster scope. Each must `read` → `write` → validate against the
   vendored OGC XSD → `read` again to a Pydantic-model fixed point.
-- **`out-of-scope/`** (27 files) — using constructs this codec
+- **`out-of-scope/`** (26 files) — using constructs this codec
   deliberately does not map. Each must raise `NotImplementedError` (a
   *clean* rejection — never another exception type).
 
@@ -37,13 +37,13 @@ Moving a file between the two directories is a deliberate act: the wrong
 behaviour then fails loudly, and `test_corpus_layout` asserts the split
 sizes and that no `.sld` is left uncategorised in the corpus root.
 
-## Out-of-scope breakdown (27 files)
+## Out-of-scope breakdown (26 files)
 
 The scope boundary, mapped against this corpus:
 
 | SE/SLD construct rejected | files | assessment |
 |---|---|---|
-| `se:Mark/se:WellKnownName` other than `circle` (`square`, `triangle`, `star`, `cross`, `x`, `shape://slash`, `ttf://` glyph) | 8 | extensible — real future scope |
+| `se:Mark/se:WellKnownName` other than `circle`/`square` (`triangle`, `star`, `cross`, `x`, `shape://slash`, `ttf://` glyph) | 7 | extensible — needs a generic polygon shape (`ClosedPath`), not yet modeled; `square` itself mapped to `RectangleGraphic`, pycartosym issue #88 |
 | `se:GraphicFill` / `se:GraphicStroke` (hatch / pattern fills & strokes) | 6 | GeoServer vendor extension / CartoSym Part 2 |
 | `se:LabelPlacement/se:LinePlacement` | 3 | unfinished design work |
 | unmapped `se:SvgParameter` (`stroke-linecap`, `stroke-linejoin`, `stroke-dashoffset`) | 2 | CSS/SVG stroke hints with no CartoSym `Stroke` field |

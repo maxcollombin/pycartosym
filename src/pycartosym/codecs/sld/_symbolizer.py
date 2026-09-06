@@ -22,8 +22,13 @@ either parameter there.
 point ``se:Graphic``'s ``se:Opacity`` and ``se:Displacement`` map to the
 graphic's ``opacity`` / ``position`` (SE 1.1.0 only — SLD 1.0.0's
 ``Graphic`` has no ``Displacement`` child, so a non-zero offset raises
-there). A point ``se:Graphic``'s ``se:Rotation`` has no CartoSym field
-and is still silently dropped, pending a mapping decision.
+there). A point ``se:Graphic``'s ``se:Rotation`` (present in both
+dialects — unlike ``Displacement``, it's not SE-only) maps to the
+graphic's ``transform.orientation`` (Part 2 ``abstractGraphic``
+extension, OGC issue tracked as pycartosym #89) for ``Mark``- and
+``ExternalGraphic``-based graphics; a ``TextGraphic.transform`` has no
+mapping (labels use ``se:LabelPlacement``, not ``se:Graphic``) and
+raises rather than silently dropping it.
 
 Every function here is dialect-agnostic: the caller passes a
 :class:`~pycartosym.codecs.sld._dialect.SldDialect` (``d``) and all
@@ -78,12 +83,17 @@ A ``2-shapes`` shape's outline ``thickness`` (``se:Mark/se:Stroke``'s own
 ``stroke-width``) is wired the same way, via the same
 :func:`_write_numeric_param`/:func:`_parse_flexible_numeric_param`.
 
-``Dot``, ``Circle``, ``Image``, and ``Text`` graphic elements (found in
-either ``Symbolizer.marker.elements`` or ``Symbolizer.label.elements`` —
-CartoSym allows Text under either) are in scope (the other ``2-shapes``
-shape graphics are not); a filled ``se:Mark wellKnownName="circle"`` reads
-back as a ``2-shapes`` ``Circle`` (``fill`` + ``outline`` + ``radius``),
-and a ``Dot`` element still writes (stroke-only mark) for CartoSym-CSS
+``Dot``, ``Circle``, ``Rectangle``, ``Image``, and ``Text`` graphic
+elements (found in either ``Symbolizer.marker.elements`` or
+``Symbolizer.label.elements`` — CartoSym allows Text under either) are
+in scope (the other ``2-shapes`` shape graphics — arbitrary polygons for
+``se:Mark wellKnownName`` values like ``triangle``/``star``/``cross``/
+``x`` — are not, pycartosym issue #88); a filled
+``se:Mark wellKnownName="circle"`` reads back as a ``2-shapes`` ``Circle``
+(``fill`` + ``outline`` + ``radius``), ``wellKnownName="square"`` as a
+``2-shapes`` ``Rectangle`` with equal ``width``/``height`` (``se:Size`` is
+a single scalar — a non-square rectangle has no ``se:Mark`` mapping), and
+a ``Dot`` element still writes (stroke-only mark) for CartoSym-CSS
 sources. On read, an ``se:Mark``/
 ``se:ExternalGraphic`` always reconstructs into ``marker.elements`` and an
 ``se:TextSymbolizer`` always reconstructs into ``label.elements`` (SLD/SE
@@ -108,10 +118,12 @@ from ...models.value_expressions import (
 )
 from ._dialect import SldDialect
 from ._types import (
+    format_angle,
     format_color,
     format_number,
     format_opacity,
     format_unit_value,
+    parse_angle,
     parse_color,
     parse_number,
     parse_opacity,
@@ -365,6 +377,8 @@ def _graphic_elements_to_symbolizers(
             result.append(_build_point_symbolizer(d, el, base_opacity))
         elif el_type == "Circle":
             result.append(_build_circle_symbolizer(d, el, base_opacity))
+        elif el_type == "Rectangle":
+            result.append(_build_rectangle_symbolizer(d, el, base_opacity))
         elif el_type == "Image":
             result.append(_build_image_symbolizer(d, el, base_opacity))
         elif el_type == "Text":
@@ -372,7 +386,8 @@ def _graphic_elements_to_symbolizers(
         else:
             raise NotImplementedError(
                 f"Graphic element type {el_type!r} has no SLD/SE mapping in "
-                "this codec's scope (only Dot/Circle/Image/Text are supported)"
+                "this codec's scope (only Dot/Circle/Rectangle/Image/Text "
+                "are supported)"
             )
     return result
 
@@ -1119,6 +1134,21 @@ def _build_shape_outline_element(
     return el
 
 
+def _write_rotation(d: SldDialect, graphic: etree._Element, transform: Any) -> None:
+    """Emit ``se:Rotation`` for a non-``None`` ``transform.orientation``.
+
+    Present in both dialects (unlike ``se:Displacement``/``se:AnchorPoint``,
+    ``se:Rotation`` isn't SE 1.1.0-only), so no ``d.graphic_placement``
+    gating is needed.
+    """
+    if transform is None:
+        return
+    orientation = _g(transform, "orientation")
+    if orientation is None:
+        return
+    d.el("Rotation", parent=graphic, text=format_angle(orientation))
+
+
 def _build_circle_symbolizer(
     d: SldDialect, circle: Any, base_opacity: float | None = None
 ) -> etree._Element:
@@ -1127,6 +1157,7 @@ def _build_circle_symbolizer(
     ``fill`` -> ``se:Mark/se:Fill``; ``outline`` -> ``se:Mark/se:Stroke``;
     ``radius`` -> ``se:Graphic/se:Size`` **doubled** (``se:Size`` is a
     diameter, ``radius`` a radius); ``opacity`` -> ``se:Graphic/se:Opacity``;
+    ``transform.orientation`` -> ``se:Graphic/se:Rotation``;
     ``position`` -> ``se:Graphic/se:Displacement``.
     """
     ps = d.el("PointSymbolizer")
@@ -1142,7 +1173,8 @@ def _build_circle_symbolizer(
     if outline is not None:
         mark.append(_build_shape_outline_element(d, outline, base_opacity))
 
-    # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?, ...
+    # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?,
+    # Rotation?, AnchorPoint?, Displacement?
     combined = _combine_opacity(base_opacity, _g(circle, "opacity"))
     if combined is not None:
         d.el("Opacity", parent=graphic, text=combined)
@@ -1157,7 +1189,58 @@ def _build_circle_symbolizer(
             )
         d.el("Size", parent=graphic, text=format_number(diameter * 2))
 
+    _write_rotation(d, graphic, _g(circle, "transform"))
     _build_graphic_displacement(d, graphic, _g(circle, "position"), "Circle")
+    return ps
+
+
+def _build_rectangle_symbolizer(
+    d: SldDialect, rectangle: Any, base_opacity: float | None = None
+) -> etree._Element:
+    """Turn a ``2-shapes`` ``Rectangle`` into ``se:PointSymbolizer``/``se:Mark``.
+
+    ``se:Mark wellKnownName="square"`` only — ``se:Graphic/se:Size`` is a
+    single scalar, so ``width`` and ``height`` must be equal (a non-square
+    rectangle has no ``se:Mark`` mapping and raises). Otherwise the same
+    shape as :func:`_build_circle_symbolizer`: ``fill``/``outline``/
+    ``opacity``/``transform.orientation``/``position`` map the same way.
+    """
+    ps = d.el("PointSymbolizer")
+    graphic = d.el("Graphic", parent=ps)
+    mark = d.el("Mark", parent=graphic)
+    d.el("WellKnownName", parent=mark, text="square")
+
+    fill = _g(rectangle, "fill")
+    if fill is not None:
+        mark.append(_build_fill_element(d, fill, base_opacity))
+
+    outline = _g(rectangle, "outline")
+    if outline is not None:
+        mark.append(_build_shape_outline_element(d, outline, base_opacity))
+
+    combined = _combine_opacity(base_opacity, _g(rectangle, "opacity"))
+    if combined is not None:
+        d.el("Opacity", parent=graphic, text=combined)
+
+    width = _number_of(_g(rectangle, "width"))
+    height = _number_of(_g(rectangle, "height"))
+    if width is not None or height is not None:
+        if width is None or height is None:
+            raise NotImplementedError(
+                "Property-driven / expression RectangleGraphic width/height "
+                "has no SLD/SE mapping in this codec"
+            )
+        if width != height:
+            raise NotImplementedError(
+                f"RectangleGraphic with width ({width!r}) != height "
+                f"({height!r}) has no SLD/SE mapping in this codec — "
+                'se:Mark wellKnownName="square" only represents a single '
+                "uniform se:Size"
+            )
+        d.el("Size", parent=graphic, text=format_number(width))
+
+    _write_rotation(d, graphic, _g(rectangle, "transform"))
+    _build_graphic_displacement(d, graphic, _g(rectangle, "position"), "Rectangle")
     return ps
 
 
@@ -1246,6 +1329,8 @@ def _build_image_symbolizer(
     if combined is not None:
         d.el("Opacity", parent=graphic, text=combined)
 
+    _write_rotation(d, graphic, _g(image_graphic, "transform"))
+
     hot_spot = _g(image_graphic, "hotSpot")
     if hot_spot is not None:
         fx, fy = _hot_spot_to_anchor_fraction(hot_spot)
@@ -1297,6 +1382,11 @@ def _build_halo(d: SldDialect, ts: etree._Element, outline: Any) -> None:
 def _build_text_symbolizer(
     d: SldDialect, text_graphic: Any, base_opacity: float | None = None
 ) -> etree._Element:
+    if _g(text_graphic, "transform") is not None:
+        raise NotImplementedError(
+            "TextGraphic.transform has no SLD/SE mapping in this codec — "
+            "text labels use se:LabelPlacement, not se:Graphic/se:Rotation"
+        )
     ts = d.el("TextSymbolizer")
 
     text = _g(text_graphic, "text")
@@ -1908,31 +1998,55 @@ def _parse_point_symbolizer(d: SldDialect, ps_el: etree._Element) -> dict:
         )
     mark_el = d.find(graphic_el, "Mark")
     if mark_el is not None:
-        return _parse_mark(d, mark_el, graphic_el)
-    ext_el = d.find(graphic_el, "ExternalGraphic")
-    if ext_el is not None:
-        return _parse_external_graphic(d, ext_el, graphic_el)
-    raise NotImplementedError(
-        "se:Graphic without se:Mark or se:ExternalGraphic is not supported"
-    )
+        result = _parse_mark(d, mark_el, graphic_el)
+    else:
+        ext_el = d.find(graphic_el, "ExternalGraphic")
+        if ext_el is None:
+            raise NotImplementedError(
+                "se:Graphic without se:Mark or se:ExternalGraphic is not " "supported"
+            )
+        result = _parse_external_graphic(d, ext_el, graphic_el)
+
+    # se:Rotation is a direct se:Graphic child in both dialects (unlike
+    # se:Displacement/se:AnchorPoint, it's not SE 1.1.0-only), so it's
+    # parsed once here for both the Mark and ExternalGraphic branches.
+    rotation_text = element_text(d.find(graphic_el, "Rotation"))
+    if rotation_text is not None:
+        result["transform"] = {"orientation": parse_angle(rotation_text)}
+    return result
+
+
+def _px(value: float) -> dict:
+    """Format a plain pixel length as CartoSym's ``{"px": v}`` unit dict.
+
+    ``parse_number`` (used for ``se:Size``) already returns a plain
+    ``int`` for whole numbers despite its ``float`` type hint — handle
+    that directly rather than calling ``.is_integer()`` on it, which
+    only exists on ``int`` from Python 3.12 onward (this codebase
+    supports 3.10+).
+    """
+    if isinstance(value, int):
+        return {"px": value}
+    return {"px": int(value) if value.is_integer() else value}
 
 
 def _parse_mark(
     d: SldDialect, mark_el: etree._Element, graphic_el: etree._Element
 ) -> dict:
     wkn = element_text(d.find(mark_el, "WellKnownName"))
-    if wkn != "circle":
+    if wkn not in ("circle", "square"):
         raise NotImplementedError(
             f"se:Mark/se:WellKnownName {wkn!r} is out of scope for this "
-            "codec (only 'circle' is supported)"
+            "codec (only 'circle'/'square' are supported)"
         )
 
-    # An se:Mark wellKnownName="circle" — a filled, outlined, sized circle
-    # — is a 2-shapes Circle (ClosedShape.fill + abstractShape.outline +
-    # radius), not a 1-core Dot (which is stroke-only by design and could
-    # not carry the fill and the contrasting outline independently).
+    # se:Mark wellKnownName="circle"/"square" — a filled, outlined mark —
+    # is a 2-shapes Circle/Rectangle (ClosedShape.fill + abstractShape.
+    # outline + radius, or width+height), not a 1-core Dot (which is
+    # stroke-only by design and could not carry the fill and the
+    # contrasting outline independently).
     result: dict = {
-        "type": "Circle",
+        "type": "Circle" if wkn == "circle" else "Rectangle",
         "position": _graphic_displacement(d, graphic_el),
     }
 
@@ -1975,11 +2089,17 @@ def _parse_mark(
 
     size_text = element_text(d.find(graphic_el, "Size"))
     if size_text is not None:
-        radius = parse_number(size_text)
-        if radius is not None:
-            # se:Size is a diameter; CartoSym radius is a radius.
-            radius = radius / 2
-            result["radius"] = {"px": int(radius) if radius.is_integer() else radius}
+        size = parse_number(size_text)
+        if size is not None:
+            if wkn == "circle":
+                # se:Size is a diameter; CartoSym radius is a radius.
+                result["radius"] = _px(size / 2)
+            else:
+                # se:Size is the square's side length — width == height,
+                # se:Mark has no separate width/height of its own.
+                side = _px(size)
+                result["width"] = side
+                result["height"] = side
 
     opacity_text = element_text(d.find(graphic_el, "Opacity"))
     if opacity_text and opacity_text.strip():

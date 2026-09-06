@@ -37,7 +37,7 @@ def _write(style_dict) -> etree._Element:
 
 
 def _rule_style(symbolizer, selector=None, nested_rules=None):
-    rule = {"name": "R", "symbolizer": symbolizer}
+    rule = {"stylingRuleName": "R", "symbolizer": symbolizer}
     if selector is not None:
         rule["selector"] = selector
     if nested_rules is not None:
@@ -192,6 +192,146 @@ class TestWriteBasicSymbolizers:
             style2.styling_rules[0].symbolizer.marker.elements
             == style1.styling_rules[0].symbolizer.marker.elements
         )
+
+    def test_marker_rectangle_produces_square_mark(self):
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {
+                                "type": "Rectangle",
+                                "position": {"x": 0, "y": 0},
+                                "fill": {"color": "red"},
+                                "width": {"px": 6},
+                                "height": {"px": 6},
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        mark = root.find(".//se:PointSymbolizer/se:Graphic/se:Mark", NS)
+        assert mark.find("se:WellKnownName", NS).text == "square"
+        fill = {
+            p.get("name"): p.text for p in mark.findall("se:Fill/se:SvgParameter", NS)
+        }
+        assert fill == {"fill": "#ff0000"}
+        size = root.find(".//se:PointSymbolizer/se:Graphic/se:Size", NS)
+        assert size.text == "6"
+
+    def test_marker_rectangle_width_height_mismatch_raises(self):
+        with pytest.raises(NotImplementedError):
+            _write(
+                _rule_style(
+                    {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "Rectangle",
+                                    "position": {"x": 0, "y": 0},
+                                    "fill": {"color": "red"},
+                                    "width": {"px": 6},
+                                    "height": {"px": 8},
+                                }
+                            ]
+                        }
+                    }
+                )
+            )
+
+    def test_marker_rectangle_round_trips_through_reader(self):
+        from pycartosym.codecs.sld.reader import SldReader
+
+        style_dict = _rule_style(
+            {
+                "marker": {
+                    "elements": [
+                        {
+                            "type": "Rectangle",
+                            "position": {"x": 0, "y": 0},
+                            "fill": {"color": [255, 0, 0]},
+                            "outline": {"color": [0, 0, 0], "thickness": {"px": 2}},
+                            "width": {"px": 10},
+                            "height": {"px": 10},
+                        }
+                    ]
+                }
+            }
+        )
+        style1 = Style.from_dict(style_dict)
+        xml = SldWriter().write(style1)
+        style2 = SldReader().read(xml)
+        assert (
+            style2.styling_rules[0].symbolizer.marker.elements
+            == style1.styling_rules[0].symbolizer.marker.elements
+        )
+
+    def test_marker_circle_rotation_maps_to_se_rotation(self):
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {
+                                "type": "Circle",
+                                "position": {"x": 0, "y": 0},
+                                "fill": {"color": "red"},
+                                "radius": {"px": 5},
+                                "transform": {"orientation": 45},
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        graphic = root.find(".//se:PointSymbolizer/se:Graphic", NS)
+        assert graphic.find("se:Rotation", NS).text == "45"
+
+    def test_marker_rotation_round_trips_through_reader(self):
+        from pycartosym.codecs.sld.reader import SldReader
+
+        style_dict = _rule_style(
+            {
+                "marker": {
+                    "elements": [
+                        {
+                            "type": "Circle",
+                            "position": {"x": 0, "y": 0},
+                            "fill": {"color": [255, 0, 0]},
+                            "radius": {"px": 5},
+                            "transform": {"orientation": 30},
+                        }
+                    ]
+                }
+            }
+        )
+        style1 = Style.from_dict(style_dict)
+        xml = SldWriter().write(style1)
+        style2 = SldReader().read(xml)
+        assert (
+            style2.styling_rules[0].symbolizer.marker.elements
+            == style1.styling_rules[0].symbolizer.marker.elements
+        )
+
+    def test_label_text_transform_raises_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            _write(
+                _rule_style(
+                    {
+                        "label": {
+                            "elements": [
+                                {
+                                    "type": "Text",
+                                    "text": "Name",
+                                    "position": {"x": 0, "y": 0},
+                                    "transform": {"orientation": 10},
+                                }
+                            ]
+                        }
+                    }
+                )
+            )
 
     def test_label_text_produces_text_symbolizer(self):
         root = _write(
@@ -400,6 +540,64 @@ class TestWriteElseRule:
         assert rules[1].find("se:ElseFilter", NS) is not None
         # Regression guard: SE 1.1.0 se:ElseFilter, never SLD 1.0.0 ogc:ElseFilter.
         assert root.find(".//ogc:ElseFilter", NS) is None
+
+
+class TestWriteRuleTitleAbstract:
+    def test_rule_name_and_comment_map_to_title_and_abstract(self):
+        root = _write(
+            {
+                "stylingRules": [
+                    {
+                        "name": "Red areas",
+                        "$comment": "Areas classified as red",
+                        "symbolizer": {"fill": {"color": "red"}},
+                    }
+                ]
+            }
+        )
+        rule = root.find(".//se:Rule", NS)
+        assert rule.find("se:Name", NS) is None
+        title = rule.find("se:Description/se:Title", NS)
+        abstract = rule.find("se:Description/se:Abstract", NS)
+        assert title.text == "Red areas"
+        assert abstract.text == "Areas classified as red"
+
+    def test_rule_styling_rule_name_and_name_both_present(self):
+        root = _write(
+            {
+                "stylingRules": [
+                    {
+                        "name": "Red areas",
+                        "stylingRuleName": "rule1",
+                        "symbolizer": {"fill": {"color": "red"}},
+                    }
+                ]
+            }
+        )
+        rule = root.find(".//se:Rule", NS)
+        assert rule.find("se:Name", NS).text == "rule1"
+        assert rule.find("se:Description/se:Title", NS).text == "Red areas"
+
+    def test_rule_title_abstract_round_trips_through_reader(self):
+        from pycartosym.codecs.sld.reader import SldReader
+
+        style_dict = {
+            "stylingRules": [
+                {
+                    "name": "Red areas",
+                    "$comment": "Areas classified as red",
+                    "stylingRuleName": "rule1",
+                    "symbolizer": {"fill": {"color": [255, 0, 0]}},
+                }
+            ]
+        }
+        style1 = Style.from_dict(style_dict)
+        xml = SldWriter().write(style1)
+        style2 = SldReader().read(xml)
+        rule2 = style2.styling_rules[0]
+        assert rule2.name == "Red areas"
+        assert rule2.comment == "Areas classified as red"
+        assert rule2.styling_rule_name == "rule1"
 
 
 class TestWriteFeatureTypeName:
