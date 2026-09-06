@@ -2017,7 +2017,16 @@ def _parse_point_symbolizer(d: SldDialect, ps_el: etree._Element) -> dict:
 
 
 def _px(value: float) -> dict:
-    """Format a plain pixel length as CartoSym's ``{"px": v}`` unit dict."""
+    """Format a plain pixel length as CartoSym's ``{"px": v}`` unit dict.
+
+    ``parse_number`` (used for ``se:Size``) already returns a plain
+    ``int`` for whole numbers despite its ``float`` type hint — handle
+    that directly rather than calling ``.is_integer()`` on it, which
+    only exists on ``int`` from Python 3.12 onward (this codebase
+    supports 3.10+).
+    """
+    if isinstance(value, int):
+        return {"px": value}
     return {"px": int(value) if value.is_integer() else value}
 
 
