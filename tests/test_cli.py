@@ -148,3 +148,64 @@ class TestConversion:
             env["NO_COLOR"] = no_color
         r = run("nope.cscss", "--print", env=env)
         assert "\033[" not in r.stderr
+
+
+class TestVersion:
+    def test_version_matches_package_metadata(self):
+        from pycartosym import __version__
+
+        r = run("--version")
+        assert r.returncode == 0
+        assert r.stdout.strip() == f"pycartosym {__version__}"
+
+
+class TestValidateJson:
+    def test_valid_cscss_reports_valid_true(self):
+        import json
+
+        r = run("validate", str(EXAMPLES / "0-basic.cscss"), "--json")
+        assert r.returncode == 0
+        data = json.loads(r.stdout)
+        assert data == {
+            "valid": True,
+            "file": str(EXAMPLES / "0-basic.cscss"),
+            "format": "cscss",
+        }
+
+    def test_invalid_cscss_reports_structured_errors(self, tmp_path: Path):
+        import json
+
+        bad = tmp_path / "bad.cscss"
+        bad.write_text("Fill {\n  color: ;\n}\n", encoding="utf-8")
+        r = run("validate", str(bad), "--json")
+        assert r.returncode == 3
+        data = json.loads(r.stdout)
+        assert data["valid"] is False
+        assert data["format"] == "cscss"
+        assert data["errors"] and "line" in data["errors"][0]
+        assert r.stderr == ""
+
+    def test_missing_file_reports_valid_false(self):
+        import json
+
+        r = run("validate", "does-not-exist.cscss", "--json")
+        assert r.returncode == 2
+        data = json.loads(r.stdout)
+        assert data == {
+            "valid": False,
+            "file": "does-not-exist.cscss",
+            "error": "file not found",
+        }
+
+
+class TestLogLevel:
+    def test_log_level_works_after_subcommand(self):
+        r = run("parse", str(EXAMPLES / "0-basic.cscss"), "--log-level", "DEBUG")
+        assert r.returncode == 0
+        assert "DEBUG" in r.stderr or "INFO" in r.stderr
+
+    def test_quiet_overrides_log_level(self):
+        r = run("parse", str(EXAMPLES / "0-basic.cscss"), "--log-level", "DEBUG", "-q")
+        assert r.returncode == 0
+        assert r.stderr == ""
+        assert r.stdout == ""

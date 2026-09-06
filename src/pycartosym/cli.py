@@ -92,6 +92,13 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Suppress progress output; only warnings and errors are shown",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default=None,
+        help="Set the logging level (default: WARNING; overridden to WARNING "
+        "by --quiet)",
+    )
 
 
 def _create_convert_parser() -> argparse.ArgumentParser:
@@ -167,8 +174,8 @@ def _create_subcommand_parser() -> argparse.ArgumentParser:
     parse_parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO",
-        help="Set the logging level",
+        default=None,
+        help=argparse.SUPPRESS,
     )
 
     validate_parser = subparsers.add_parser(
@@ -179,6 +186,17 @@ def _create_subcommand_parser() -> argparse.ArgumentParser:
     )
     validate_parser.add_argument(
         "-q", "--quiet", action="store_true", help=argparse.SUPPRESS
+    )
+    validate_parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+    validate_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the result as a single machine-readable JSON object",
     )
 
     return parser
@@ -224,7 +242,7 @@ def _validate_csjson_instance(path: Path) -> str | None:
 
 def parse_command(args) -> int:
     """Handle the ``parse`` command."""
-    parser = CartoSymParser(log_level=args.log_level)
+    parser = CartoSymParser(log_level=args.log_level or "WARNING")
     if not args.input_file.exists():
         error(f"file not found: {args.input_file}")
         return ExitCode.NOT_FOUND
@@ -353,31 +371,79 @@ def _run_conversion(
     return str(result)
 
 
+def _print_json(data: dict) -> None:
+    sys.stdout.write(json.dumps(data) + "\n")
+
+
 def validate_command(args) -> int:
     """Validate a CSCSS or CS-JSON file."""
     input_path: Path = args.input_file
+    as_json: bool = args.json
+    path_str = str(input_path)
+
     if not input_path.exists():
-        error(f"file not found: {input_path}")
+        if as_json:
+            _print_json({"valid": False, "file": path_str, "error": "file not found"})
+        else:
+            error(f"file not found: {input_path}")
         return ExitCode.NOT_FOUND
 
     name = input_path.name.lower()
     if name.endswith(".cscss"):
         errors = _check_cscss_syntax(input_path)
         if errors:
-            _report_syntax_errors(input_path, errors)
+            if as_json:
+                _print_json(
+                    {
+                        "valid": False,
+                        "file": path_str,
+                        "format": "cscss",
+                        "errors": [
+                            {"line": line, "column": col + 1, "message": msg}
+                            for line, col, msg in errors
+                        ],
+                    }
+                )
+            else:
+                _report_syntax_errors(input_path, errors)
             return ExitCode.INPUT_INVALID
-        success(f"valid CSCSS: {input_path}")
+        if as_json:
+            _print_json({"valid": True, "file": path_str, "format": "cscss"})
+        else:
+            success(f"valid CSCSS: {input_path}")
         return ExitCode.OK
     if name.endswith(".cs.json"):
         problem = _validate_csjson_instance(input_path)
         if problem is not None:
-            error(f"{input_path}: {problem}")
+            if as_json:
+                _print_json(
+                    {
+                        "valid": False,
+                        "file": path_str,
+                        "format": "csjson",
+                        "errors": [{"message": problem}],
+                    }
+                )
+            else:
+                error(f"{input_path}: {problem}")
             return ExitCode.INPUT_INVALID
-        success(f"valid CartoSym-JSON: {input_path}")
+        if as_json:
+            _print_json({"valid": True, "file": path_str, "format": "csjson"})
+        else:
+            success(f"valid CartoSym-JSON: {input_path}")
         return ExitCode.OK
 
-    error(f"unrecognised extension for validation: {input_path}")
-    hint("expected a .cscss or .cs.json file")
+    if as_json:
+        _print_json(
+            {
+                "valid": False,
+                "file": path_str,
+                "error": "unrecognised extension for validation",
+            }
+        )
+    else:
+        error(f"unrecognised extension for validation: {input_path}")
+        hint("expected a .cscss or .cs.json file")
     return ExitCode.USAGE
 
 
