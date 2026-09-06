@@ -351,11 +351,29 @@ class LabelPlacement(BaseCartoSymModel):
 
 
 # Abstract base for graphics
+class Transform2D(BaseCartoSymModel, AlterMixin):
+    """2D graphic transform (Part 2 ``transform2D``).
+
+    Only ``orientation`` is wired into any codec today (SLD/SE
+    ``se:Rotation``, issue #89). ``scaling`` is accepted for schema
+    fidelity but left untyped: Part 2's own ``scale2D`` definition isn't
+    even vendored in this project's schema subset, so there's nothing
+    more precise to model yet.
+    """
+
+    orientation: FlexibleAngle | None = Field(None, description="Rotation angle")
+    scaling: Any | None = Field(None, description="2D scale factor")
+    translation: UnitPoint | None = Field(None, description="2D translation offset")
+
+
 class AbstractGraphic(BaseCartoSymModel, AlterMixin):
     """Base class for all graphic elements."""
 
     position: UnitPoint | None = Field(None, description="Graphic position")
     opacity: FlexibleOpacity | None = Field(None, description="Graphic opacity")
+    transform: Transform2D | None = Field(
+        None, description="2D transform (Part 2 abstractGraphic extension)"
+    )
 
     @field_validator("position", mode="before")
     def validate_position(cls, v):

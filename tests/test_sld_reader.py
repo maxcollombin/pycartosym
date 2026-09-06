@@ -104,6 +104,63 @@ class TestReadBasicSymbolizers:
         with pytest.raises(NotImplementedError):
             SldReader().read(xml)
 
+    def test_square_mark_maps_to_rectangle(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se" '
+            'xmlns:ogc="http://www.opengis.net/ogc">'
+            "<NamedLayer><se:Name>x</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule><se:PointSymbolizer><se:Graphic>"
+            "<se:Mark><se:WellKnownName>square</se:WellKnownName>"
+            '<se:Fill><se:SvgParameter name="fill">#ff0000</se:SvgParameter>'
+            "</se:Fill></se:Mark><se:Size>6</se:Size>"
+            "</se:Graphic></se:PointSymbolizer></se:Rule>"
+            "</se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        el = SldReader().read(xml).styling_rules[0].symbolizer.marker.elements[0]
+        assert el["type"] == "Rectangle"
+        assert el["fill"] == {"color": [255, 0, 0]}
+        # se:Size is a single scalar — width == height, unlike a circle's
+        # size (a diameter) which is halved into a radius.
+        assert el["width"] == {"px": 6}
+        assert el["height"] == {"px": 6}
+
+    def test_non_circle_non_square_mark_raises_not_implemented(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se">'
+            "<NamedLayer><se:Name>x</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule><se:PointSymbolizer><se:Graphic>"
+            "<se:Mark><se:WellKnownName>triangle</se:WellKnownName></se:Mark>"
+            "</se:Graphic></se:PointSymbolizer></se:Rule>"
+            "</se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        with pytest.raises(NotImplementedError):
+            SldReader().read(xml)
+
+    def test_graphic_rotation_maps_to_transform_orientation(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se" '
+            'xmlns:ogc="http://www.opengis.net/ogc">'
+            "<NamedLayer><se:Name>x</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule><se:PointSymbolizer><se:Graphic>"
+            "<se:Mark><se:WellKnownName>circle</se:WellKnownName>"
+            '<se:Fill><se:SvgParameter name="fill">#ff0000</se:SvgParameter>'
+            "</se:Fill></se:Mark><se:Size>8</se:Size>"
+            "<se:Rotation>45</se:Rotation>"
+            "</se:Graphic></se:PointSymbolizer></se:Rule>"
+            "</se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        el = SldReader().read(xml).styling_rules[0].symbolizer.marker.elements[0]
+        assert el["transform"] == {"orientation": 45.0}
+
     def test_line_stroke_cap_join(self):
         xml = (
             '<StyledLayerDescriptor version="1.1.0" '
@@ -327,6 +384,45 @@ class TestReadMetadata:
         assert style.metadata.abstract == (
             "SLD/SE codec fixture: se:Description/Title/Abstract mapping"
         )
+
+
+class TestReadRuleMetadata:
+    def test_rule_title_and_abstract_map_to_name_and_comment(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se" '
+            'xmlns:ogc="http://www.opengis.net/ogc">'
+            "<NamedLayer><se:Name>L</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule>"
+            "<se:Name>rule1</se:Name>"
+            "<se:Description><se:Title>Red areas</se:Title>"
+            "<se:Abstract>Areas classified as red</se:Abstract></se:Description>"
+            '<se:PolygonSymbolizer><se:Fill><se:SvgParameter name="fill">'
+            "#ff0000</se:SvgParameter></se:Fill></se:PolygonSymbolizer>"
+            "</se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        rule = SldReader().read(xml).styling_rules[0]
+        assert rule.styling_rule_name == "rule1"
+        assert rule.name == "Red areas"
+        assert rule.comment == "Areas classified as red"
+
+    def test_rule_without_title_abstract_leaves_name_and_comment_unset(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se">'
+            "<NamedLayer><se:Name>L</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule>"
+            '<se:PolygonSymbolizer><se:Fill><se:SvgParameter name="fill">'
+            "#ff0000</se:SvgParameter></se:Fill></se:PolygonSymbolizer>"
+            "</se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        rule = SldReader().read(xml).styling_rules[0]
+        assert rule.name is None
+        assert rule.comment is None
 
 
 class TestReadSymbolizerGeometry:

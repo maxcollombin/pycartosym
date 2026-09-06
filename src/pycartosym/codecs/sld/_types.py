@@ -295,6 +295,17 @@ def format_angle(value: Any) -> str:
     raise NotImplementedError(f"Unsupported angle value shape: {value!r}")
 
 
+def parse_angle(text: str | None) -> float | None:
+    """Parse a bare ``se:Rotation`` degrees string into a CartoSym float.
+
+    ``FlexibleAngle`` accepts a plain float as degrees directly, so no
+    ``Angle`` wrapper is needed here.
+    """
+    if text is None:
+        return None
+    return float(text)
+
+
 def format_opacity(value: Any) -> str:
     """Format a CartoSym opacity (0-1) as a bare SLD/SE number string."""
     if isinstance(value, (int, float)) and not isinstance(value, bool):
