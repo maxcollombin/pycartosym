@@ -7,7 +7,17 @@ Layer Descriptor) and MapLibre GL Style.
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    # Single source of truth: pyproject.toml's [project] version, read back
+    # from the installed distribution's metadata — no hardcoded literal to
+    # drift out of sync with it.
+    __version__ = version("pycartosym")
+except PackageNotFoundError:
+    # Not installed (e.g. run from a source checkout without `uv sync`).
+    __version__ = "0.0.0+unknown"
+
 __author__ = "Maxime Collombin"
 __email__ = "maxime.collombin@netplus.ch"
 
