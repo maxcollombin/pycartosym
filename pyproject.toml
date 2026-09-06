@@ -99,18 +99,22 @@ extend-exclude = ["src/pycartosym/grammar/generated"]
 # case) are enforced in `src/` only (see per-file-ignores) — fixed by a
 # manual pass, not an autofix, since a naive one mangles identifiers like
 # `stylingRuleName`.
-# ERA (commented-out code) is a separate follow-up.
-select = ["E", "F", "W", "I", "UP", "FIX", "TD", "D"]
+# T20: no print() (CLAUDE.md rule — use logging; the CLI itself uses
+# sys.stdout.write/sys.stderr.write for genuine user-facing output,
+# not print()). ERA (commented-out code) is a separate follow-up.
+select = ["E", "F", "W", "I", "UP", "FIX", "TD", "D", "T20"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 # A test's name and body document what it checks; docstring content and
-# summary-line layout carry little there.
+# summary-line layout carry little there. T201: golden-snapshot drift
+# diagnostics (test_expression_parser_tree.py) intentionally print to
+# stdout for a human reading pytest output — not a logging substitute.
 "tests/**" = [
     "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", "D205",
-    "D400", "D401", "D403", "D415",
+    "D400", "D401", "D403", "D415", "T201",
 ]
 
 [tool.ruff.lint.isort]
