@@ -31,15 +31,41 @@ _PRINT_DEFAULT_TARGET = {"cscss": "csjson", "csjson": "cscss"}
 # Subcommands that are dispatched explicitly (not the default conversion path)
 _SUBCOMMANDS = frozenset({"parse", "validate"})
 
+# Common flags that consume a following token as their value — needed so the
+# subcommand pre-detection below (which runs before argparse parses anything)
+# doesn't mistake a flag's value for the subcommand name or the input file.
+_VALUE_FLAGS = frozenset(
+    {"--log-level", "-o", "--output", "--from-format", "--to-format"}
+)
+
 _SLD_FORMATS = ["sld", "sld:1.0.0", "sld:1.1.0", "sld:geoserver"]
 _ALL_FORMATS = ["cscss", "csjson", *_SLD_FORMATS, "maplibre"]
+
+
+def _leading_positionals(argv: list[str]) -> list[str]:
+    """Return *argv* tokens that aren't flags or a flag's value.
+
+    A value-taking flag (e.g. ``--log-level DEBUG``) consumes the token
+    right after it, which would otherwise be mistaken for a positional.
+    """
+    positionals = []
+    skip_next = False
+    for token in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if token.startswith("-"):
+            skip_next = token in _VALUE_FLAGS
+            continue
+        positionals.append(token)
+    return positionals
 
 
 def main() -> int:
     """Run the CLI entry point."""
     # Pre-detect whether a named subcommand is being used so that argparse
     # doesn't confuse a file path for a subcommand name (or vice-versa).
-    positionals = [a for a in sys.argv[1:] if not a.startswith("-")]
+    positionals = _leading_positionals(sys.argv[1:])
     is_subcommand = bool(positionals) and positionals[0] in _SUBCOMMANDS
 
     parser = _create_subcommand_parser() if is_subcommand else _create_convert_parser()
@@ -169,12 +195,16 @@ def _create_subcommand_parser() -> argparse.ArgumentParser:
         "input_file", type=Path, help="Input CartoSym CSS (.cscss) file to parse"
     )
     parse_parser.add_argument(
-        "-q", "--quiet", action="store_true", help=argparse.SUPPRESS
+        "-q",
+        "--quiet",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
     )
     parse_parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default=None,
+        default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
     )
 
@@ -185,12 +215,16 @@ def _create_subcommand_parser() -> argparse.ArgumentParser:
         "input_file", type=Path, help="File to validate (.cscss or .cs.json)"
     )
     validate_parser.add_argument(
-        "-q", "--quiet", action="store_true", help=argparse.SUPPRESS
+        "-q",
+        "--quiet",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
     )
     validate_parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default=None,
+        default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
     )
     validate_parser.add_argument(

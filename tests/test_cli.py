@@ -209,3 +209,17 @@ class TestLogLevel:
         assert r.returncode == 0
         assert r.stderr == ""
         assert r.stdout == ""
+
+    def test_log_level_before_subcommand_is_recognised(self):
+        r = run("--log-level", "DEBUG", "parse", str(EXAMPLES / "0-basic.cscss"))
+        assert r.returncode == 0
+        assert "DEBUG" in r.stderr or "INFO" in r.stderr
+
+    def test_output_flag_before_subcommand_still_dispatches_to_subcommand_parser(self):
+        # -o isn't a valid flag on the subcommand parser, but the pre-detection
+        # heuristic must still recognise "validate" as the subcommand (not
+        # "unused.json") so argparse reports *that* usage error, not a
+        # confusing misinterpretation of the convert-mode path.
+        r = run("-o", "unused.json", "validate", str(EXAMPLES / "0-basic.cscss"))
+        assert r.returncode == 2
+        assert "invalid choice: 'unused.json'" in r.stderr
