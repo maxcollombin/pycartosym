@@ -45,10 +45,6 @@ from ._zoom import merge_zoom_range
 # `text-padding` is collision-detection sizing (whether a label is hidden
 # next to another one) — it never changes one label's own rendered
 # appearance, so it carries no portrayal content for this codec's purposes.
-# `text-rotate`/`icon-rotate` have no CartoSym field, same open question as
-# `se:Graphic/se:Rotation` on the SLD/SE side (see `codecs/sld/_symbolizer.py`
-# — "pending a mapping decision"), so dropped the same way for consistency
-# across codecs rather than raised here alone.
 # `symbol-z-order`/`icon-optional`/`text-optional` are all about collision
 # *fallback* behaviour when several symbols overlap — none of them changes
 # a single, non-colliding symbol's own rendered appearance, same category
@@ -87,8 +83,6 @@ _IGNORED_PAINT: frozenset[str] = frozenset(
         "icon-halo-blur",
         "symbol-spacing",
         "text-padding",
-        "text-rotate",
-        "icon-rotate",
         "symbol-z-order",
         "icon-optional",
         "text-optional",
@@ -174,6 +168,8 @@ _SYMBOL_LAYOUT: frozenset[str] = frozenset(
         "icon-offset",
         "icon-text-fit",
         "icon-text-fit-padding",
+        "text-rotate",
+        "icon-rotate",
     }
 )
 _BACKGROUND_PAINT: frozenset[str] = frozenset(
@@ -605,6 +601,10 @@ def _symbol_symbolizer(layer: dict[str, Any]) -> dict[str, Any]:
             if anchor not in _ANCHOR_TO_ALIGNMENT:
                 raise NotImplementedError(f"unexpected text-anchor {anchor!r}")
             text_el["alignment"] = list(_ANCHOR_TO_ALIGNMENT[anchor])
+        if "text-rotate" in layout:
+            text_el["transform"] = {
+                "orientation": _constant(layout["text-rotate"], "text-rotate")
+            }
         font = _symbol_font(layout, paint)
         if font:
             text_el["font"] = font
@@ -632,6 +632,10 @@ def _symbol_symbolizer(layer: dict[str, Any]) -> dict[str, Any]:
                 {"pc": round(fx * 100)},
                 {"pc": round(fy * 100)},
             ]
+        if "icon-rotate" in layout:
+            image_el["transform"] = {
+                "orientation": _constant(layout["icon-rotate"], "icon-rotate")
+            }
         if "icon-opacity" in paint:
             image_el["opacity"] = _constant(paint["icon-opacity"], "icon-opacity")
         if "icon-color" in paint:

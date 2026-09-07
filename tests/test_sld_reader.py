@@ -237,6 +237,24 @@ class TestReadBasicSymbolizers:
         assert el.alignment == ["left", "middle"]
         assert el.position.x == 20
 
+    def test_label_point_placement_rotation_maps_to_transform_orientation(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se" '
+            'xmlns:ogc="http://www.opengis.net/ogc">'
+            "<NamedLayer><se:Name>x</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule><se:TextSymbolizer>"
+            "<se:Label><ogc:PropertyName>Name</ogc:PropertyName></se:Label>"
+            "<se:LabelPlacement><se:PointPlacement>"
+            "<se:Rotation>-45</se:Rotation>"
+            "</se:PointPlacement></se:LabelPlacement>"
+            "</se:TextSymbolizer></se:Rule></se:FeatureTypeStyle>"
+            "</UserStyle></NamedLayer></StyledLayerDescriptor>"
+        )
+        el = SldReader().read(xml).styling_rules[0].symbolizer.label.elements[0]
+        assert el.transform.orientation == -45.0
+
     def test_label_ogc_literal_is_read_as_plain_text(self):
         """se:Label is mixed content; some producers wrap literal text in
         <ogc:Literal> rather than as a bare text node.

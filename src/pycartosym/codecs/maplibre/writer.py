@@ -84,6 +84,7 @@ ramp).
 
 from __future__ import annotations
 
+import math
 import re
 from typing import Any
 
@@ -182,6 +183,30 @@ def _px_number(value: Any, ctx: str) -> Any:
         return value.value
     if isinstance(value, dict) and set(value) == {"px"}:
         return value["px"]
+    return value
+
+
+def _orientation_degrees(value: Any, ctx: str) -> Any:
+    """Unwrap a ``Transform2D.orientation`` angle to bare degrees.
+
+    ``FlexibleAngle`` may validate to an ``Angle`` model (``value`` +
+    ``unit``) or a ``{"deg": …}``/``{"rad": …}`` dict — MapLibre's
+    ``icon-rotate``/``text-rotate`` have no unit system of their own
+    (always degrees), so ``rad`` input is converted here, mirroring the
+    SLD/SE codec's own ``format_angle``. A bare number or a
+    value-expression model passes through unchanged for :func:`_literal`
+    to handle.
+    """
+    if hasattr(value, "value") and hasattr(value, "unit"):
+        unit = value.unit
+        return (
+            value.value
+            if str(unit) in ("deg", "AngleUnit.DEGREES")
+            else math.degrees(value.value)
+        )
+    if isinstance(value, dict) and set(value) in ({"deg"}, {"rad"}):
+        unit, v = next(iter(value.items()))
+        return v if unit == "deg" else math.degrees(v)
     return value
 
 
@@ -487,6 +512,16 @@ def _circle_paint_from_dot(dot: Any) -> dict[str, Any]:
 def _circle_layer_from_element(layer_id: str, el: Any) -> dict[str, Any]:
     """Turn a single ``Circle``/``Dot`` marker/label element into a ``circle`` layer."""
     el_type = _attr(el, "type")
+    if _attr(el, "transform") is not None:
+        # MapLibre's `circle` layer type has no rotation-capable property
+        # at all (unlike `symbol`'s icon-rotate/text-rotate) — a plain
+        # circle is radially symmetric in this codec's flat
+        # color+radius+outline representation, so orientation/scaling/
+        # translation all have nothing to map to.
+        raise NotImplementedError(
+            f"{el_type}.transform has no MapLibre mapping in this codec "
+            "(the circle layer type has no rotation-capable property)"
+        )
     if el_type == "Circle":
         paint = _circle_paint_from_circle(el)
     elif el_type == "Dot":
@@ -547,6 +582,21 @@ def _text_layer_layout_paint(text_el: Any) -> tuple[dict[str, Any], dict[str, An
         if anchor is None:
             raise NotImplementedError(f"Text.alignment {(h, v)!r} is not mapped")
         layout["text-anchor"] = anchor
+
+    transform = _attr(text_el, "transform")
+    if transform is not None:
+        for attr in ("scaling", "translation"):
+            if _attr(transform, attr) is not None:
+                raise NotImplementedError(
+                    f"TextGraphic.transform.{attr} has no MapLibre mapping "
+                    "in this codec"
+                )
+        orientation = _attr(transform, "orientation")
+        if orientation is not None:
+            layout["text-rotate"] = _literal(
+                _orientation_degrees(orientation, "TextGraphic.transform.orientation"),
+                "TextGraphic.transform.orientation",
+            )
 
     font = _attr(text_el, "font")
     if font is not None:
@@ -686,6 +736,19 @@ def _icon_layer_layout_paint(image_el: Any) -> tuple[dict[str, Any], dict[str, A
         hot_spot = _attr(image_el, "hot_spot")
     if hot_spot is not None:
         layout["icon-anchor"] = _hot_spot_to_icon_anchor(hot_spot, "Image.hotSpot")
+    transform = _attr(image_el, "transform")
+    if transform is not None:
+        for attr in ("scaling", "translation"):
+            if _attr(transform, attr) is not None:
+                raise NotImplementedError(
+                    f"Image.transform.{attr} has no MapLibre mapping in this codec"
+                )
+        orientation = _attr(transform, "orientation")
+        if orientation is not None:
+            layout["icon-rotate"] = _literal(
+                _orientation_degrees(orientation, "Image.transform.orientation"),
+                "Image.transform.orientation",
+            )
     return layout, paint
 
 

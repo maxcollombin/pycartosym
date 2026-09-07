@@ -26,9 +26,12 @@ there). A point ``se:Graphic``'s ``se:Rotation`` (present in both
 dialects — unlike ``Displacement``, it's not SE-only) maps to the
 graphic's ``transform.orientation`` (Part 2 ``abstractGraphic``
 extension, OGC issue tracked as pycartosym #89) for ``Mark``- and
-``ExternalGraphic``-based graphics; a ``TextGraphic.transform`` has no
-mapping (labels use ``se:LabelPlacement``, not ``se:Graphic``) and
-raises rather than silently dropping it.
+``ExternalGraphic``-based graphics. A ``TextGraphic.transform.orientation``
+maps the same way, but to ``se:LabelPlacement/se:PointPlacement/se:Rotation``
+instead of ``se:Graphic/se:Rotation`` — the Basic Labeling worked example in
+1-core's own Annex B uses exactly that construct. ``transform.scaling``/
+``transform.translation`` have no equivalent on a text label and still
+raise.
 
 Every function here is dialect-agnostic: the caller passes a
 :class:`~pycartosym.codecs.sld._dialect.SldDialect` (``d``) and all
@@ -1382,10 +1385,14 @@ def _build_halo(d: SldDialect, ts: etree._Element, outline: Any) -> None:
 def _build_text_symbolizer(
     d: SldDialect, text_graphic: Any, base_opacity: float | None = None
 ) -> etree._Element:
-    if _g(text_graphic, "transform") is not None:
+    transform = _g(text_graphic, "transform")
+    if transform is not None and (
+        _g(transform, "scaling") is not None or _g(transform, "translation") is not None
+    ):
         raise NotImplementedError(
-            "TextGraphic.transform has no SLD/SE mapping in this codec — "
-            "text labels use se:LabelPlacement, not se:Graphic/se:Rotation"
+            "TextGraphic.transform.scaling/translation has no SLD/SE "
+            "mapping in this codec — only orientation maps, to "
+            "se:LabelPlacement/se:PointPlacement/se:Rotation"
         )
     ts = d.el("TextSymbolizer")
 
@@ -1432,8 +1439,9 @@ def _build_text_symbolizer(
     position = _g(text_graphic, "position")
     px, py = _unit_point_xy(position) if position is not None else (None, None)
     has_displacement = (px or 0) != 0 or (py or 0) != 0
+    orientation = _g(transform, "orientation") if transform is not None else None
 
-    if alignment is not None or has_displacement:
+    if alignment is not None or has_displacement or orientation is not None:
         placement_el = d.el("LabelPlacement", parent=ts)
         point_placement_el = d.el("PointPlacement", parent=placement_el)
         if alignment is not None:
@@ -1445,6 +1453,8 @@ def _build_text_symbolizer(
             disp_el = d.el("Displacement", parent=point_placement_el)
             _write_numeric_element(d, disp_el, "DisplacementX", px or 0)
             _write_numeric_element(d, disp_el, "DisplacementY", py or 0)
+        # se:PointPlacementType order: AnchorPoint?, Displacement?, Rotation?
+        _write_rotation(d, point_placement_el, transform)
 
     # se:TextSymbolizerType order: Label, Font, LabelPlacement, Halo, Fill.
     if font_outline is not None:
@@ -2301,5 +2311,8 @@ def _parse_text_symbolizer(d: SldDialect, ts_el: etree._Element) -> dict:
                 "x": _parsed_axis_or_zero(dx),
                 "y": _parsed_axis_or_zero(dy),
             }
+        rotation_text = element_text(d.find(point_placement_el, "Rotation"))
+        if rotation_text is not None:
+            result["transform"] = {"orientation": parse_angle(rotation_text)}
 
     return result

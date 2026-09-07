@@ -305,8 +305,6 @@ def test_blur_paint_is_dropped_silently(layer_type, prop):
         ("symbol", {"icon-image": "dot"}, "icon-halo-blur", 1.5),
         ("symbol", {"text-field": "hi"}, "symbol-spacing", 550),
         ("symbol", {"text-field": "hi"}, "text-padding", 12),
-        ("symbol", {"text-field": "hi"}, "text-rotate", 45),
-        ("symbol", {"icon-image": "dot"}, "icon-rotate", 15),
         ("symbol", {"text-field": "hi"}, "symbol-z-order", "y-position"),
         ("symbol", {"icon-image": "dot"}, "icon-optional", True),
         ("symbol", {"icon-image": "dot"}, "text-optional", True),
@@ -433,6 +431,14 @@ def test_icon_anchor_maps_to_hot_spot(anchor, fx, fy):
     )
     element = style.to_dict()["stylingRules"][0]["symbolizer"]["marker"]["elements"][0]
     assert element["hotSpot"] == [{"pc": fx}, {"pc": fy}]
+
+
+def test_icon_rotate_maps_to_transform_orientation():
+    style = MaplibreReader().read(
+        _symbol_layer({"icon-image": "dot", "icon-rotate": 15})
+    )
+    element = style.to_dict()["stylingRules"][0]["symbolizer"]["marker"]["elements"][0]
+    assert element["transform"] == {"orientation": 15}
 
 
 def test_line_offset_default_zero_passes():
@@ -743,6 +749,12 @@ def test_text_offset_maps_to_position():
     )
     el = style.styling_rules[0].symbolizer.label.elements[0]
     assert (el.position.x, el.position.y) == (1, -2)
+
+
+def test_text_rotate_maps_to_transform_orientation():
+    style = MaplibreReader().read(_symbol_layer({"text-field": "x", "text-rotate": 45}))
+    el = style.styling_rules[0].symbolizer.label.elements[0]
+    assert el.transform.orientation == 45
 
 
 def test_text_transform_none_is_ignored():

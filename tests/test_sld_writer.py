@@ -314,7 +314,56 @@ class TestWriteBasicSymbolizers:
             == style1.styling_rules[0].symbolizer.marker.elements
         )
 
-    def test_label_text_transform_raises_not_implemented(self):
+    def test_label_text_orientation_maps_to_point_placement_rotation(self):
+        root = _write(
+            _rule_style(
+                {
+                    "label": {
+                        "elements": [
+                            {
+                                "type": "Text",
+                                "text": "Name",
+                                "position": {"x": 0, "y": 0},
+                                "transform": {"orientation": 10},
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        rotation = root.find(
+            ".//se:TextSymbolizer/se:LabelPlacement/se:PointPlacement/se:Rotation",
+            NS,
+        )
+        assert rotation is not None
+        assert rotation.text == "10"
+
+    def test_label_rotation_round_trips_through_reader(self):
+        from pycartosym.codecs.sld.reader import SldReader
+
+        style_dict = _rule_style(
+            {
+                "label": {
+                    "elements": [
+                        {
+                            "type": "Text",
+                            "text": {"property": "Name"},
+                            "position": {"x": 0, "y": 0},
+                            "transform": {"orientation": -45},
+                        }
+                    ]
+                }
+            }
+        )
+        style1 = Style.from_dict(style_dict)
+        xml = SldWriter().write(style1)
+        style2 = SldReader().read(xml)
+        assert (
+            style2.styling_rules[0].symbolizer.label.elements
+            == style1.styling_rules[0].symbolizer.label.elements
+        )
+
+    def test_label_text_transform_scaling_raises_not_implemented(self):
         with pytest.raises(NotImplementedError):
             _write(
                 _rule_style(
@@ -325,7 +374,7 @@ class TestWriteBasicSymbolizers:
                                     "type": "Text",
                                     "text": "Name",
                                     "position": {"x": 0, "y": 0},
-                                    "transform": {"orientation": 10},
+                                    "transform": {"scaling": {"x": 2, "y": 2}},
                                 }
                             ]
                         }

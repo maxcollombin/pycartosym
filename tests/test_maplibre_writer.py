@@ -1332,6 +1332,84 @@ def test_icon_marker_hot_spot_maps_to_icon_anchor(fx, fy, anchor):
     assert_maplibre_valid(out)
 
 
+def test_icon_marker_transform_orientation_maps_to_icon_rotate():
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {
+                    "name": "poi",
+                    "symbolizer": {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "Image",
+                                    "image": {"id": "dot.sdf"},
+                                    "transform": {"orientation": 15},
+                                }
+                            ]
+                        }
+                    },
+                }
+            ]
+        }
+    )
+    out = MaplibreWriter().write(style)
+    assert out["layers"][0]["layout"]["icon-rotate"] == 15
+    assert_maplibre_valid(out)
+
+
+def test_icon_marker_transform_scaling_raises():
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {
+                    "name": "poi",
+                    "symbolizer": {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "Image",
+                                    "image": {"id": "dot.sdf"},
+                                    "transform": {"scaling": {"x": 2, "y": 2}},
+                                }
+                            ]
+                        }
+                    },
+                }
+            ]
+        }
+    )
+    with pytest.raises(NotImplementedError):
+        MaplibreWriter().write(style)
+
+
+def test_circle_transform_raises():
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {
+                    "name": "poi",
+                    "symbolizer": {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "Circle",
+                                    "position": {"x": 0, "y": 0},
+                                    "fill": {"color": "red"},
+                                    "radius": {"px": 5},
+                                    "transform": {"orientation": 45},
+                                }
+                            ]
+                        }
+                    },
+                }
+            ]
+        }
+    )
+    with pytest.raises(NotImplementedError):
+        MaplibreWriter().write(style)
+
+
 def test_icon_marker_hot_spot_off_grid_is_rejected():
     style = Style.from_dict(
         {
@@ -1610,6 +1688,57 @@ def test_label_with_fill_becomes_two_layers():
     assert out["layers"][0]["paint"] == {"fill-color": "red"}
     assert out["layers"][1]["layout"] == {"text-field": "a"}
     assert_maplibre_valid(out)
+
+
+def test_label_text_transform_orientation_maps_to_text_rotate():
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {
+                    "name": "labels",
+                    "symbolizer": {
+                        "label": {
+                            "elements": [
+                                {
+                                    "type": "Text",
+                                    "text": "a",
+                                    "transform": {"orientation": -45},
+                                }
+                            ]
+                        }
+                    },
+                }
+            ]
+        }
+    )
+    out = MaplibreWriter().write(style)
+    assert out["layers"][0]["layout"]["text-rotate"] == -45
+    assert_maplibre_valid(out)
+
+
+def test_label_text_transform_translation_raises():
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {
+                    "name": "labels",
+                    "symbolizer": {
+                        "label": {
+                            "elements": [
+                                {
+                                    "type": "Text",
+                                    "text": "a",
+                                    "transform": {"translation": {"x": 1, "y": 1}},
+                                }
+                            ]
+                        }
+                    },
+                }
+            ]
+        }
+    )
+    with pytest.raises(NotImplementedError):
+        MaplibreWriter().write(style)
 
 
 def test_font_bold_is_rejected():
