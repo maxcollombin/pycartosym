@@ -49,6 +49,17 @@ def parse_flexible_unit_value(v):
     return v
 
 
+def _validate_flexible_unit(cls, v):
+    """Coerce a ``{unit: value}`` dict on a unit-typed field before validation.
+
+    Shared body for the several ``field_validator``s below that only ever
+    delegated to :func:`parse_flexible_unit_value` — assigned per-class as
+    ``field_validator(<field names>, mode="before")(_validate_flexible_unit)``
+    since the field names differ per class but the logic doesn't.
+    """
+    return parse_flexible_unit_value(v)
+
+
 def _coerce_numeric_str(v: str):
     """Convert a numeric string to int/float, leaving it as-is if it isn't one."""
     try:
@@ -112,10 +123,9 @@ class Hatch(BaseCartoSymModel, AlterMixin):
         None, description="Distance between hatch lines"
     )
 
-    @field_validator("width", "distance", mode="before")
-    def validate_unit_fields(cls, v):
-        """Coerce ``{unit: value}`` dicts on width/distance before validation."""
-        return parse_flexible_unit_value(v)
+    validate_unit_fields = field_validator("width", "distance", mode="before")(
+        _validate_flexible_unit
+    )
 
 
 class DotPattern(BaseCartoSymModel, AlterMixin):
@@ -123,10 +133,9 @@ class DotPattern(BaseCartoSymModel, AlterMixin):
 
     distance: FlexibleSize | None = Field(None, description="Distance between dots")
 
-    @field_validator("distance", mode="before")
-    def validate_distance(cls, v):
-        """Coerce a ``{unit: value}`` dict on ``distance`` before validation."""
-        return parse_flexible_unit_value(v)
+    validate_distance = field_validator("distance", mode="before")(
+        _validate_flexible_unit
+    )
 
 
 class Stipple(BaseCartoSymModel, AlterMixin):
@@ -146,10 +155,7 @@ class StrokeStyling(BaseCartoSymModel, AlterMixin):
     )
     width: UnitValue | str | float | None = Field(None, description="Stroke width")
 
-    @field_validator("width", mode="before")
-    def validate_width(cls, v):
-        """Coerce a ``{unit: value}`` dict on ``width`` before validation."""
-        return parse_flexible_unit_value(v)
+    validate_width = field_validator("width", mode="before")(_validate_flexible_unit)
 
 
 class Stroke(BaseCartoSymModel, AlterMixin):
@@ -191,10 +197,7 @@ class Stroke(BaseCartoSymModel, AlterMixin):
     cap: str | None = Field(None, description="Stroke line cap")
     join: str | None = Field(None, description="Stroke line join")
 
-    @field_validator("width", mode="before")
-    def validate_width(cls, v):
-        """Coerce a ``{unit: value}`` dict on ``width`` before validation."""
-        return parse_flexible_unit_value(v)
+    validate_width = field_validator("width", mode="before")(_validate_flexible_unit)
 
 
 class Marker(BaseCartoSymModel):
@@ -344,10 +347,9 @@ class LabelPlacement(BaseCartoSymModel):
         None, alias="maxSpacing", description="Maximum spacing"
     )
 
-    @field_validator("min_spacing", "max_spacing", mode="before")
-    def validate_spacing_fields(cls, v):
-        """Coerce ``{unit: value}`` dicts on min/maxSpacing before validation."""
-        return parse_flexible_unit_value(v)
+    validate_spacing_fields = field_validator(
+        "min_spacing", "max_spacing", mode="before"
+    )(_validate_flexible_unit)
 
 
 # Abstract base for graphics
@@ -434,10 +436,9 @@ class ShapeOutline(BaseCartoSymModel, AlterMixin):
     )
     color: FlexibleColor | None = Field(None, description="Outline color")
 
-    @field_validator("thickness", mode="before")
-    def validate_thickness(cls, v):
-        """Coerce a ``{unit: value}`` dict on ``thickness`` before validation."""
-        return parse_flexible_unit_value(v)
+    validate_thickness = field_validator("thickness", mode="before")(
+        _validate_flexible_unit
+    )
 
 
 class ShapeGraphic(Graphic):
@@ -473,10 +474,9 @@ class RectangleGraphic(ClosedShape):
     width: FlexibleSize = Field(..., description="Rectangle width")
     height: FlexibleSize = Field(..., description="Rectangle height")
 
-    @field_validator("width", "height", mode="before")
-    def validate_size_fields(cls, v):
-        """Coerce ``{unit: value}`` dicts on width/height before validation."""
-        return parse_flexible_unit_value(v)
+    validate_size_fields = field_validator("width", "height", mode="before")(
+        _validate_flexible_unit
+    )
 
 
 class ArcGraphic(ShapeGraphic):
