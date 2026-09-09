@@ -554,11 +554,7 @@ def convert_literal_value(value: str | int | float) -> Any:
     # arrays, {r,g,b} objects, or web color names – not hex strings)
     if value.startswith("#") and len(value) == 7:
         try:
-            hex_color = value[1:]
-            r = int(hex_color[0:2], 16)
-            g = int(hex_color[2:4], 16)
-            b = int(hex_color[4:6], 16)
-            return [r, g, b]
+            return list(bytes.fromhex(value[1:]))
         except ValueError:
             return value  # Keep as string if not valid hex
 

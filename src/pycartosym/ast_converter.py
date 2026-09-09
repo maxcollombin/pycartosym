@@ -153,7 +153,7 @@ def _parse_color_value(v: str):
         if len(hex_str) == 3:
             hex_str = "".join(c * 2 for c in hex_str)
         try:
-            return [int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16)]
+            return list(bytes.fromhex(hex_str))
         except ValueError:
             pass
     return v

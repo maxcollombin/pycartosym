@@ -397,4 +397,4 @@ def parse_color(text: str | None) -> list | None:
             f"Unsupported SLD/SE color text {text!r} (not a #rrggbb/#rgb "
             "hex literal or a known CSS color name)"
         )
-    return [int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16)]
+    return list(bytes.fromhex(hex_str))
