@@ -67,16 +67,7 @@ DE9IM_PREDICATES: dict[str, list[str]] = {
 # CQL2 operator name → predicate name mapping
 # CQL2 uses s_ prefix for spatial predicates
 CQL2_SPATIAL_PREDICATES: dict[str, str] = {
-    "s_equals": "equals",
-    "s_disjoint": "disjoint",
-    "s_intersects": "intersects",
-    "s_touches": "touches",
-    "s_contains": "contains",
-    "s_within": "within",
-    "s_crosses": "crosses",
-    "s_overlaps": "overlaps",
-    "s_covers": "covers",
-    "s_coveredby": "coveredby",
+    f"s_{name}": name for name in DE9IM_PREDICATES
 }
 
 
