@@ -17,7 +17,38 @@ __all__ = [
     "convert_identifier",
     "convert_literal_value",
     "convert_numeric_expression_value",
+    "split_on_comparison_operator",
 ]
+
+# Tried longest-first so e.g. ">=" matches before its "=" substring.
+_COMPARISON_OPERATORS = [">=", "<=", "!=", "=", ">", "<"]
+
+
+def split_on_comparison_operator(
+    text: str, *, quoted_guard: bool = True
+) -> tuple[str, str, str] | None:
+    """Find a comparison operator embedded in *text* and split around it.
+
+    Returns ``(op, left_part, right_part)`` for the first operator in
+    ``_COMPARISON_OPERATORS`` that appears in *text* and splits it into
+    exactly two pieces, both stripped of surrounding whitespace. Returns
+    ``None`` if no operator matches.
+
+    When *quoted_guard* is true (the default), a *text* starting with a
+    quote character is never split — it's a string literal, not an
+    embedded expression. ``converter.py``'s ``_fix_selector`` passes
+    ``quoted_guard=False``: it runs on a ``sysId`` value that is never
+    itself quoted, so the earlier duplicated copy of this logic there
+    never carried the guard either.
+    """
+    if quoted_guard and (text.startswith('"') or text.startswith("'")):
+        return None
+    for op in _COMPARISON_OPERATORS:
+        if op in text:
+            parts = text.split(op, 1)
+            if len(parts) == 2:
+                return op, parts[0].strip(), parts[1].strip()
+    return None
 
 
 def post_process_selector(selector: Any) -> Any:
@@ -75,22 +106,18 @@ def post_process_selector(selector: Any) -> Any:
         elif "sysId" in selector:
             sysid = selector["sysId"]
             # Check if sysId contains an embedded expression
-            for op in [">=", "<=", "!=", "=", ">", "<"]:
-                if op in sysid and not (sysid.startswith('"') or sysid.startswith("'")):
-                    parts = sysid.split(op, 1)
-                    if len(parts) == 2:
-                        left_part = parts[0].strip()
-                        right_part = parts[1].strip()
+            split = split_on_comparison_operator(sysid)
+            if split is not None:
+                op, left_part, right_part = split
+                # Convert right part
+                if right_part.isdigit():
+                    right_arg = int(right_part)
+                elif right_part.replace(".", "").isdigit():
+                    right_arg = float(right_part)
+                else:
+                    right_arg = right_part.strip("'\"")
 
-                        # Convert right part
-                        if right_part.isdigit():
-                            right_arg = int(right_part)
-                        elif right_part.replace(".", "").isdigit():
-                            right_arg = float(right_part)
-                        else:
-                            right_arg = right_part.strip("'\"")
-
-                        return {"op": op, "args": [{"sysId": left_part}, right_arg]}
+                return {"op": op, "args": [{"sysId": left_part}, right_arg]}
         elif "property" in selector:
             prop = selector["property"]
             # Check if property is actually an unparsed CQL2 expression
@@ -112,38 +139,34 @@ def post_process_selector(selector: Any) -> Any:
                 except Exception:
                     pass
             # Check if property contains an embedded expression
-            for op in [">=", "<=", "!=", "=", ">", "<"]:
-                if op in prop and not (prop.startswith('"') or prop.startswith("'")):
-                    parts = prop.split(op, 1)
-                    if len(parts) == 2:
-                        left_part = parts[0].strip()
-                        right_part = parts[1].strip()
+            split = split_on_comparison_operator(prop)
+            if split is not None:
+                op, left_part, right_part = split
+                # Determine if left part is system property or regular property
+                if "." in left_part and any(
+                    left_part.startswith(prefix)
+                    for prefix in ["viz", "dataLayer", "feature"]
+                ):
+                    left_arg = {"sysId": left_part}
+                # Special case: certain properties are known system identifiers
+                elif left_part in [
+                    "featuresGeometryDimensions",
+                    "featuresGeometry",
+                    "geometryDimensions",
+                ]:
+                    left_arg = {"sysId": f"dataLayer.{left_part}"}
+                else:
+                    left_arg = {"property": left_part}
 
-                        # Determine if left part is system property or regular property
-                        if "." in left_part and any(
-                            left_part.startswith(prefix)
-                            for prefix in ["viz", "dataLayer", "feature"]
-                        ):
-                            left_arg = {"sysId": left_part}
-                        # Special case: certain properties are known system identifiers
-                        elif left_part in [
-                            "featuresGeometryDimensions",
-                            "featuresGeometry",
-                            "geometryDimensions",
-                        ]:
-                            left_arg = {"sysId": f"dataLayer.{left_part}"}
-                        else:
-                            left_arg = {"property": left_part}
+                # Convert right part
+                if right_part.isdigit():
+                    right_arg = int(right_part)
+                elif right_part.replace(".", "").replace("-", "").isdigit():
+                    right_arg = float(right_part)
+                else:
+                    right_arg = right_part.strip("'\"")
 
-                        # Convert right part
-                        if right_part.isdigit():
-                            right_arg = int(right_part)
-                        elif right_part.replace(".", "").replace("-", "").isdigit():
-                            right_arg = float(right_part)
-                        else:
-                            right_arg = right_part.strip("'\"")
-
-                        return {"op": op, "args": [left_arg, right_arg]}
+                return {"op": op, "args": [left_arg, right_arg]}
         return selector
     elif isinstance(selector, str):
         # Handle string selectors that should be expressions
@@ -162,37 +185,33 @@ def convert_string_to_json_selector(selector_str: str) -> dict[str, Any]:
     left_arg: Any
     right_arg: Any
     # Handle expressions embedded in strings
-    for op in [">=", "<=", "!=", "=", ">", "<"]:
-        if op in selector_str and not (
-            selector_str.startswith('"') or selector_str.startswith("'")
+    split = split_on_comparison_operator(selector_str)
+    if split is not None:
+        op, left_part, right_part = split
+        right_part = right_part.strip("'\"")
+        # Determine if left part is system property or regular property
+        if "." in left_part and any(
+            left_part.startswith(prefix) for prefix in ["viz", "dataLayer"]
         ):
-            parts = selector_str.split(op, 1)
-            if len(parts) == 2:
-                left_part = parts[0].strip()
-                right_part = parts[1].strip().strip("'\"")
-                # Determine if left part is system property or regular property
-                if "." in left_part and any(
-                    left_part.startswith(prefix) for prefix in ["viz", "dataLayer"]
-                ):
-                    left_arg = {"sysId": left_part}
-                elif left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
-                    left_arg = {"property": left_part}
-                else:
-                    left_arg = left_part
-                # Convert right part (handle sysId for dot notation)
-                if right_part.isdigit():
-                    right_arg = int(right_part)
-                elif right_part.replace(".", "").isdigit():
-                    right_arg = float(right_part)
-                elif "." in right_part and any(
-                    right_part.startswith(prefix) for prefix in ["viz", "dataLayer"]
-                ):
-                    right_arg = {"sysId": right_part}
-                elif right_part in ["validDate", "FunctionCode", "FunctionTitle"]:
-                    right_arg = {"property": right_part}
-                else:
-                    right_arg = right_part
-                return {"op": op, "args": [left_arg, right_arg]}
+            left_arg = {"sysId": left_part}
+        elif left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
+            left_arg = {"property": left_part}
+        else:
+            left_arg = left_part
+        # Convert right part (handle sysId for dot notation)
+        if right_part.isdigit():
+            right_arg = int(right_part)
+        elif right_part.replace(".", "").isdigit():
+            right_arg = float(right_part)
+        elif "." in right_part and any(
+            right_part.startswith(prefix) for prefix in ["viz", "dataLayer"]
+        ):
+            right_arg = {"sysId": right_part}
+        elif right_part in ["validDate", "FunctionCode", "FunctionTitle"]:
+            right_arg = {"property": right_part}
+        else:
+            right_arg = right_part
+        return {"op": op, "args": [left_arg, right_arg]}
     # If no operator found, treat as property
     return {"property": selector_str}
 
@@ -479,40 +498,34 @@ def convert_identifier(name: str) -> Any:
     left_arg: Any
     right_arg: Any
     # Handle embedded operators first
-    for op in [">=", "<=", "!=", "=", ">", "<"]:
-        if f"{op}" in name and not (name.startswith('"') or name.startswith("'")):
-            parts = name.split(op, 1)
-            if len(parts) == 2:
-                left_part = parts[0].strip()
-                right_part = parts[1].strip()
+    split = split_on_comparison_operator(name)
+    if split is not None:
+        op, left_part, right_part = split
+        # Convert left part (property)
+        if "." in left_part:
+            if any(
+                left_part.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]
+            ):
+                # Map system properties correctly
+                mapped_prop = _map_system_property(left_part)
+                left_arg = {"sysId": mapped_prop}
+            else:
+                left_arg = {"property": left_part}
+        else:
+            if left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
+                left_arg = {"property": left_part}
+            elif any(
+                left_part.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]
+            ):
+                mapped_prop = _map_system_property(left_part)
+                left_arg = {"sysId": mapped_prop}
+            else:
+                left_arg = left_part
 
-                # Convert left part (property)
-                if "." in left_part:
-                    if any(
-                        left_part.startswith(prefix)
-                        for prefix in ["viz", "vis", "dataLayer"]
-                    ):
-                        # Map system properties correctly
-                        mapped_prop = _map_system_property(left_part)
-                        left_arg = {"sysId": mapped_prop}
-                    else:
-                        left_arg = {"property": left_part}
-                else:
-                    if left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
-                        left_arg = {"property": left_part}
-                    elif any(
-                        left_part.startswith(prefix)
-                        for prefix in ["viz", "vis", "dataLayer"]
-                    ):
-                        mapped_prop = _map_system_property(left_part)
-                        left_arg = {"sysId": mapped_prop}
-                    else:
-                        left_arg = left_part
+        # Convert right part (value)
+        right_arg = convert_literal_value(right_part)
 
-                # Convert right part (value)
-                right_arg = convert_literal_value(right_part)
-
-                return {"op": op, "args": [left_arg, right_arg]}
+        return {"op": op, "args": [left_arg, right_arg]}
 
     # No operator - determine property type
     if "." in name:

@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .cql2.to_json import split_on_comparison_operator
 from .models import Style
 from .parser import CartoSymParser
 
@@ -113,22 +114,15 @@ class Converter:
         sysid = selector.get("sysId")
         if not isinstance(sysid, str):
             return
-        for op in [">=", "<=", "!=", "=", ">", "<"]:
-            if op not in sysid:
-                continue
-            parts = sysid.split(op, 1)
-            if len(parts) != 2:
-                continue
-            left_part = parts[0].strip()
-            right_part = parts[1].strip()
-            try:
-                right_value = (
-                    float(right_part) if "." in right_part else int(right_part)
-                )
-            except ValueError:
-                right_value = right_part.strip("'\"")
-            data["selector"] = {"op": op, "args": [{"sysId": left_part}, right_value]}
-            break
+        split = split_on_comparison_operator(sysid, quoted_guard=False)
+        if split is None:
+            return
+        op, left_part, right_part = split
+        try:
+            right_value = float(right_part) if "." in right_part else int(right_part)
+        except ValueError:
+            right_value = right_part.strip("'\"")
+        data["selector"] = {"op": op, "args": [{"sysId": left_part}, right_value]}
 
     def csjson_to_style(self, csjson_input: str | dict[str, Any] | Path) -> Style:
         """Convert CSJSON to CartoSym Style model.
