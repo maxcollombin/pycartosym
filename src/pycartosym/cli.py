@@ -422,8 +422,8 @@ def validate_command(args) -> int:
             error(f"file not found: {input_path}")
         return ExitCode.NOT_FOUND
 
-    name = input_path.name.lower()
-    if name.endswith(".cscss"):
+    fmt = detect_format(input_path)
+    if fmt == "cscss":
         errors = _check_cscss_syntax(input_path)
         if errors:
             if as_json:
@@ -446,7 +446,7 @@ def validate_command(args) -> int:
         else:
             success(f"valid CSCSS: {input_path}")
         return ExitCode.OK
-    if name.endswith(".cs.json"):
+    if fmt == "csjson":
         problem = _validate_csjson_instance(input_path)
         if problem is not None:
             if as_json:
