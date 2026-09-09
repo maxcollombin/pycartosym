@@ -47,6 +47,26 @@ from pydantic import Field, field_validator
 from .base import BaseCartoSymModel
 
 
+def _make_arg_parity_validator(*, want_odd: bool, msg: str):
+    """Build an ``args``-length-parity ``field_validator`` for ``args``.
+
+    Shared by the 4 MapLibre expression validators below (``CaseExpression``,
+    ``MatchExpression``, ``StepExpression``, ``InterpolateExpression``) —
+    real argument-count validation (MapLibre requires a specific parity per
+    operator), not ponytail-scope duplication. They only differ in whether
+    the required length is odd or even and in their own error message; this
+    dedupes the repeated ``if len(v) % 2 == /!= 0: raise`` shape without
+    changing any condition it enforces.
+    """
+
+    def _check(cls, v: list) -> list:
+        if (len(v) % 2 != 0) != want_odd:
+            raise ValueError(msg)
+        return v
+
+    return field_validator("args")(_check)
+
+
 class PropertyRef(BaseCartoSymModel):
     """Property reference: ``{"property": "name"}`` (MapLibre ``["get", "name"]``).
 
@@ -86,15 +106,13 @@ class CaseExpression(BaseCartoSymModel):
         min_length=3, description="cond1, out1, cond2, out2, ..., fallback"
     )
 
-    @field_validator("args")
-    @classmethod
-    def _odd_length(cls, v: list) -> list:
-        if len(v) % 2 == 0:
-            raise ValueError(
-                "case: args must have an odd length "
-                "(cond, out, ..., fallback pairs plus a trailing fallback)"
-            )
-        return v
+    _check_args_parity = _make_arg_parity_validator(
+        want_odd=True,
+        msg=(
+            "case: args must have an odd length "
+            "(cond, out, ..., fallback pairs plus a trailing fallback)"
+        ),
+    )
 
 
 class MatchExpression(BaseCartoSymModel):
@@ -110,12 +128,10 @@ class MatchExpression(BaseCartoSymModel):
         min_length=4, description="input, label, out, ..., fallback"
     )
 
-    @field_validator("args")
-    @classmethod
-    def _pair_shape(cls, v: list) -> list:
-        if (len(v) - 2) % 2 != 0:
-            raise ValueError("match: args must be [input, label, out, ..., fallback]")
-        return v
+    _check_args_parity = _make_arg_parity_validator(
+        want_odd=False,
+        msg="match: args must be [input, label, out, ..., fallback]",
+    )
 
 
 class StepExpression(BaseCartoSymModel):
@@ -126,15 +142,13 @@ class StepExpression(BaseCartoSymModel):
         min_length=2, description="input, output0, stop1, output1, ..."
     )
 
-    @field_validator("args")
-    @classmethod
-    def _even_length(cls, v: list) -> list:
-        if len(v) % 2 != 0:
-            raise ValueError(
-                "step: args must have an even length "
-                "(input, output0, then stop/output pairs)"
-            )
-        return v
+    _check_args_parity = _make_arg_parity_validator(
+        want_odd=False,
+        msg=(
+            "step: args must have an even length "
+            "(input, output0, then stop/output pairs)"
+        ),
+    )
 
 
 class InterpolateExpression(BaseCartoSymModel):
@@ -155,15 +169,13 @@ class InterpolateExpression(BaseCartoSymModel):
         min_length=3, description="input, stop1, output1, ..."
     )
 
-    @field_validator("args")
-    @classmethod
-    def _odd_length(cls, v: list) -> list:
-        if len(v) % 2 == 0:
-            raise ValueError(
-                "interpolate: args must have an odd length "
-                "(input, then stop/output pairs)"
-            )
-        return v
+    _check_args_parity = _make_arg_parity_validator(
+        want_odd=True,
+        msg=(
+            "interpolate: args must have an odd length "
+            "(input, then stop/output pairs)"
+        ),
+    )
 
 
 class CoalesceExpression(BaseCartoSymModel):
