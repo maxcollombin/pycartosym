@@ -6,7 +6,6 @@ including colors, units, ranges, and custom validators.
 
 from __future__ import annotations
 
-import re
 from enum import Enum
 from typing import Annotated
 
@@ -314,39 +313,6 @@ Percent = Annotated[float, Field(ge=0.0, le=100.0)]
 
 ColorComponent255 = Annotated[int, Field(ge=0, le=255)]
 """Color component value between 0 and 255."""
-
-
-# =============================================================================
-# Validators
-# =============================================================================
-
-
-def validate_hex_color(v: str) -> str:
-    """Validate hex color format."""
-    if not isinstance(v, str):
-        return v
-
-    # Allow hex colors like #ff0000, #fff, etc.
-    hex_pattern = re.compile(r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")
-    if hex_pattern.match(v):
-        return v
-
-    # Allow other string expressions (like CSS variables, functions, etc.)
-    return v
-
-
-def validate_unit_string(v: str) -> str:
-    """Validate unit string format like '10px', '2.5mm'."""
-    if not isinstance(v, str):
-        return v
-
-    # Pattern for number + unit
-    unit_pattern = re.compile(r"^-?\d+(\.\d+)?(px|mm|cm|in|pt|em|pc|m|ft)$")
-    if unit_pattern.match(v):
-        return v
-
-    # Allow expressions
-    return v
 
 
 # =============================================================================
