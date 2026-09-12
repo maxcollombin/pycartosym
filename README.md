@@ -3,13 +3,13 @@
 [![CI](https://github.com/maxcollombin/pycartosym/actions/workflows/ci.yml/badge.svg)](https://github.com/maxcollombin/pycartosym/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/pycartosym.svg)](https://pypi.org/project/pycartosym/)
 
-A Python package for lossless transcoding between [CartoSym CSS](https://github.com/opengeospatial/styles-and-symbology) (`.cscss`) and other encodings of the OGC Style & Symbology conceptual model (CS-JSON, SLD/SE), plus MapLibre Style as a practical interoperability target.
+A Python package for lossless transcoding between [CartoSym CSS](https://github.com/opengeospatial/cartographic-symbology) (`.cscss`) and other encodings of the OGC Cartographic Symbology conceptual model (CS-JSON, SLD/SE), plus MapLibre Style as a practical interoperability target.
 
 ## Supported Formats
 
-CartoSym-CSS (`.cscss`) and CS-JSON (`.cs.json`) are the two OGC Style &
-Symbology encodings this package reads and writes losslessly. SLD/SE
-(`.sld`, 1.1.0 and 1.0.0, including SLD 1.0.0 with GeoServer
+CartoSym-CSS (`.cscss`) and CS-JSON (`.cs.json`) are the two OGC
+Cartographic Symbology encodings this package reads and writes losslessly.
+SLD/SE (`.sld`, 1.1.0 and 1.0.0, including SLD 1.0.0 with GeoServer
 `<VendorOption>` pass-through) is also OGC. MapLibre Style (`.json`) is
 the MapLibre/Mapbox de facto spec, not OGC, supported as a practical
 interoperability target. All are read and written.
