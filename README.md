@@ -1,6 +1,7 @@
 # pycartosym
 
 [![CI](https://github.com/maxcollombin/pycartosym/actions/workflows/ci.yml/badge.svg)](https://github.com/maxcollombin/pycartosym/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/pycartosym.svg)](https://pypi.org/project/pycartosym/)
 
 A Python package for lossless transcoding between [CartoSym CSS](https://github.com/opengeospatial/styles-and-symbology) (`.cscss`) and other encodings of the OGC Style & Symbology conceptual model (CS-JSON, SLD/SE), plus MapLibre Style as a practical interoperability target.
 
@@ -19,7 +20,7 @@ raises rather than silently dropping data).
 
 ## Installation
 
-### From PyPI (Coming Soon)
+### From PyPI
 
 ```bash
 pip install pycartosym
