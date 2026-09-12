@@ -1001,6 +1001,31 @@ class TestWriteImage:
         assert _g(image, "black_tint") == "red"
         assert _g(image, "nope", "default") == "default"
 
+    def test_hot_spot_writes_anchor_point_from_a_typed_image_graphic(self):
+        """Regression: ``UnitPoint.x``/``.y`` had no ``{unit: value}``
+        shorthand coercion (unlike every other ``UnitValue``-typed field
+        in this file), so ``ImageGraphic(hot_spot=[{"pc": 50}, {"pc":
+        50}])`` — the shape ``hotSpot`` actually needs (issue #35) —
+        raised a ``ValidationError`` instead of building a real
+        ``UnitPoint``. Fixed alongside ``_percent_to_fraction``/
+        ``_hot_spot_to_anchor_fraction``, which only understood the raw
+        ``{"pc": N}`` dict a loosely-typed graphic element keeps, not a
+        real ``UnitValue`` instance.
+        """
+        from pycartosym.codecs.sld._symbolizer import _build_graphic_content
+        from pycartosym.models.symbolizers import ImageGraphic, Resource
+
+        image = ImageGraphic(
+            image=Resource(uri="http://example.com/x.png"),
+            hot_spot=[{"pc": 50}, {"pc": 50}],
+        )
+        graphic = etree.Element(f"{{{NS['se']}}}Graphic")
+        _build_graphic_content(SldWriter().d, "Image", image, graphic)
+        anchor = graphic.find("se:AnchorPoint", NS)
+        assert anchor is not None
+        assert anchor.find("se:AnchorPointX", NS).text == "0.5"
+        assert anchor.find("se:AnchorPointY", NS).text == "0.5"
+
 
 class TestWritePattern:
     """``Fill``/``Stroke.pattern`` -> ``se:GraphicFill``/``se:GraphicStroke``."""

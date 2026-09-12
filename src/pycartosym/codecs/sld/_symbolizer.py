@@ -141,6 +141,7 @@ from typing import Any
 from lxml import etree
 
 from ...models.base import BaseCartoSymModel
+from ...models.types import UnitType, UnitValue
 from ...models.value_expressions import (
     ArithmeticExpression,
     InterpolateExpression,
@@ -1425,8 +1426,21 @@ def _build_graphic_displacement(
 
 
 def _percent_to_fraction(value: Any) -> float:
+    """Read one ``hotSpot`` axis as a 0.0-1.0 fraction.
+
+    ``hotSpot`` reuses the general ``unitValue`` shape's ``pc`` key
+    (``UnitType.PICAS`` everywhere else in this codec) to mean *percent*
+    instead — a deliberate, narrowly-scoped convention (issue #35), not a
+    naming mistake to "fix" by picking a different key. Accepts either
+    the raw ``{"pc": N}`` dict a loosely-typed ``Marker.elements``/
+    ``Label.elements`` entry keeps (never re-validated into a real
+    ``UnitPoint``/``UnitValue``), or an actual ``UnitValue(value=N,
+    unit=PICAS)`` instance from a strictly-typed ``ImageGraphic``.
+    """
     if isinstance(value, dict) and set(value) == {"pc"}:
         return float(value["pc"]) / 100
+    if isinstance(value, UnitValue) and value.unit == UnitType.PICAS:
+        return float(value.value) / 100
     raise NotImplementedError(
         f"ImageGraphic.hotSpot component {value!r} is not a percent (pc) "
         "unit value — only pc-unit hotSpot maps to se:AnchorPoint in this "
@@ -1437,12 +1451,12 @@ def _percent_to_fraction(value: Any) -> float:
 def _hot_spot_to_anchor_fraction(hot_spot: Any):
     if isinstance(hot_spot, (list, tuple)) and len(hot_spot) == 2:
         x_raw, y_raw = hot_spot
-    elif isinstance(hot_spot, dict) and "x" in hot_spot and "y" in hot_spot:
-        x_raw, y_raw = hot_spot["x"], hot_spot["y"]
     else:
-        raise NotImplementedError(
-            f"Unsupported ImageGraphic.hotSpot shape: {hot_spot!r}"
-        )
+        x_raw, y_raw = _g(hot_spot, "x"), _g(hot_spot, "y")
+        if x_raw is None or y_raw is None:
+            raise NotImplementedError(
+                f"Unsupported ImageGraphic.hotSpot shape: {hot_spot!r}"
+            )
     return _percent_to_fraction(x_raw), _percent_to_fraction(y_raw)
 
 

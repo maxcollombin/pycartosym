@@ -269,6 +269,10 @@ class UnitPoint(BaseCartoSymModel):
     x: UnitValue | str | float | PropertyRef
     y: UnitValue | str | float | PropertyRef
 
+    validate_axis_unit = field_validator("x", "y", mode="before")(
+        _validate_flexible_unit
+    )
+
     @model_validator(mode="before")
     @classmethod
     def parse_unit_point(cls, v):
