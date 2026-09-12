@@ -403,6 +403,33 @@ class TestWriteBasicSymbolizers:
         prop = text_sym.find("se:Label/ogc:PropertyName", NS)
         assert prop.text == "Name"
 
+    def test_label_text_font_color_and_opacity_produce_fill(self):
+        root = _write(
+            _rule_style(
+                {
+                    "label": {
+                        "elements": [
+                            {
+                                "type": "Text",
+                                "text": "Name",
+                                "font": {
+                                    "face": "Arial",
+                                    "color": "red",
+                                    "opacity": 0.5,
+                                },
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        fill_params = {
+            p.get("name"): p.text
+            for p in root.findall(".//se:TextSymbolizer/se:Fill/se:SvgParameter", NS)
+        }
+        assert fill_params["fill"] == "#ff0000"
+        assert fill_params["fill-opacity"] == "0.5"
+
     def test_multiple_dots_produce_sibling_point_symbolizers(self):
         root = _write(
             _rule_style(
@@ -2158,6 +2185,28 @@ class TestWritePropertyDrivenNestedElementFields:
         assert font_color is not None and font_color.text == "fontColourAttr"
         assert halo_size is not None and halo_size.text == "haloSizeAttr"
         assert halo_color is not None and halo_color.text == "haloColourAttr"
+
+    def test_font_model_accepts_color_opacity_and_outline(self):
+        """Regression: ``Font`` used to declare neither ``color``, ``opacity``
+        nor ``outline`` (``extra="forbid"``), even though the CartoSym-JSON
+        schema's own ``font`` definition has all three — harmless only
+        because ``Label.elements``/``Marker.elements`` (typed
+        ``list[Graphic]``/``Any``) never actually validated a ``Text``
+        element's nested ``font`` through the strict ``Font`` class, so
+        real SLD/SE font-color round-trips (``TestWriteBasicSymbolizers``
+        above) never hit this — but constructing a ``Font``/``TextGraphic``
+        directly, the correct typed way, raised a spurious
+        ``ValidationError``.
+        """
+        from pycartosym.models.symbolizers import Font, TextGraphic
+
+        font = Font(face="Arial", color="red", opacity=0.5, outline={"color": "white"})
+        assert font.color == "red"
+        assert font.opacity == 0.5
+        assert font.outline.color == "white"
+
+        text = TextGraphic(text="hello", font=font)
+        assert text.font.color == "red"
 
     def test_font_size_system_identifier_raises_cleanly(self):
         """Regression: used to crash the same way as ``Dot.size`` above."""

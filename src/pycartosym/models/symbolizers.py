@@ -299,14 +299,27 @@ class Resource(BaseCartoSymModel):
     sprite: str | None = Field(None, description="Icon atlas sprite id")
 
 
-class Font(BaseCartoSymModel):
-    """Font specification."""
+class Font(BaseCartoSymModel, AlterMixin):
+    """Font specification.
+
+    ``color``/``opacity``/``outline`` were missing here relative to the
+    CartoSym-JSON schema's own ``font`` definition — harmless in practice
+    only because ``Marker.elements``/``Label.elements`` (typed ``Any``)
+    never actually validates a ``Text`` element's nested ``font`` through
+    this class (it stays a raw dict, read via ``_g()`` in
+    ``codecs/sld/_symbolizer.py::_build_text_symbolizer``), but a real
+    trap for any future caller that does construct/validate a proper
+    ``Font``/``TextGraphic`` instance directly.
+    """
 
     face: str | None = Field(None, description="Font family name")
     size: FlexibleSize | None = Field(None, description="Font size")
     bold: bool | None = Field(None, description="Bold weight")
     italic: bool | None = Field(None, description="Italic style")
     underline: bool | None = Field(None, description="Underline decoration")
+    color: FlexibleColor | None = Field(None, description="Font color")
+    opacity: FlexibleOpacity | None = Field(None, description="Font opacity")
+    outline: FontOutline | None = Field(None, description="Font outline (halo)")
 
 
 class FontOutline(BaseCartoSymModel):
@@ -671,6 +684,7 @@ class Symbolizer(BaseCartoSymModel, CommentMixin):
 Fill.model_rebuild()
 Stroke.model_rebuild()
 StrokeStyling.model_rebuild()
+Font.model_rebuild()
 Marker.model_rebuild()
 Label.model_rebuild()
 AbstractGraphic.model_rebuild()

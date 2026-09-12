@@ -234,6 +234,9 @@ class TestReadBasicSymbolizers:
         el = sym.label.elements[0]
         assert el.text == {"property": "Name"}
         assert el.font["face"] == "Arial"
+        # se:Fill on the se:TextSymbolizer -> font.color/font.opacity.
+        assert el.font["color"] == [169, 169, 169]
+        assert el.font["opacity"] == 1.0
         assert el.alignment == ["left", "middle"]
         assert el.position.x == 20
 
