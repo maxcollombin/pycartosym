@@ -26,10 +26,11 @@ They are SE 1.1.0 (`se:` namespace, `se:SvgParameter`).
 `tests/test_sld_se_geostyler.py` reads the split straight from the
 directory layout:
 
-- **`in-scope/`** (26 files) — fully within this codec's vector +
-  Part-1-raster scope. Each must `read` → `write` → validate against the
-  vendored OGC XSD → `read` again to a Pydantic-model fixed point.
-- **`out-of-scope/`** (26 files) — using constructs this codec
+- **`in-scope/`** (28 files) — fully within this codec's vector +
+  Part-1/Part-2-raster+shapes scope. Each must `read` → `write` → validate
+  against the vendored OGC XSD → `read` again to a Pydantic-model fixed
+  point.
+- **`out-of-scope/`** (24 files) — using constructs this codec
   deliberately does not map. Each must raise `NotImplementedError` (a
   *clean* rejection — never another exception type).
 
@@ -37,28 +38,35 @@ Moving a file between the two directories is a deliberate act: the wrong
 behaviour then fails loudly, and `test_corpus_layout` asserts the split
 sizes and that no `.sld` is left uncategorised in the corpus root.
 
-## Out-of-scope breakdown (26 files)
+## Out-of-scope breakdown (24 files)
 
 The scope boundary, mapped against this corpus:
 
 | SE/SLD construct rejected | files | assessment |
 |---|---|---|
 | `se:Mark/se:WellKnownName` other than `circle`/`square` (`triangle`, `star`, `cross`, `x`, `shape://slash`, `ttf://` glyph) | 7 | extensible — needs a generic polygon shape (`ClosedPath`), not yet modeled; `square` itself mapped to `RectangleGraphic`, pycartosym issue #88 |
-| `se:GraphicFill` / `se:GraphicStroke` (hatch / pattern fills & strokes) | 6 | GeoServer vendor extension / CartoSym Part 2 |
 | `se:LabelPlacement/se:LinePlacement` | 3 | unfinished design work |
-| unmapped `se:SvgParameter` (`stroke-linecap`, `stroke-linejoin`, `stroke-dashoffset`) | 2 | CSS/SVG stroke hints with no CartoSym `Stroke` field |
-| `ogc:Function` inside `ogc:Filter` | 2 | no Filter Encoding 1.1 mapping without `ogc:Function` support |
+| `ogc:Function` inside `ogc:Filter` | 3 | no Filter Encoding 1.1 mapping without `ogc:Function` support |
+| unmapped/rejected stroke `se:SvgParameter` (`stroke-dashoffset` name; `stroke-linejoin` value `mitre`, the British spelling — only `miter`/`round`/`bevel` map) | 3 | CSS/SVG stroke hints with no CartoSym `Stroke` field, or a value this codec doesn't recognise |
+| `se:Stroke/se:GraphicFill` (filling a stroke's *width* with a repeated graphic, as opposed to stroking *along* it) | 2 | no CartoSym `Stroke` concept — `se:Stroke/se:GraphicStroke` (`Stroke.pattern`) is in scope, see below |
 | `ogc:Function` inside `se:Label` (`round`, …) | 1 | property-driven label text, out of scope |
 | `se:RasterSymbolizer/se:ContrastEnhancement` | 1 | "not supported by SLD/SE" per OGC Annex B |
 | `se:ExternalGraphic/se:InlineContent` (base64) | 1 | no `se:OnlineResource` |
 | bare `se:RasterSymbolizer` (only `se:Opacity`) | 1 | niche, no fix planned |
 | colour = `se:Categorize` function result | 1 | property-driven colour, out of scope |
+| `se:LineSymbolizer/se:PerpendicularOffset` | 1 | no CartoSym mapping |
 
 `se:TextSymbolizer/se:Halo` ↔ `font.outline` **is** now mapped (Part-1
 "font outlines"), so the 4 files that used it (`point_styledlabel*`,
 `zero_values`) are in-scope. `se:Min/MaxScaleDenominator` ↔ `viz.sd` is
-mapped too. The non-`circle`-mark rows (~8 files) are still "could
-reasonably be added"; the rest are deliberate Part-2 / vendor scope calls.
+mapped too. `se:Fill/se:GraphicFill` and `se:Stroke/se:GraphicStroke`
+(`Fill.pattern`/`Stroke.pattern`, Part 2 "Pattern Fills"/"Pattern
+Strokes" — a real, pure-SE 1.1.0 mapping per Annex B, no vendor
+extension needed) are now in-scope too —
+`polygon_graphicFill(_externalGraphic)` moved from `out-of-scope/` to
+`in-scope/` accordingly. The non-`circle`-mark rows (~8 files) are still
+"could reasonably be added"; the rest are deliberate Part-2 / vendor
+scope calls.
 
 **Source validity**: 6 of the 52 files are not themselves valid against
 the pure OGC SE 1.1.0 XSD (empty `<se:Filter/>`, `ogc:Function` where the

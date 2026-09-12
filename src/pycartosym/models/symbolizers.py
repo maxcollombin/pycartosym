@@ -188,9 +188,7 @@ class Stroke(BaseCartoSymModel, AlterMixin):
             "override {index, value}"
         ),
     )
-    pattern: dict[str, Any] | None = Field(
-        None, description="Stroke pattern graphic (temporary)"
-    )
+    pattern: Graphic | None = Field(None, description="Stroke pattern graphic")
 
     # Part 2 ("shapes") extension: line ends/corners — { butt, round,
     # square } / { miter, round, bevel } respectively.

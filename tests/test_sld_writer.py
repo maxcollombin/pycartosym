@@ -954,6 +954,98 @@ class TestWriteImage:
             SldWriter(SLD_1_0_0).write(style)
 
 
+class TestWritePattern:
+    """``Fill``/``Stroke.pattern`` -> ``se:GraphicFill``/``se:GraphicStroke``."""
+
+    def test_fill_pattern_dot_produces_graphic_fill(self):
+        root = _write(
+            _rule_style(
+                {
+                    "fill": {
+                        "pattern": {
+                            "type": "Dot",
+                            "color": "red",
+                            "size": {"px": 6},
+                        }
+                    }
+                }
+            )
+        )
+        graphic_fill = root.find(".//se:Fill/se:GraphicFill", NS)
+        assert graphic_fill is not None
+        mark = graphic_fill.find("se:Graphic/se:Mark", NS)
+        assert mark.find("se:WellKnownName", NS).text == "circle"
+        fill_param = mark.find("se:Fill/se:SvgParameter", NS)
+        assert fill_param.get("name") == "fill"
+        assert fill_param.text == "#ff0000"
+        assert graphic_fill.find("se:Graphic/se:Size", NS).text == "6"
+
+    def test_stroke_pattern_dot_produces_graphic_stroke(self):
+        root = _write(
+            _rule_style(
+                {
+                    "stroke": {
+                        "color": "black",
+                        "pattern": {"type": "Dot", "color": "blue", "size": {"px": 4}},
+                    }
+                }
+            )
+        )
+        stroke = root.find(".//se:LineSymbolizer/se:Stroke", NS)
+        graphic_stroke = stroke.find("se:GraphicStroke", NS)
+        assert graphic_stroke is not None
+        mark = graphic_stroke.find("se:Graphic/se:Mark", NS)
+        assert mark.find("se:WellKnownName", NS).text == "circle"
+        # se:StrokeType order: (GraphicFill|GraphicStroke)?, SvgParameter* —
+        # the outline's own colour still writes as a sibling SvgParameter.
+        stroke_params = {
+            p.get("name"): p.text for p in stroke.findall("se:SvgParameter", NS)
+        }
+        assert stroke_params["stroke"] == "#000000"
+
+    def test_stroke_pattern_image_produces_external_graphic(self):
+        root = _write(
+            _rule_style(
+                {
+                    "stroke": {
+                        "pattern": {
+                            "type": "Image",
+                            "image": {"uri": "http://example.com/x.png"},
+                        }
+                    }
+                }
+            )
+        )
+        online = root.find(
+            ".//se:Stroke/se:GraphicStroke/se:Graphic/se:ExternalGraphic/"
+            "se:OnlineResource",
+            NS,
+        )
+        assert online is not None
+        assert online.get(f"{{{NS['xlink']}}}href") == "http://example.com/x.png"
+
+    def test_fill_pattern_multi_element_raises(self):
+        with pytest.raises(NotImplementedError):
+            _write(
+                _rule_style(
+                    {
+                        "fill": {
+                            "pattern": {
+                                "elements": [
+                                    {"type": "Dot", "color": "red"},
+                                    {"type": "Dot", "color": "blue"},
+                                ]
+                            }
+                        }
+                    }
+                )
+            )
+
+    def test_stroke_pattern_text_type_raises(self):
+        with pytest.raises(NotImplementedError):
+            _write(_rule_style({"stroke": {"pattern": {"type": "Text", "text": "x"}}}))
+
+
 class TestWriteRaster:
     def test_color_channels_produce_channel_selection_rgb(self):
         root = _write(

@@ -102,6 +102,35 @@ sources. On read, an ``se:Mark``/
 ``se:TextSymbolizer`` always reconstructs into ``label.elements`` (SLD/SE
 has no construct distinguishing CartoSym's separate marker-text vs
 label-text concepts, so this read direction is inherently lossy).
+
+``Fill.pattern``/``Stroke.pattern`` (Part 2 "Pattern Fills"/"Pattern
+Strokes") map to ``se:Fill/se:GraphicFill``/``se:Stroke/se:GraphicStroke``
+— pure SE 1.1.0, no vendor extension needed, unlike the GeoServer
+``shape://`` hatch/stipple fills. The nested ``se:Graphic`` reuses the
+same ``Dot``/``Circle``/``Rectangle``/``Image`` content as a point
+``se:Graphic`` (see :func:`_build_graphic_content`/
+:func:`_parse_graphic_element`) — ``Text`` is not representable here
+(``se:GraphicFill``/``se:GraphicStroke`` can only hold one ``se:Graphic``,
+i.e. a ``Mark`` or an ``ExternalGraphic``, never a ``TextSymbolizer``),
+and a multi-element (``multiGraphic``) pattern has no mapping either,
+since the XSD allows exactly one nested ``se:Graphic``. Annex B's own
+"Pattern Strokes" table also names a second alternative,
+``se:Mark``/``se:OnlineResource``/``se:MarkIndex`` (a reference into an
+external mark/font-glyph library, distinct from ``se:ExternalGraphic``) —
+this has no corresponding CartoSym conceptual-model construct at all and
+is out of scope. ``patternGap``/``patternInitialGap`` are not modeled
+yet — no CartoSym-JSON schema/Pydantic field exists for them, so this
+codec has nothing to read them into or write them from. (Annex B's own
+"Pattern Strokes" worked example represents them with
+``stroke-dasharray``/``stroke-dashoffset`` ``SvgParameter``s, but that
+example is itself SLD 1.0.0 vocabulary wrapped in a document claiming SE
+1.1.0 — the real SE 1.1.0 elements for this are ``se:GraphicStroke``'s
+own ``se:InitialGap``/``se:Gap`` children, confirmed against
+``Symbolizer.xsd``; a future implementation of these two fields should
+target those, not the ``SvgParameter`` form the example shows.)
+``se:Stroke/se:GraphicFill`` (filling a line's width with a repeated
+graphic, as opposed to stroking *along* it) has no CartoSym ``Stroke``
+concept and still raises.
 """
 
 from __future__ import annotations
@@ -396,7 +425,7 @@ def _graphic_elements_to_symbolizers(
 
 
 def _raise_if_fill_out_of_scope(fill: Any) -> None:
-    for attr in ("hatch", "dotpattern", "stipple", "pattern"):
+    for attr in ("hatch", "dotpattern", "stipple"):
         if _g(fill, attr) is not None:
             raise NotImplementedError(
                 f"Fill.{attr} has no SLD/SE mapping in this codec"
@@ -824,11 +853,43 @@ def _write_numeric_element(
     return el
 
 
+def _build_pattern_graphic(
+    d: SldDialect, pattern: Any, field_label: str, base_opacity: float | None = None
+) -> etree._Element:
+    """Build a bare ``se:Graphic`` for ``Fill.pattern``/``Stroke.pattern``.
+
+    Unlike a point ``se:Graphic`` (always wrapped in its own
+    ``se:PointSymbolizer``), this one is embedded directly inside
+    ``se:GraphicFill``/``se:GraphicStroke`` — the content itself is built
+    by the shared :func:`_build_graphic_content`.
+    """
+    if _g(pattern, "elements") is not None:
+        raise NotImplementedError(
+            f"{field_label}: a multi-element graphic pattern has no "
+            "SLD/SE mapping in this codec — se:GraphicFill/se:GraphicStroke "
+            "can only hold a single se:Graphic"
+        )
+    el_type = _g(pattern, "type")
+    graphic = d.el("Graphic")
+    try:
+        _build_graphic_content(d, el_type, pattern, graphic, base_opacity)
+    except NotImplementedError as exc:
+        raise NotImplementedError(f"{field_label}: {exc}") from exc
+    return graphic
+
+
 def _build_fill_element(
     d: SldDialect, fill: Any, base_opacity: float | None = None
 ) -> etree._Element:
     _raise_if_fill_out_of_scope(fill)
     el = d.el("Fill")
+    # se:FillType order: GraphicFill?, SvgParameter*.
+    pattern = _g(fill, "pattern")
+    if pattern is not None:
+        graphic_fill = d.el("GraphicFill", parent=el)
+        graphic_fill.append(
+            _build_pattern_graphic(d, pattern, "Fill.pattern", base_opacity)
+        )
     color = _g(fill, "color")
     if color is not None:
         _write_color_param(d, el, "fill", color)
@@ -845,10 +906,6 @@ def _raise_if_stroke_out_of_scope(stroke: Any) -> None:
         raise NotImplementedError(
             "Stroke.centerLine has no SLD/SE mapping in this codec"
         )
-    if _g(stroke, "pattern") is not None:
-        raise NotImplementedError(
-            "Stroke.pattern (graphic stroke) has no SLD/SE mapping in this codec"
-        )
 
 
 def _build_stroke_element(
@@ -856,6 +913,16 @@ def _build_stroke_element(
 ) -> etree._Element:
     _raise_if_stroke_out_of_scope(stroke)
     el = d.el("Stroke")
+    # se:StrokeType order: (GraphicFill|GraphicStroke)?, SvgParameter*.
+    # Only se:GraphicStroke has a CartoSym concept (Stroke.pattern) — a
+    # se:Stroke/se:GraphicFill (filling the line's width, not stroking
+    # along it) has none.
+    pattern = _g(stroke, "pattern")
+    if pattern is not None:
+        graphic_stroke = d.el("GraphicStroke", parent=el)
+        graphic_stroke.append(
+            _build_pattern_graphic(d, pattern, "Stroke.pattern", base_opacity)
+        )
     color = _g(stroke, "color")
     width = _g(stroke, "width")
     dash_pattern = _g(stroke, "dash_pattern")
@@ -1084,29 +1151,153 @@ def _build_raster_symbolizer(
     return rs
 
 
+def _build_graphic_content(
+    d: SldDialect,
+    el_type: str | None,
+    element: Any,
+    graphic: etree._Element,
+    base_opacity: float | None = None,
+) -> None:
+    """Populate an already-created, empty ``se:Graphic`` element.
+
+    Shared by the point-symbolizer builders below (each wraps the result
+    in its own ``se:PointSymbolizer``) and :func:`_build_pattern_graphic`
+    (``Fill.pattern``/``Stroke.pattern``, embedded directly inside
+    ``se:GraphicFill``/``se:GraphicStroke`` with no symbolizer wrapper) —
+    the ``se:Graphic`` content itself (``se:Mark``/``se:ExternalGraphic``
+    plus ``Opacity``/``Size``/``Rotation``/``Displacement``) is identical
+    either way. Only ``Dot``/``Circle``/``Rectangle``/``Image`` are
+    supported here — ``Text`` has no ``se:Graphic`` representation (it's
+    always a sibling ``se:TextSymbolizer``, see
+    :func:`_build_text_symbolizer`), so it's dispatched separately by
+    :func:`_graphic_elements_to_symbolizers` and never reaches this
+    function.
+    """
+    if el_type == "Dot":
+        mark = d.el("Mark", parent=graphic)
+        d.el("WellKnownName", parent=mark, text="circle")
+
+        color = _g(element, "color")
+        if color is not None:
+            fill_el = d.el("Fill", parent=mark)
+            _write_color_param(d, fill_el, "fill", color)
+
+        # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?, ...
+        combined = _combine_opacity(base_opacity, _g(element, "opacity"))
+        if combined is not None:
+            d.el("Opacity", parent=graphic, text=combined)
+
+        size = _g(element, "size")
+        if size is not None:
+            _write_numeric_element(d, graphic, "Size", size)
+
+        _build_graphic_displacement(d, graphic, _g(element, "position"), "Dot")
+    elif el_type in ("Circle", "Rectangle"):
+        mark = d.el("Mark", parent=graphic)
+        wkn = "circle" if el_type == "Circle" else "square"
+        d.el("WellKnownName", parent=mark, text=wkn)
+
+        fill = _g(element, "fill")
+        if fill is not None:
+            mark.append(_build_fill_element(d, fill, base_opacity))
+
+        outline = _g(element, "outline")
+        if outline is not None:
+            mark.append(_build_shape_outline_element(d, outline, base_opacity))
+
+        combined = _combine_opacity(base_opacity, _g(element, "opacity"))
+        if combined is not None:
+            d.el("Opacity", parent=graphic, text=combined)
+
+        if el_type == "Circle":
+            radius = _g(element, "radius")
+            if radius is not None:
+                diameter = _number_of(radius)
+                if diameter is None:
+                    raise NotImplementedError(
+                        f"Property-driven / expression Circle.radius {radius!r} "
+                        "has no SLD/SE mapping in this codec"
+                    )
+                d.el("Size", parent=graphic, text=format_number(diameter * 2))
+        else:
+            width = _number_of(_g(element, "width"))
+            height = _number_of(_g(element, "height"))
+            if width is not None or height is not None:
+                if width is None or height is None:
+                    raise NotImplementedError(
+                        "Property-driven / expression RectangleGraphic "
+                        "width/height has no SLD/SE mapping in this codec"
+                    )
+                if width != height:
+                    raise NotImplementedError(
+                        f"RectangleGraphic with width ({width!r}) != height "
+                        f"({height!r}) has no SLD/SE mapping in this codec — "
+                        'se:Mark wellKnownName="square" only represents a '
+                        "single uniform se:Size"
+                    )
+                d.el("Size", parent=graphic, text=format_number(width))
+
+        _write_rotation(d, graphic, _g(element, "transform"))
+        _build_graphic_displacement(d, graphic, _g(element, "position"), el_type)
+    elif el_type == "Image":
+        _raise_if_image_out_of_scope(element)
+
+        resource = _g(element, "image")
+        if resource is None:
+            raise NotImplementedError("ImageGraphic.image (Resource) is required")
+        uri = _g(resource, "uri")
+        if uri is None:
+            raise NotImplementedError(
+                "Resource.path-only images (no uri) have no SLD/SE mapping "
+                "in this codec — no local-file resolution"
+            )
+        mime_type = _g(resource, "type")
+
+        ext_graphic = d.el("ExternalGraphic", parent=graphic)
+        online_resource = d.el("OnlineResource", parent=ext_graphic)
+        online_resource.set(f"{XLINK}type", "simple")
+        online_resource.set(f"{XLINK}href", uri)
+        if mime_type is not None:
+            d.el("Format", parent=ext_graphic, text=mime_type)
+
+        # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?,
+        # Rotation?, AnchorPoint?, Displacement?
+        combined = _combine_opacity(base_opacity, _g(element, "opacity"))
+        if combined is not None:
+            d.el("Opacity", parent=graphic, text=combined)
+
+        _write_rotation(d, graphic, _g(element, "transform"))
+
+        hot_spot = _g(element, "hotSpot")
+        if hot_spot is not None:
+            fx, fy = _hot_spot_to_anchor_fraction(hot_spot)
+            if not d.graphic_placement:
+                raise NotImplementedError(
+                    "ImageGraphic.hotSpot has no SLD 1.0.0 Graphic mapping "
+                    "(Graphic has no AnchorPoint child)"
+                )
+            # se:AnchorPoint belongs inside se:Graphic (after
+            # ExternalGraphic/Mark, Opacity, Size, Rotation), not directly
+            # under the symbolizer.
+            anchor_el = d.el("AnchorPoint", parent=graphic)
+            d.el("AnchorPointX", parent=anchor_el, text=format_number(fx))
+            d.el("AnchorPointY", parent=anchor_el, text=format_number(fy))
+
+        _build_graphic_displacement(d, graphic, _g(element, "position"), "ImageGraphic")
+    else:
+        raise NotImplementedError(
+            f"Graphic element type {el_type!r} has no SLD/SE mapping in "
+            "this codec's scope (only Dot/Circle/Rectangle/Image are "
+            "supported here)"
+        )
+
+
 def _build_point_symbolizer(
     d: SldDialect, dot: Any, base_opacity: float | None = None
 ) -> etree._Element:
     ps = d.el("PointSymbolizer")
     graphic = d.el("Graphic", parent=ps)
-    mark = d.el("Mark", parent=graphic)
-    d.el("WellKnownName", parent=mark, text="circle")
-
-    color = _g(dot, "color")
-    if color is not None:
-        fill_el = d.el("Fill", parent=mark)
-        _write_color_param(d, fill_el, "fill", color)
-
-    # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?, ...
-    combined = _combine_opacity(base_opacity, _g(dot, "opacity"))
-    if combined is not None:
-        d.el("Opacity", parent=graphic, text=combined)
-
-    size = _g(dot, "size")
-    if size is not None:
-        _write_numeric_element(d, graphic, "Size", size)
-
-    _build_graphic_displacement(d, graphic, _g(dot, "position"), "Dot")
+    _build_graphic_content(d, "Dot", dot, graphic, base_opacity)
     return ps
 
 
@@ -1165,35 +1356,7 @@ def _build_circle_symbolizer(
     """
     ps = d.el("PointSymbolizer")
     graphic = d.el("Graphic", parent=ps)
-    mark = d.el("Mark", parent=graphic)
-    d.el("WellKnownName", parent=mark, text="circle")
-
-    fill = _g(circle, "fill")
-    if fill is not None:
-        mark.append(_build_fill_element(d, fill, base_opacity))
-
-    outline = _g(circle, "outline")
-    if outline is not None:
-        mark.append(_build_shape_outline_element(d, outline, base_opacity))
-
-    # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?,
-    # Rotation?, AnchorPoint?, Displacement?
-    combined = _combine_opacity(base_opacity, _g(circle, "opacity"))
-    if combined is not None:
-        d.el("Opacity", parent=graphic, text=combined)
-
-    radius = _g(circle, "radius")
-    if radius is not None:
-        diameter = _number_of(radius)
-        if diameter is None:
-            raise NotImplementedError(
-                f"Property-driven / expression Circle.radius {radius!r} has "
-                "no SLD/SE mapping in this codec"
-            )
-        d.el("Size", parent=graphic, text=format_number(diameter * 2))
-
-    _write_rotation(d, graphic, _g(circle, "transform"))
-    _build_graphic_displacement(d, graphic, _g(circle, "position"), "Circle")
+    _build_graphic_content(d, "Circle", circle, graphic, base_opacity)
     return ps
 
 
@@ -1210,40 +1373,7 @@ def _build_rectangle_symbolizer(
     """
     ps = d.el("PointSymbolizer")
     graphic = d.el("Graphic", parent=ps)
-    mark = d.el("Mark", parent=graphic)
-    d.el("WellKnownName", parent=mark, text="square")
-
-    fill = _g(rectangle, "fill")
-    if fill is not None:
-        mark.append(_build_fill_element(d, fill, base_opacity))
-
-    outline = _g(rectangle, "outline")
-    if outline is not None:
-        mark.append(_build_shape_outline_element(d, outline, base_opacity))
-
-    combined = _combine_opacity(base_opacity, _g(rectangle, "opacity"))
-    if combined is not None:
-        d.el("Opacity", parent=graphic, text=combined)
-
-    width = _number_of(_g(rectangle, "width"))
-    height = _number_of(_g(rectangle, "height"))
-    if width is not None or height is not None:
-        if width is None or height is None:
-            raise NotImplementedError(
-                "Property-driven / expression RectangleGraphic width/height "
-                "has no SLD/SE mapping in this codec"
-            )
-        if width != height:
-            raise NotImplementedError(
-                f"RectangleGraphic with width ({width!r}) != height "
-                f"({height!r}) has no SLD/SE mapping in this codec — "
-                'se:Mark wellKnownName="square" only represents a single '
-                "uniform se:Size"
-            )
-        d.el("Size", parent=graphic, text=format_number(width))
-
-    _write_rotation(d, graphic, _g(rectangle, "transform"))
-    _build_graphic_displacement(d, graphic, _g(rectangle, "position"), "Rectangle")
+    _build_graphic_content(d, "Rectangle", rectangle, graphic, base_opacity)
     return ps
 
 
@@ -1304,53 +1434,9 @@ def _raise_if_image_out_of_scope(image_graphic: Any) -> None:
 def _build_image_symbolizer(
     d: SldDialect, image_graphic: Any, base_opacity: float | None = None
 ) -> etree._Element:
-    _raise_if_image_out_of_scope(image_graphic)
-
-    resource = _g(image_graphic, "image")
-    if resource is None:
-        raise NotImplementedError("ImageGraphic.image (Resource) is required")
-    uri = _g(resource, "uri")
-    if uri is None:
-        raise NotImplementedError(
-            "Resource.path-only images (no uri) have no SLD/SE mapping in "
-            "this codec — no local-file resolution"
-        )
-    mime_type = _g(resource, "type")
-
     ps = d.el("PointSymbolizer")
     graphic = d.el("Graphic", parent=ps)
-    ext_graphic = d.el("ExternalGraphic", parent=graphic)
-    online_resource = d.el("OnlineResource", parent=ext_graphic)
-    online_resource.set(f"{XLINK}type", "simple")
-    online_resource.set(f"{XLINK}href", uri)
-    if mime_type is not None:
-        d.el("Format", parent=ext_graphic, text=mime_type)
-
-    # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?,
-    # Rotation?, AnchorPoint?, Displacement?
-    combined = _combine_opacity(base_opacity, _g(image_graphic, "opacity"))
-    if combined is not None:
-        d.el("Opacity", parent=graphic, text=combined)
-
-    _write_rotation(d, graphic, _g(image_graphic, "transform"))
-
-    hot_spot = _g(image_graphic, "hotSpot")
-    if hot_spot is not None:
-        fx, fy = _hot_spot_to_anchor_fraction(hot_spot)
-        if not d.graphic_placement:
-            raise NotImplementedError(
-                "ImageGraphic.hotSpot has no SLD 1.0.0 Graphic mapping "
-                "(Graphic has no AnchorPoint child)"
-            )
-        # se:AnchorPoint belongs inside se:Graphic (after ExternalGraphic/
-        # Mark, Opacity, Size, Rotation), not directly under the symbolizer.
-        anchor_el = d.el("AnchorPoint", parent=graphic)
-        d.el("AnchorPointX", parent=anchor_el, text=format_number(fx))
-        d.el("AnchorPointY", parent=anchor_el, text=format_number(fy))
-
-    _build_graphic_displacement(
-        d, graphic, _g(image_graphic, "position"), "ImageGraphic"
-    )
+    _build_graphic_content(d, "Image", image_graphic, graphic, base_opacity)
     return ps
 
 
@@ -1778,13 +1864,11 @@ def _parse_flexible_numeric_param(
 
 
 def _parse_fill_element(d: SldDialect, fill_el: etree._Element) -> dict:
-    if d.find(fill_el, "GraphicFill") is not None:
-        raise NotImplementedError(
-            "se:Fill/se:GraphicFill (hatch/pattern fills) is out of scope "
-            "for this codec"
-        )
-    _reject_unknown_params(d, fill_el, {"fill", "fill-opacity"}, "Fill")
     result: dict = {}
+    graphic_fill_el = d.find(fill_el, "GraphicFill")
+    if graphic_fill_el is not None:
+        result["pattern"] = _parse_pattern_graphic(d, graphic_fill_el, "Fill.pattern")
+    _reject_unknown_params(d, fill_el, {"fill", "fill-opacity"}, "Fill")
     color = _parse_flexible_param(d, fill_el, "fill")
     opacity = _parse_flexible_param(d, fill_el, "fill-opacity")
     if color is not None:
@@ -1797,12 +1881,18 @@ def _parse_fill_element(d: SldDialect, fill_el: etree._Element) -> dict:
 
 
 def _parse_stroke_element(d: SldDialect, stroke_el: etree._Element) -> dict:
-    if (
-        d.find(stroke_el, "GraphicStroke") is not None
-        or d.find(stroke_el, "GraphicFill") is not None
-    ):
+    if d.find(stroke_el, "GraphicFill") is not None:
         raise NotImplementedError(
-            "se:Stroke graphic-fill/-stroke patterns are out of scope for this codec"
+            "se:Stroke/se:GraphicFill (filling a stroke's width with a "
+            "repeated graphic, as opposed to stroking along it) has no "
+            "CartoSym Stroke concept in this codec — only "
+            "se:Stroke/se:GraphicStroke (Stroke.pattern) is supported"
+        )
+    result: dict = {}
+    graphic_stroke_el = d.find(stroke_el, "GraphicStroke")
+    if graphic_stroke_el is not None:
+        result["pattern"] = _parse_pattern_graphic(
+            d, graphic_stroke_el, "Stroke.pattern"
         )
     _reject_unknown_params(
         d,
@@ -1817,7 +1907,6 @@ def _parse_stroke_element(d: SldDialect, stroke_el: etree._Element) -> dict:
         },
         "Stroke",
     )
-    result: dict = {}
     color = _parse_flexible_param(d, stroke_el, "stroke")
     width = _parse_flexible_numeric_param(d, stroke_el, "stroke-width")
     opacity = _parse_flexible_param(d, stroke_el, "stroke-opacity")
@@ -2000,12 +2089,15 @@ def _parse_raster_symbolizer(d: SldDialect, el: etree._Element) -> dict:
     return result
 
 
-def _parse_point_symbolizer(d: SldDialect, ps_el: etree._Element) -> dict:
-    graphic_el = d.find(ps_el, "Graphic")
-    if graphic_el is None:
-        raise NotImplementedError(
-            "se:PointSymbolizer without se:Graphic is not supported"
-        )
+def _parse_graphic_element(d: SldDialect, graphic_el: etree._Element) -> dict:
+    """Parse one ``se:Graphic``'s content (``se:Mark`` or ``se:ExternalGraphic``).
+
+    Shared by :func:`_parse_point_symbolizer` (a ``se:PointSymbolizer``'s
+    own ``se:Graphic``) and :func:`_parse_pattern_graphic`
+    (``se:GraphicFill``/``se:GraphicStroke``'s nested ``se:Graphic``,
+    ``Fill.pattern``/``Stroke.pattern``) — the content itself is identical
+    either way.
+    """
     mark_el = d.find(graphic_el, "Mark")
     if mark_el is not None:
         result = _parse_mark(d, mark_el, graphic_el)
@@ -2023,7 +2115,35 @@ def _parse_point_symbolizer(d: SldDialect, ps_el: etree._Element) -> dict:
     rotation_text = element_text(d.find(graphic_el, "Rotation"))
     if rotation_text is not None:
         result["transform"] = {"orientation": parse_angle(rotation_text)}
+    # se:Opacity is likewise a direct se:Graphic child either way — was
+    # only ever parsed on the Mark branch until Fill.pattern/
+    # Stroke.pattern made a plain se:Graphic/se:ExternalGraphic (no Mark)
+    # reachable from se:Fill/se:Stroke too, exposing the gap.
+    opacity_text = element_text(d.find(graphic_el, "Opacity"))
+    if opacity_text and opacity_text.strip():
+        result["opacity"] = parse_opacity(opacity_text.strip())
     return result
+
+
+def _parse_point_symbolizer(d: SldDialect, ps_el: etree._Element) -> dict:
+    graphic_el = d.find(ps_el, "Graphic")
+    if graphic_el is None:
+        raise NotImplementedError(
+            "se:PointSymbolizer without se:Graphic is not supported"
+        )
+    return _parse_graphic_element(d, graphic_el)
+
+
+def _parse_pattern_graphic(
+    d: SldDialect, container_el: etree._Element, field_label: str
+) -> dict:
+    graphic_el = d.find(container_el, "Graphic")
+    if graphic_el is None:
+        raise NotImplementedError(
+            f"{field_label}: {local_name(container_el.tag)} without "
+            "se:Graphic is not supported"
+        )
+    return _parse_graphic_element(d, graphic_el)
 
 
 def _px(value: float) -> dict:
@@ -2111,9 +2231,6 @@ def _parse_mark(
                 result["width"] = side
                 result["height"] = side
 
-    opacity_text = element_text(d.find(graphic_el, "Opacity"))
-    if opacity_text and opacity_text.strip():
-        result["opacity"] = parse_opacity(opacity_text.strip())
     return result
 
 

@@ -33,13 +33,15 @@ IN_SCOPE = {
         "vendor.geoserver.group": True,
         "vendor.geoserver.autoWrap": 100,
     },
+    "pattern_polygon.sld": {
+        "vendor.geoserver.graphic-margin": "4 6 2 3",
+    },
 }
 
 # <VendorOption> files still out of scope under sld:geoserver, each for a
 # reason that has nothing to do with the vendor option.
 OUT_OF_SCOPE = {
     "default_generic.sld": "<ogc:Function> in filter",
-    "pattern_polygon.sld": "Fill/GraphicFill (pattern fill)",
     "tiger_roads.sld": "LabelPlacement/LinePlacement",
 }
 

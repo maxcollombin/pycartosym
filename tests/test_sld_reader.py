@@ -586,6 +586,83 @@ class TestReadImage:
         assert el["hotSpot"] == [{"pc": 50}, {"pc": 50}]
 
 
+class TestReadPattern:
+    """``se:GraphicFill``/``se:GraphicStroke`` -> ``Fill``/``Stroke.pattern``."""
+
+    def _read_string(self, xml):
+        return SldReader().read(xml)
+
+    def test_fill_graphic_fill_mark_reads_as_pattern(self):
+        xml = """<?xml version='1.0' encoding='UTF-8'?>
+<StyledLayerDescriptor
+    xmlns="http://www.opengis.net/sld"
+    xmlns:se="http://www.opengis.net/se"
+    xmlns:ogc="http://www.opengis.net/ogc"
+    version="1.1.0">
+  <NamedLayer><UserStyle><se:FeatureTypeStyle><se:Rule>
+    <se:PolygonSymbolizer><se:Fill>
+      <se:GraphicFill><se:Graphic>
+        <se:Mark>
+          <se:WellKnownName>circle</se:WellKnownName>
+          <se:Fill><se:SvgParameter name="fill">#FF0000</se:SvgParameter></se:Fill>
+        </se:Mark>
+        <se:Size>6</se:Size>
+      </se:Graphic></se:GraphicFill>
+    </se:Fill></se:PolygonSymbolizer>
+  </se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>
+</StyledLayerDescriptor>"""
+        style = self._read_string(xml)
+        pattern = style.styling_rules[0].symbolizer.fill.pattern
+        # A filled se:Mark wellKnownName="circle" always reads as a
+        # 2-shapes Circle (issue #46), same as a point se:Graphic.
+        assert pattern.type == "Circle"
+        assert pattern.fill == {"color": [255, 0, 0]}
+        assert pattern.radius == {"px": 3}
+
+    def test_stroke_graphic_stroke_external_graphic_reads_as_pattern(self):
+        xml = """<?xml version='1.0' encoding='UTF-8'?>
+<StyledLayerDescriptor
+    xmlns="http://www.opengis.net/sld"
+    xmlns:se="http://www.opengis.net/se"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    version="1.1.0">
+  <NamedLayer><UserStyle><se:FeatureTypeStyle><se:Rule>
+    <se:LineSymbolizer><se:Stroke>
+      <se:GraphicStroke><se:Graphic>
+        <se:ExternalGraphic>
+          <se:OnlineResource xlink:type="simple" xlink:href="http://example.com/x.png"/>
+          <se:Format>image/png</se:Format>
+        </se:ExternalGraphic>
+      </se:Graphic></se:GraphicStroke>
+      <se:SvgParameter name="stroke">#000000</se:SvgParameter>
+    </se:Stroke></se:LineSymbolizer>
+  </se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>
+</StyledLayerDescriptor>"""
+        style = self._read_string(xml)
+        sym = style.styling_rules[0].symbolizer
+        pattern = sym.stroke.pattern
+        assert pattern.type == "Image"
+        assert pattern.image == {"uri": "http://example.com/x.png", "type": "image/png"}
+        assert sym.stroke.color == [0, 0, 0]
+
+    def test_stroke_graphic_fill_raises(self):
+        xml = """<?xml version='1.0' encoding='UTF-8'?>
+<StyledLayerDescriptor
+    xmlns="http://www.opengis.net/sld"
+    xmlns:se="http://www.opengis.net/se"
+    version="1.1.0">
+  <NamedLayer><UserStyle><se:FeatureTypeStyle><se:Rule>
+    <se:LineSymbolizer><se:Stroke>
+      <se:GraphicFill><se:Graphic>
+        <se:Mark><se:WellKnownName>circle</se:WellKnownName></se:Mark>
+      </se:Graphic></se:GraphicFill>
+    </se:Stroke></se:LineSymbolizer>
+  </se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>
+</StyledLayerDescriptor>"""
+        with pytest.raises(NotImplementedError):
+            self._read_string(xml)
+
+
 class TestReadRaster:
     def test_single_channel_colormap(self):
         style = _read("11-raster-single-channel-colormap.sld")

@@ -31,8 +31,8 @@ OUT_OF_SCOPE = sorted(p.stem for p in OUT_OF_SCOPE_DIR.glob("*.sld"))
 
 # Upstream corpus is 52 files; this split is asserted so an accidental
 # add/remove/miscategorisation is caught (see the fixtures README).
-_EXPECTED_IN_SCOPE = 26
-_EXPECTED_OUT_OF_SCOPE = 26
+_EXPECTED_IN_SCOPE = 28
+_EXPECTED_OUT_OF_SCOPE = 24
 
 
 def test_corpus_layout():
