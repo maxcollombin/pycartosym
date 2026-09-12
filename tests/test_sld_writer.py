@@ -980,6 +980,27 @@ class TestWriteImage:
         with pytest.raises(NotImplementedError):
             SldWriter(SLD_1_0_0).write(style)
 
+    def test_g_resolves_alias_on_a_typed_model_not_just_dicts(self):
+        """Regression: ``_g(element, "hotSpot")`` reads the CS-JSON alias
+        spelling (``ImageGraphic.hot_spot``'s ``alias="hotSpot"``), which
+        works for a raw dict/``extra="allow"`` attribute (both keep the
+        literal input key) but never for a real, strictly-typed model
+        instance — ``getattr`` only ever resolves a field's Python name,
+        never its Pydantic alias. Harmless for ``Marker.elements``/
+        ``Label.elements`` (never actually re-validated into
+        ``ImageGraphic``, so ``hotSpot`` stayed a raw key either way), but
+        a real trap for an ``ImageGraphic`` (or any aliased field) built
+        directly, the correct typed way — same shape as the ``Font`` bug
+        above, just in ``_g`` instead of the model.
+        """
+        from pycartosym.codecs.sld._symbolizer import _g
+        from pycartosym.models.symbolizers import ImageGraphic, Resource
+
+        image = ImageGraphic(image=Resource(uri="x"), black_tint="red")
+        assert _g(image, "blackTint") == "red"
+        assert _g(image, "black_tint") == "red"
+        assert _g(image, "nope", "default") == "default"
+
 
 class TestWritePattern:
     """``Fill``/``Stroke.pattern`` -> ``se:GraphicFill``/``se:GraphicStroke``."""

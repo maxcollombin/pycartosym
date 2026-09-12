@@ -169,13 +169,37 @@ _ANCHOR_X_TO_H = {"0": "left", "0.5": "center", "1": "right"}
 _ANCHOR_Y_TO_V = {"1": "top", "0.5": "middle", "0": "bottom"}
 
 
+_MISSING = object()
+
+
 def _g(obj: Any, key: str, default: Any = None) -> Any:
-    """Get *key* from *obj*, whether it's a plain dict or a Pydantic model."""
+    """Get *key* from *obj*, whether it's a plain dict or a Pydantic model.
+
+    *key* is conventionally the field's Python (snake_case) name, which
+    ``getattr`` resolves directly on a real model instance. But a
+    graphic-element field (``Marker.elements``/``Label.elements``, typed
+    ``Any``/``list[Graphic]``) is never actually re-validated into its
+    concrete subclass (``ImageGraphic``, ...) — it stays a raw dict or an
+    ``extra="allow"`` attribute stored under whatever key the input JSON
+    used, i.e. the CS-JSON *alias* (``hotSpot``, camelCase). Some call
+    sites therefore pass the alias instead, which works for those two
+    cases but not for a strictly-typed instance built directly (e.g.
+    ``ImageGraphic(hot_spot=...)``), since ``getattr`` never resolves a
+    Pydantic alias — only the field's own declared model_fields do. Fall
+    back to an alias lookup so both spellings work either way.
+    """
     if obj is None:
         return default
     if isinstance(obj, dict):
         return obj.get(key, default)
-    return getattr(obj, key, default)
+    value = getattr(obj, key, _MISSING)
+    if value is not _MISSING:
+        return value
+    if isinstance(obj, BaseCartoSymModel):
+        for name, field in type(obj).model_fields.items():
+            if field.alias == key:
+                return getattr(obj, name, default)
+    return default
 
 
 def _number_of(value: Any) -> float | None:
