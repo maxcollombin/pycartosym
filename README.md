@@ -59,7 +59,7 @@ cartosym validate <input-file>
 cartosym --help
 ```
 
-A few concrete conversions, using the files under [`examples/`](examples/)
+A few concrete conversions, using the files under [`examples/`](https://github.com/maxcollombin/pycartosym/tree/main/examples/)
 (`examples/sld/` for SLD/SE):
 
 ```bash
@@ -113,4 +113,4 @@ uv run pytest
 
 ## License
 
-See [LICENSE](LICENSE).
+See [LICENSE](https://github.com/maxcollombin/pycartosym/blob/main/LICENSE).
