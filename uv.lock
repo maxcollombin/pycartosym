@@ -155,62 +155,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pycartosym"
-version = "0.2.0"
-source = { editable = "." }
-dependencies = [
-    { name = "antlr4-python3-runtime" },
-    { name = "jsonschema" },
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "antlr4-tools" },
-    { name = "black" },
-    { name = "lxml" },
-    { name = "mypy" },
-    { name = "pygeofilter" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "xmlschema" },
-]
-cql2 = [
-    { name = "pygeofilter" },
-]
-dev = [
-    { name = "antlr4-tools" },
-    { name = "black" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "xmlschema" },
-]
-sld = [
-    { name = "lxml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "antlr4-python3-runtime", specifier = ">=4.13.0" },
-    { name = "antlr4-tools", marker = "extra == 'dev'", specifier = ">=0.2.0" },
-    { name = "black", marker = "extra == 'dev'" },
-    { name = "pycartosym", extras = ["dev", "sld", "cql2", "maplibre"], marker = "extra == 'all'" },
-    { name = "jsonschema", specifier = ">=4.0.0" },
-    { name = "lxml", marker = "extra == 'sld'", specifier = ">=4.9.0" },
-    { name = "mypy", marker = "extra == 'dev'" },
-    { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pygeofilter", marker = "extra == 'cql2'", specifier = ">=0.2.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "xmlschema", marker = "extra == 'dev'", specifier = ">=3.0" },
-]
-provides-extras = ["dev", "sld", "maplibre", "cql2", "all"]
-
-[[package]]
 name = "click"
 version = "8.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -847,6 +791,62 @@ sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
 ]
+
+[[package]]
+name = "pycartosym"
+version = "0.2.2"
+source = { editable = "." }
+dependencies = [
+    { name = "antlr4-python3-runtime" },
+    { name = "jsonschema" },
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "antlr4-tools" },
+    { name = "black" },
+    { name = "lxml" },
+    { name = "mypy" },
+    { name = "pygeofilter" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "xmlschema" },
+]
+cql2 = [
+    { name = "pygeofilter" },
+]
+dev = [
+    { name = "antlr4-tools" },
+    { name = "black" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "xmlschema" },
+]
+sld = [
+    { name = "lxml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "antlr4-python3-runtime", specifier = ">=4.13.0" },
+    { name = "antlr4-tools", marker = "extra == 'dev'", specifier = ">=0.2.0" },
+    { name = "black", marker = "extra == 'dev'" },
+    { name = "jsonschema", specifier = ">=4.0.0" },
+    { name = "lxml", marker = "extra == 'sld'", specifier = ">=4.9.0" },
+    { name = "mypy", marker = "extra == 'dev'" },
+    { name = "pycartosym", extras = ["dev", "sld", "cql2", "maplibre"], marker = "extra == 'all'" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pygeofilter", marker = "extra == 'cql2'", specifier = ">=0.2.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "xmlschema", marker = "extra == 'dev'", specifier = ">=3.0" },
+]
+provides-extras = ["dev", "sld", "maplibre", "cql2", "all"]
 
 [[package]]
 name = "pydantic"
