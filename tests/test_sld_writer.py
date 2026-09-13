@@ -1027,6 +1027,179 @@ class TestWriteImage:
         assert anchor.find("se:AnchorPointY", NS).text == "0.5"
 
 
+class TestWriteFontGlyphMark:
+    """Single-character marker ``Text`` -> ``se:Mark`` font-glyph reference.
+
+    ``1-core``'s own Annex B ("Basic Vector Features Styling") maps this
+    exact construct to "Text (inside Marker)" (issue #51).
+    """
+
+    def test_single_char_marker_text_produces_font_glyph_mark(self):
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {
+                                "type": "Text",
+                                "text": "K",
+                                "font": {"face": "WESP", "color": "red"},
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        assert root.find(".//se:TextSymbolizer", NS) is None
+        mark = root.find(".//se:PointSymbolizer/se:Graphic/se:Mark", NS)
+        assert mark is not None
+        online = mark.find("se:OnlineResource", NS)
+        assert online.get(f"{{{NS['xlink']}}}href") == "ttf://WESP"
+        assert mark.find("se:Format", NS).text == "ttf"
+        # ord("K") == 75 -- matches a real WESP-font fixture's own MarkIndex.
+        assert mark.find("se:MarkIndex", NS).text == "75"
+        assert mark.find("se:Fill/se:SvgParameter", NS).text == "#ff0000"
+
+    def test_label_text_never_uses_font_glyph_mark(self):
+        """Annex B scopes this mapping to "Text (inside Marker)" only —
+        the identical element under ``Label.elements`` must still produce
+        a ``se:TextSymbolizer``.
+        """
+        root = _write(
+            _rule_style(
+                {
+                    "label": {
+                        "elements": [
+                            {"type": "Text", "text": "K", "font": {"face": "WESP"}}
+                        ]
+                    }
+                }
+            )
+        )
+        assert root.find(".//se:TextSymbolizer", NS) is not None
+        assert root.find(".//se:Mark", NS) is None
+
+    def test_multi_character_text_falls_back_to_text_symbolizer(self):
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {"type": "Text", "text": "KO", "font": {"face": "WESP"}}
+                        ]
+                    }
+                }
+            )
+        )
+        assert root.find(".//se:TextSymbolizer", NS) is not None
+
+    def test_bold_or_italic_falls_back_to_text_symbolizer(self):
+        """``se:Mark`` has no ``se:Font`` at all -- ``bold``/``italic``
+        have nowhere to go there, so the fallback avoids losing them.
+        """
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {
+                                "type": "Text",
+                                "text": "K",
+                                "font": {"face": "WESP", "bold": True},
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        assert root.find(".//se:TextSymbolizer", NS) is not None
+
+    def test_font_outline_falls_back_to_text_symbolizer(self):
+        """``se:Halo`` is ``se:TextSymbolizer``-only -- a halo forces the
+        fallback rather than being silently dropped.
+        """
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {
+                                "type": "Text",
+                                "text": "K",
+                                "font": {
+                                    "face": "WESP",
+                                    "outline": {"color": "black"},
+                                },
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        assert root.find(".//se:TextSymbolizer", NS) is not None
+        assert root.find(".//se:Halo", NS) is not None
+
+    def test_no_font_face_falls_back_to_text_symbolizer(self):
+        root = _write(
+            _rule_style({"marker": {"elements": [{"type": "Text", "text": "K"}]}})
+        )
+        assert root.find(".//se:TextSymbolizer", NS) is not None
+
+    def test_sld_1_0_0_always_falls_back_to_text_symbolizer(self):
+        """SLD 1.0.0's ``Mark`` is only ``{WellKnownName?, Fill?, Stroke?}``
+        -- no ``OnlineResource``/``MarkIndex`` alternative at all.
+        """
+        from pycartosym.codecs.sld._dialect import SLD_1_0_0
+
+        style = Style.from_dict(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {"type": "Text", "text": "K", "font": {"face": "WESP"}}
+                        ]
+                    }
+                }
+            )
+        )
+        xml = SldWriter(SLD_1_0_0).write(style)
+        assert "TextSymbolizer" in xml
+        assert "ttf://" not in xml
+
+    def test_full_round_trip_is_a_fixed_point(self):
+        xml = SldWriter().write(
+            Style.from_dict(
+                _rule_style(
+                    {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "Text",
+                                    "text": "K",
+                                    "font": {
+                                        "face": "WESP",
+                                        "color": "red",
+                                        "opacity": 0.8,
+                                        "size": {"px": 12},
+                                    },
+                                    "alignment": ["center", "middle"],
+                                    "position": {"x": 5, "y": 3},
+                                    "transform": {"orientation": 45},
+                                }
+                            ]
+                        }
+                    }
+                )
+            )
+        )
+        assert_sld_valid(xml, label="font-glyph-mark-full")
+        from pycartosym.codecs.sld.reader import SldReader
+
+        style1 = SldReader().read(xml)
+        style2 = SldReader().read(SldWriter().write(style1))
+        assert style1 == style2
+
+
 class TestWritePattern:
     """``Fill``/``Stroke.pattern`` -> ``se:GraphicFill``/``se:GraphicStroke``."""
 

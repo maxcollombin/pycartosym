@@ -103,6 +103,24 @@ sources. On read, an ``se:Mark``/
 has no construct distinguishing CartoSym's separate marker-text vs
 label-text concepts, so this read direction is inherently lossy).
 
+A single-character ``Text`` marker element (``marker.elements`` only,
+never ``label.elements`` — Annex B scopes this to "Text (inside Marker)")
+whose ``font.face``/``.bold``/``.italic``/``.outline`` fit within what
+``se:Mark`` can carry (no font weight/style, no halo) writes as
+``se:Mark``/``se:OnlineResource``(``ttf://<font.face>``)/``se:Format``/
+``se:MarkIndex``(the character's Unicode code point) instead of a
+``se:TextSymbolizer`` — SE 1.1.0 only (:attr:`SldDialect.mark_font_glyph`;
+SLD 1.0.0's ``Mark`` has no ``OnlineResource``/``MarkIndex`` alternative).
+Anything that construct can't carry (more than one character, ``bold``,
+``italic``, ``outline``) falls back to the general ``se:TextSymbolizer``
+path rather than losing data. On read, ``se:Mark``/
+``se:OnlineResource`` with a ``ttf://`` href reconstructs the same way,
+but only when reached via a ``se:PointSymbolizer`` — reusing this shape
+inside ``se:GraphicFill``/``se:GraphicStroke`` (``Fill.pattern``/
+``Stroke.pattern``) still raises, since the writer has no way to
+produce it there (see the ``Fill.pattern``/``Stroke.pattern`` paragraph
+below).
+
 ``Fill.pattern``/``Stroke.pattern`` (Part 2 "Pattern Fills"/"Pattern
 Strokes") map to ``se:Fill/se:GraphicFill``/``se:Stroke/se:GraphicStroke``
 — pure SE 1.1.0, no vendor extension needed, unlike the GeoServer
@@ -116,19 +134,19 @@ and a multi-element (``multiGraphic``) pattern has no mapping either,
 since the XSD allows exactly one nested ``se:Graphic``. Annex B's own
 "Pattern Strokes" table also names a second alternative,
 ``se:Mark``/``se:OnlineResource``/``se:MarkIndex`` (a reference into an
-external mark/font-glyph library, distinct from ``se:ExternalGraphic``) —
-**this was previously documented here as having no CartoSym-side concept
+external mark/font-glyph library, distinct from ``se:ExternalGraphic``).
+**This was previously documented here as having no CartoSym-side concept
 at all; that was wrong.** Part 1's own Annex B ("Basic Vector Features
 Styling") maps this exact construct to "Text (inside Marker)" — a
-single-character ``TextGraphic`` used as a ``Marker.elements`` entry
-(``TextGraphic`` is already a valid element there) — not a genuinely
-unmapped construct, just one this codec doesn't wire that way yet
-(``_build_text_symbolizer`` always emits a full ``se:TextSymbolizer``
-regardless of whether the ``Text`` element sits under ``marker`` or
-``label``). Not implemented as the ``pattern`` alternative yet: no
-worked XML example backs that Annex B table row, unlike most other
-constructs this codec maps, so it needs the same real-XSD verification
-pass already applied elsewhere in this file before being trusted.
+single-character ``TextGraphic`` used as a ``Marker.elements`` entry —
+and that mapping *is* now implemented (see
+:func:`_build_font_glyph_mark`/:func:`_parse_font_glyph_mark`), just not
+as a ``Fill.pattern``/``Stroke.pattern`` alternative: no worked XML
+example backs that particular Annex B table row for the ``pattern``
+context (unlike most other constructs this codec maps), and a single
+font glyph as a *repeated pattern* has no obvious CartoSym-side meaning
+the way a single marker glyph does, so this stays out of scope for
+``pattern`` specifically.
 ``patternGap``/``patternInitialGap`` are not modeled
 yet — no CartoSym-JSON schema/Pydantic field exists for them, so this
 codec has nothing to read them into or write them from. (Annex B's own
@@ -402,7 +420,9 @@ def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
 
     if marker is not None:
         elements.extend(
-            _graphic_elements_to_symbolizers(d, _g(marker, "elements"), s_op)
+            _graphic_elements_to_symbolizers(
+                d, _g(marker, "elements"), s_op, context="marker"
+            )
         )
 
     if label is not None:
@@ -412,7 +432,9 @@ def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
                 "no SLD/SE mapping in this codec"
             )
         elements.extend(
-            _graphic_elements_to_symbolizers(d, _g(label, "elements"), s_op)
+            _graphic_elements_to_symbolizers(
+                d, _g(label, "elements"), s_op, context="label"
+            )
         )
 
     _apply_vendor_options(d, sym, elements)
@@ -426,7 +448,11 @@ def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
 
 
 def _graphic_elements_to_symbolizers(
-    d: SldDialect, elements: Any, base_opacity: float | None = None
+    d: SldDialect,
+    elements: Any,
+    base_opacity: float | None = None,
+    *,
+    context: str = "marker",
 ) -> list[etree._Element]:
     if elements is None:
         return []
@@ -450,7 +476,10 @@ def _graphic_elements_to_symbolizers(
         elif el_type == "Image":
             result.append(_build_image_symbolizer(d, el, base_opacity))
         elif el_type == "Text":
-            result.append(_build_text_symbolizer(d, el, base_opacity))
+            if context == "marker" and _is_font_glyph_candidate(d, el):
+                result.append(_build_font_glyph_mark(d, el, base_opacity))
+            else:
+                result.append(_build_text_symbolizer(d, el, base_opacity))
         else:
             raise NotImplementedError(
                 f"Graphic element type {el_type!r} has no SLD/SE mapping in "
@@ -1528,6 +1557,104 @@ def _build_halo(d: SldDialect, ts: etree._Element, outline: Any) -> None:
             d.param(fill_el, "fill-opacity", format_opacity(opacity))
 
 
+def _is_font_glyph_candidate(d: SldDialect, text_graphic: Any) -> bool:
+    """Whether a marker ``Text`` element can use the ``se:Mark`` font-glyph shortcut.
+
+    See :func:`_build_font_glyph_mark` — falls back to a full
+    ``se:TextSymbolizer`` if this returns ``False`` rather than losing
+    anything. ``bold``/``italic``/``outline`` (halo) have no ``se:Mark``
+    equivalent at all (``se:Mark`` carries no ``se:Font``, and
+    ``se:Halo`` is ``se:TextSymbolizer``-only), so their presence forces
+    the fallback rather than silently dropping them.
+    """
+    if not d.mark_font_glyph:
+        return False
+    text = _g(text_graphic, "text")
+    if not isinstance(text, str) or len(text) != 1:
+        return False
+    font = _g(text_graphic, "font")
+    if font is None or _g(font, "face") is None:
+        return False
+    if _g(font, "bold") is not None or _g(font, "italic") is not None:
+        return False
+    if _g(font, "outline") is not None:
+        return False
+    return True
+
+
+def _build_font_glyph_mark(
+    d: SldDialect, text_graphic: Any, base_opacity: float | None = None
+) -> etree._Element:
+    """Build a font-glyph ``se:PointSymbolizer``/``se:Graphic``/``se:Mark``.
+
+    For a single-character marker ``Text``, referencing a font-glyph
+    library — ``1-core``'s own Annex B ("Basic
+    Vector Features Styling") maps exactly this construct to "Text
+    (inside Marker)": a ``se:Mark`` whose ``se:OnlineResource`` names a
+    TrueType font and whose ``se:MarkIndex`` identifies the glyph by
+    Unicode code point, distinct from ``se:Mark/se:WellKnownName`` (a
+    fixed shape name) or ``se:ExternalGraphic`` (a raster/vector image
+    reference). SE 1.1.0 only (:attr:`SldDialect.mark_font_glyph`) — SLD
+    1.0.0's ``Mark`` has no ``OnlineResource``/``MarkIndex`` alternative
+    at all, only ``WellKnownName``.
+    """
+    transform = _g(text_graphic, "transform")
+    if transform is not None and (
+        _g(transform, "scaling") is not None or _g(transform, "translation") is not None
+    ):
+        raise NotImplementedError(
+            "TextGraphic.transform.scaling/translation has no SLD/SE "
+            "mapping in this codec — only orientation maps, to "
+            "se:Graphic/se:Rotation"
+        )
+
+    text = _g(text_graphic, "text")
+    font = _g(text_graphic, "font")
+    face = _g(font, "face")
+
+    ps = d.el("PointSymbolizer")
+    graphic = d.el("Graphic", parent=ps)
+    mark = d.el("Mark", parent=graphic)
+    online_resource = d.el("OnlineResource", parent=mark)
+    online_resource.set(f"{XLINK}type", "simple")
+    online_resource.set(f"{XLINK}href", f"ttf://{face}")
+    d.el("Format", parent=mark, text="ttf")
+    d.el("MarkIndex", parent=mark, text=str(ord(text)))
+
+    font_color = _g(font, "color")
+    font_opacity = _g(font, "opacity")
+    combined_opacity = _combine_opacity(base_opacity, font_opacity)
+    if font_color is not None or combined_opacity is not None:
+        fill_el = d.el("Fill", parent=mark)
+        if font_color is not None:
+            _write_color_param(d, fill_el, "fill", font_color)
+        if combined_opacity is not None:
+            d.param(fill_el, "fill-opacity", combined_opacity)
+
+    # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?,
+    # Rotation?, AnchorPoint?, Displacement?
+    size = _g(font, "size")
+    if size is not None:
+        _write_numeric_element(d, graphic, "Size", size)
+
+    _write_rotation(d, graphic, transform)
+
+    alignment = _g(text_graphic, "alignment")
+    if alignment is not None:
+        if not d.graphic_placement:
+            raise NotImplementedError(
+                "TextGraphic.alignment (marker font-glyph) has no SLD "
+                "1.0.0 Graphic mapping (Graphic has no AnchorPoint child)"
+            )
+        h, v = _alignment_hv(alignment)
+        anchor_el = d.el("AnchorPoint", parent=graphic)
+        d.el("AnchorPointX", parent=anchor_el, text=_ANCHOR_X.get(h, "0.5"))
+        d.el("AnchorPointY", parent=anchor_el, text=_ANCHOR_Y.get(v, "0.5"))
+
+    _build_graphic_displacement(d, graphic, _g(text_graphic, "position"), "Text")
+    return ps
+
+
 def _build_text_symbolizer(
     d: SldDialect, text_graphic: Any, base_opacity: float | None = None
 ) -> etree._Element:
@@ -2149,18 +2276,24 @@ def _parse_raster_symbolizer(d: SldDialect, el: etree._Element) -> dict:
     return result
 
 
-def _parse_graphic_element(d: SldDialect, graphic_el: etree._Element) -> dict:
+def _parse_graphic_element(
+    d: SldDialect, graphic_el: etree._Element, *, allow_font_glyph: bool = False
+) -> dict:
     """Parse one ``se:Graphic``'s content (``se:Mark`` or ``se:ExternalGraphic``).
 
     Shared by :func:`_parse_point_symbolizer` (a ``se:PointSymbolizer``'s
-    own ``se:Graphic``) and :func:`_parse_pattern_graphic`
-    (``se:GraphicFill``/``se:GraphicStroke``'s nested ``se:Graphic``,
-    ``Fill.pattern``/``Stroke.pattern``) — the content itself is identical
+    own ``se:Graphic``, ``allow_font_glyph=True`` — Annex B's "Text
+    (inside Marker)" mapping only applies there) and
+    :func:`_parse_pattern_graphic` (``se:GraphicFill``/``se:GraphicStroke``'s
+    nested ``se:Graphic``, ``Fill.pattern``/``Stroke.pattern``,
+    ``allow_font_glyph=False`` — the writer has no way to produce a
+    ``Text``-shaped pattern, so accepting one here would read something
+    this codec can't write back) — the rest of the content is identical
     either way.
     """
     mark_el = d.find(graphic_el, "Mark")
     if mark_el is not None:
-        result = _parse_mark(d, mark_el, graphic_el)
+        result = _parse_mark(d, mark_el, graphic_el, allow_font_glyph=allow_font_glyph)
     else:
         ext_el = d.find(graphic_el, "ExternalGraphic")
         if ext_el is None:
@@ -2191,7 +2324,7 @@ def _parse_point_symbolizer(d: SldDialect, ps_el: etree._Element) -> dict:
         raise NotImplementedError(
             "se:PointSymbolizer without se:Graphic is not supported"
         )
-    return _parse_graphic_element(d, graphic_el)
+    return _parse_graphic_element(d, graphic_el, allow_font_glyph=True)
 
 
 def _parse_pattern_graphic(
@@ -2221,9 +2354,22 @@ def _px(value: float) -> dict:
 
 
 def _parse_mark(
-    d: SldDialect, mark_el: etree._Element, graphic_el: etree._Element
+    d: SldDialect,
+    mark_el: etree._Element,
+    graphic_el: etree._Element,
+    *,
+    allow_font_glyph: bool = False,
 ) -> dict:
     wkn = element_text(d.find(mark_el, "WellKnownName"))
+    if wkn is None and allow_font_glyph:
+        online_resource_el = d.find(mark_el, "OnlineResource")
+        href = (
+            online_resource_el.get(f"{XLINK}href")
+            if online_resource_el is not None
+            else None
+        )
+        if href is not None and href.startswith("ttf://"):
+            return _parse_font_glyph_mark(d, mark_el, graphic_el, href)
     if wkn not in ("circle", "square"):
         raise NotImplementedError(
             f"se:Mark/se:WellKnownName {wkn!r} is out of scope for this "
@@ -2290,6 +2436,63 @@ def _parse_mark(
                 side = _px(size)
                 result["width"] = side
                 result["height"] = side
+
+    return result
+
+
+def _parse_font_glyph_mark(
+    d: SldDialect, mark_el: etree._Element, graphic_el: etree._Element, href: str
+) -> dict:
+    """Parse a font-glyph ``se:Mark`` into a single-character marker ``Text`` element.
+
+    ``se:OnlineResource``(``ttf://...``)/``se:MarkIndex`` — the reverse
+    of :func:`_build_font_glyph_mark`.
+    """
+    mark_index_text = element_text(d.find(mark_el, "MarkIndex"))
+    if mark_index_text is None:
+        raise NotImplementedError(
+            "se:Mark with a ttf:// se:OnlineResource but no se:MarkIndex "
+            "is not supported"
+        )
+    try:
+        code_point = int(mark_index_text.strip())
+    except ValueError:
+        raise NotImplementedError(
+            f"se:MarkIndex {mark_index_text!r} is not a plain integer"
+        ) from None
+
+    font: dict = {"face": href[len("ttf://") :]}
+
+    fill_el = d.find(mark_el, "Fill")
+    if fill_el is not None:
+        color = d.get_param(fill_el, "fill")
+        if color is not None:
+            font["color"] = parse_color(color)
+        fill_opacity = d.get_param(fill_el, "fill-opacity")
+        if fill_opacity is not None:
+            font["opacity"] = parse_opacity(fill_opacity)
+
+    size_text = element_text(d.find(graphic_el, "Size"))
+    if size_text is not None:
+        size = parse_number(size_text)
+        if size is not None:
+            font["size"] = _px(size)
+
+    result: dict = {
+        "type": "Text",
+        "text": chr(code_point),
+        "font": font,
+        "position": _graphic_displacement(d, graphic_el),
+    }
+
+    anchor_el = d.find(graphic_el, "AnchorPoint")
+    if anchor_el is not None:
+        ax = element_text(d.find(anchor_el, "AnchorPointX"))
+        ay = element_text(d.find(anchor_el, "AnchorPointY"))
+        result["alignment"] = [
+            _ANCHOR_X_TO_H.get((ax or "").strip(), "center"),
+            _ANCHOR_Y_TO_V.get((ay or "").strip(), "middle"),
+        ]
 
     return result
 

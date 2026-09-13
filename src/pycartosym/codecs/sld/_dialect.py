@@ -87,6 +87,11 @@ class SldDialect:
             1.1.0 additions, substitution group ``se:Function``, same
             section of ``Symbolizer.xsd`` as ``se:Recode``); ``False``
             for SLD 1.0.0, which predates them.
+        mark_font_glyph: ``True`` if ``se:Mark`` supports the
+            ``OnlineResource``/``Format``/``MarkIndex`` font-glyph-library
+            alternative to ``WellKnownName`` (SE 1.1.0's own
+            ``MarkType``); ``False`` for SLD 1.0.0, whose ``Mark`` is
+            only ``{WellKnownName?, Fill?, Stroke?}``.
         nsmap: Namespace map for the document root element.
     """
 
@@ -100,6 +105,7 @@ class SldDialect:
     vendor_options: bool
     recode_function: bool
     interpolate_function: bool
+    mark_font_glyph: bool
     nsmap: dict[str | None, str]
 
     # -- element factories -------------------------------------------------
@@ -210,6 +216,7 @@ SE_1_1_0 = SldDialect(
     vendor_options=False,
     recode_function=True,
     interpolate_function=True,
+    mark_font_glyph=True,
     nsmap=_SE_NSMAP,
 )
 
@@ -224,6 +231,7 @@ SLD_1_0_0 = SldDialect(
     vendor_options=False,
     recode_function=False,
     interpolate_function=False,
+    mark_font_glyph=False,
     nsmap=_SLD10_NSMAP,
 )
 
@@ -241,6 +249,7 @@ SLD_1_0_0_GEOSERVER = SldDialect(
     vendor_options=True,
     recode_function=False,
     interpolate_function=False,
+    mark_font_glyph=False,
     nsmap=_SLD10_NSMAP,
 )
 

@@ -666,6 +666,84 @@ class TestReadPattern:
             self._read_string(xml)
 
 
+class TestReadFontGlyphMark:
+    """``se:Mark``/``se:OnlineResource``(``ttf://...``)/``se:MarkIndex`` ->
+    a single-character marker ``Text`` element (issue #51).
+    """
+
+    def _read_string(self, xml):
+        return SldReader().read(xml)
+
+    def test_ttf_mark_reads_as_single_char_text(self):
+        """Matches a real official Swiss federal SLD fixture shape
+        (Sachplan Militär, ``ttf://WESP`` + ``MarkIndex``, colour per
+        facility status).
+        """
+        xml = """<?xml version='1.0' encoding='UTF-8'?>
+<StyledLayerDescriptor
+    xmlns="http://www.opengis.net/sld"
+    xmlns:se="http://www.opengis.net/se"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    version="1.1.0">
+  <NamedLayer><UserStyle><se:FeatureTypeStyle><se:Rule>
+    <se:PointSymbolizer><se:Graphic><se:Mark>
+      <se:OnlineResource xlink:type="simple" xlink:href="ttf://WESP"/>
+      <se:Format>ttf</se:Format>
+      <se:MarkIndex>75</se:MarkIndex>
+      <se:Fill><se:SvgParameter name="fill">#0066cc</se:SvgParameter></se:Fill>
+    </se:Mark></se:Graphic></se:PointSymbolizer>
+  </se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>
+</StyledLayerDescriptor>"""
+        style = self._read_string(xml)
+        el = style.styling_rules[0].symbolizer.marker.elements[0]
+        assert el["type"] == "Text"
+        assert el["text"] == chr(75)
+        assert el["font"] == {"face": "WESP", "color": [0, 102, 204]}
+
+    def test_ttf_mark_without_markindex_raises(self):
+        xml = """<?xml version='1.0' encoding='UTF-8'?>
+<StyledLayerDescriptor
+    xmlns="http://www.opengis.net/sld"
+    xmlns:se="http://www.opengis.net/se"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    version="1.1.0">
+  <NamedLayer><UserStyle><se:FeatureTypeStyle><se:Rule>
+    <se:PointSymbolizer><se:Graphic><se:Mark>
+      <se:OnlineResource xlink:type="simple" xlink:href="ttf://WESP"/>
+      <se:Format>ttf</se:Format>
+    </se:Mark></se:Graphic></se:PointSymbolizer>
+  </se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>
+</StyledLayerDescriptor>"""
+        with pytest.raises(NotImplementedError):
+            self._read_string(xml)
+
+    def test_ttf_mark_inside_pattern_still_raises(self):
+        """Font-glyph marks are only recognised for ``se:PointSymbolizer``
+        (``Marker.elements``, per Annex B's own "Text (inside Marker)"
+        scoping) — the writer has no way to produce this shape for
+        ``Fill.pattern``/``Stroke.pattern``, so the reader must not accept
+        it there either.
+        """
+        xml = """<?xml version='1.0' encoding='UTF-8'?>
+<StyledLayerDescriptor
+    xmlns="http://www.opengis.net/sld"
+    xmlns:se="http://www.opengis.net/se"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    version="1.1.0">
+  <NamedLayer><UserStyle><se:FeatureTypeStyle><se:Rule>
+    <se:PolygonSymbolizer><se:Fill>
+      <se:GraphicFill><se:Graphic><se:Mark>
+        <se:OnlineResource xlink:type="simple" xlink:href="ttf://WESP"/>
+        <se:Format>ttf</se:Format>
+        <se:MarkIndex>75</se:MarkIndex>
+      </se:Mark></se:Graphic></se:GraphicFill>
+    </se:Fill></se:PolygonSymbolizer>
+  </se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>
+</StyledLayerDescriptor>"""
+        with pytest.raises(NotImplementedError):
+            self._read_string(xml)
+
+
 class TestReadRaster:
     def test_single_channel_colormap(self):
         style = _read("11-raster-single-channel-colormap.sld")
