@@ -67,3 +67,7 @@ run after a failed attempt requires bumping the version first.
 4. Tag and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 5. Create a GitHub Release from that tag (**Releases → Draft a new
    release**) and publish it — this triggers the `pypi` job.
+6. If `.claude/HANDOFF.md` already names a "current live PyPI version"
+   from earlier in the same session, update it to the new version now —
+   it goes stale the moment this release publishes, not at the next
+   `/handoff` call (see `CLAUDE.md`'s "Handoff file" section).
