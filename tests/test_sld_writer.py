@@ -1268,6 +1268,49 @@ class TestWriteRaster:
         values = [v.text for v in root.findall(".//se:Categorize/se:Value", NS)]
         assert values == ["#000000", "#808080"]
 
+    def test_color_map_entry_label_raises_cleanly_not_a_value_error(self):
+        """Regression: a 3-element ``[threshold, color, label]`` entry
+        (any position, not just the second-and-later ones the reported
+        repro hit) used to crash with a raw ``ValueError`` (``for
+        threshold, value in pairs[1:]`` unpacking a 3-tuple) instead of a
+        clean ``NotImplementedError`` — ``se:Categorize`` genuinely has
+        no label slot (only ``se:Threshold``/``se:Value``), unlike
+        ``se:ColorMapEntry`` (the ``sld:1.0.0``/``sld:geoserver``
+        dialects' form, which already supports one).
+        """
+        with pytest.raises(NotImplementedError):
+            _write(
+                _rule_style(
+                    {
+                        "singleChannel": {"property": "elevation"},
+                        "colorMap": [
+                            [0.0, "black"],
+                            [900.0, "gray", "High"],
+                        ],
+                    }
+                )
+            )
+
+    def test_color_map_entry_label_round_trips_in_sld_1_0_0(self):
+        """The label a ``se:Categorize`` entry can't hold (previous test)
+        is exactly what ``se:ColorMapEntry`` — the SLD 1.0.0/GeoServer
+        dialects' own colour-map form — is for.
+        """
+        from pycartosym.codecs.sld._dialect import SLD_1_0_0
+
+        style = Style.from_dict(
+            _rule_style(
+                {
+                    "singleChannel": {"property": "elevation"},
+                    "colorMap": [[0.0, "black"], [900.0, "gray", "High"]],
+                }
+            )
+        )
+        xml = SldWriter(SLD_1_0_0).write(style)
+        root = etree.fromstring(xml.encode("utf-8"))
+        entries = root.findall(".//sld:ColorMapEntry", NS)
+        assert entries[1].get("label") == "High"
+
     def test_hill_shading_factor_produces_shaded_relief(self):
         root = _write(
             _rule_style(

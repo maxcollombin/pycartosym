@@ -1067,8 +1067,19 @@ def _build_categorize(d: SldDialect, pairs: list) -> etree._Element:
 
     Per ``se:Categorize``'s own semantics, the first ``se:Value`` has no
     preceding ``se:Threshold`` (it's the below/at-first-value bucket) —
-    ``pairs[0][0]`` is therefore never written.
+    ``pairs[0][0]`` is therefore never written. Unlike
+    ``se:ColorMapEntry`` (:func:`_build_color_map_entries`, SLD 1.0.0),
+    ``se:Categorize`` has no label slot at all — only ``se:Threshold``/
+    ``se:Value`` — so a ``[threshold, color, label]`` entry's label has
+    nowhere to go here and raises rather than being silently dropped.
     """
+    if any(len(pair) > 2 and pair[2] is not None for pair in pairs):
+        raise NotImplementedError(
+            "Symbolizer.colorMap entry labels have no se:Categorize "
+            "mapping in this codec — SE 1.1.0's se:Categorize has only "
+            "se:Threshold/se:Value, no label slot (se:ColorMapEntry, the "
+            "sld:1.0.0/sld:geoserver dialects' form, does support one)"
+        )
     categorize = d.el("Categorize")
     # fallbackValue is required on se:FunctionType (SE 1.1.0). It is the
     # value returned for an uncategorisable input; the below-first-
@@ -1077,9 +1088,9 @@ def _build_categorize(d: SldDialect, pairs: list) -> etree._Element:
     categorize.set("fallbackValue", format_color(pairs[0][1]))
     d.el("LookupValue", parent=categorize, text="Rasterdata")
     d.el("Value", parent=categorize, text=format_color(pairs[0][1]))
-    for threshold, value in pairs[1:]:
-        d.el("Threshold", parent=categorize, text=format_number(threshold))
-        d.el("Value", parent=categorize, text=format_color(value))
+    for pair in pairs[1:]:
+        d.el("Threshold", parent=categorize, text=format_number(pair[0]))
+        d.el("Value", parent=categorize, text=format_color(pair[1]))
     return categorize
 
 
