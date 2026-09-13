@@ -117,8 +117,19 @@ since the XSD allows exactly one nested ``se:Graphic``. Annex B's own
 "Pattern Strokes" table also names a second alternative,
 ``se:Mark``/``se:OnlineResource``/``se:MarkIndex`` (a reference into an
 external mark/font-glyph library, distinct from ``se:ExternalGraphic``) —
-this has no corresponding CartoSym conceptual-model construct at all and
-is out of scope. ``patternGap``/``patternInitialGap`` are not modeled
+**this was previously documented here as having no CartoSym-side concept
+at all; that was wrong.** Part 1's own Annex B ("Basic Vector Features
+Styling") maps this exact construct to "Text (inside Marker)" — a
+single-character ``TextGraphic`` used as a ``Marker.elements`` entry
+(``TextGraphic`` is already a valid element there) — not a genuinely
+unmapped construct, just one this codec doesn't wire that way yet
+(``_build_text_symbolizer`` always emits a full ``se:TextSymbolizer``
+regardless of whether the ``Text`` element sits under ``marker`` or
+``label``). Not implemented as the ``pattern`` alternative yet: no
+worked XML example backs that Annex B table row, unlike most other
+constructs this codec maps, so it needs the same real-XSD verification
+pass already applied elsewhere in this file before being trusted.
+``patternGap``/``patternInitialGap`` are not modeled
 yet — no CartoSym-JSON schema/Pydantic field exists for them, so this
 codec has nothing to read them into or write them from. (Annex B's own
 "Pattern Strokes" worked example represents them with
