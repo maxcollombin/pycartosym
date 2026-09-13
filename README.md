@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/maxcollombin/pycartosym/actions/workflows/ci.yml/badge.svg)](https://github.com/maxcollombin/pycartosym/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/pycartosym.svg)](https://pypi.org/project/pycartosym/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pycartosym.svg)](https://pypi.org/project/pycartosym/)
+[![License](https://img.shields.io/pypi/l/pycartosym.svg)](https://github.com/maxcollombin/pycartosym/blob/main/LICENSE)
 
 A Python package for lossless transcoding between [CartoSym CSS](https://github.com/opengeospatial/cartographic-symbology) (`.cscss`) and other encodings of the OGC Cartographic Symbology conceptual model (CS-JSON, SLD/SE), plus MapLibre Style as a practical interoperability target.
 
