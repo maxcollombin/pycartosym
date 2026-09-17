@@ -267,6 +267,114 @@ class TestWriteBasicSymbolizers:
             == style1.styling_rules[0].symbolizer.marker.elements
         )
 
+    @pytest.mark.parametrize("wkn", ["triangle", "star", "cross", "x"])
+    def test_marker_closed_path_produces_named_mark(self, wkn):
+        """triangle/star/cross/x -> se:Mark wellKnownName (pycartosym issue #96)."""
+        from pycartosym.codecs.sld._symbolizer import _UNIT_WKN_SHAPES
+
+        nodes = [
+            {"x": {"px": ux * 10}, "y": {"px": uy * 10}}
+            for ux, uy in _UNIT_WKN_SHAPES[wkn]
+        ]
+        root = _write(
+            _rule_style(
+                {
+                    "marker": {
+                        "elements": [
+                            {
+                                "type": "ClosedPath",
+                                "position": {"x": 0, "y": 0},
+                                "fill": {"color": "red"},
+                                "outline": {"color": "black", "thickness": {"px": 1}},
+                                "nodes": nodes,
+                            }
+                        ]
+                    }
+                }
+            )
+        )
+        mark = root.find(".//se:PointSymbolizer/se:Graphic/se:Mark", NS)
+        assert mark.find("se:WellKnownName", NS).text == wkn
+        fill = {
+            p.get("name"): p.text for p in mark.findall("se:Fill/se:SvgParameter", NS)
+        }
+        assert fill == {"fill": "#ff0000"}
+        size = root.find(".//se:PointSymbolizer/se:Graphic/se:Size", NS)
+        assert size.text == "10"
+
+    @pytest.mark.parametrize("wkn", ["triangle", "star", "cross", "x"])
+    def test_marker_closed_path_round_trips_through_reader(self, wkn):
+        from pycartosym.codecs.sld._symbolizer import _UNIT_WKN_SHAPES
+        from pycartosym.codecs.sld.reader import SldReader
+
+        nodes = [
+            {"x": {"px": ux * 10}, "y": {"px": uy * 10}}
+            for ux, uy in _UNIT_WKN_SHAPES[wkn]
+        ]
+        style_dict = _rule_style(
+            {
+                "marker": {
+                    "elements": [
+                        {
+                            "type": "ClosedPath",
+                            "position": {"x": 0, "y": 0},
+                            "fill": {"color": [255, 0, 0]},
+                            "outline": {"color": [0, 0, 0], "thickness": {"px": 1}},
+                            "nodes": nodes,
+                        }
+                    ]
+                }
+            }
+        )
+        style1 = Style.from_dict(style_dict)
+        xml = SldWriter().write(style1)
+        style2 = SldReader().read(xml)
+        assert (
+            style2.styling_rules[0].symbolizer.marker.elements
+            == style1.styling_rules[0].symbolizer.marker.elements
+        )
+
+    def test_marker_closed_path_arbitrary_nodes_raises(self):
+        with pytest.raises(NotImplementedError):
+            _write(
+                _rule_style(
+                    {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "ClosedPath",
+                                    "position": {"x": 0, "y": 0},
+                                    "fill": {"color": "red"},
+                                    "nodes": [
+                                        {"x": {"px": 0}, "y": {"px": 0}},
+                                        {"x": {"px": 3}, "y": {"px": 1}},
+                                        {"x": {"px": 1}, "y": {"px": 4}},
+                                    ],
+                                }
+                            ]
+                        }
+                    }
+                )
+            )
+
+    def test_marker_closed_path_without_nodes_raises(self):
+        with pytest.raises(NotImplementedError):
+            _write(
+                _rule_style(
+                    {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "ClosedPath",
+                                    "position": {"x": 0, "y": 0},
+                                    "fill": {"color": "red"},
+                                }
+                            ]
+                        }
+                    }
+                )
+            )
+
     def test_marker_circle_rotation_maps_to_se_rotation(self):
         root = _write(
             _rule_style(

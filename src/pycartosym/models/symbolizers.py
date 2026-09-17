@@ -550,6 +550,21 @@ class ChordArcGraphic(ClosedShape):
     )
 
 
+class ClosedPathGraphic(ClosedShape):
+    """Closed, arbitrary polygon shape graphic (Part 2 ``closedPath``).
+
+    A filled, outlined polygon defined by vertex ``nodes`` (``fill``/
+    ``outline`` from :class:`ClosedShape`/:class:`ShapeGraphic`) — unlike
+    :class:`CircleGraphic`/:class:`RectangleGraphic`, no dedicated
+    CartoSym Part 2 class exists for a specific named shape, so this is
+    the generic vessel (see ``codecs/sld/_symbolizer.py`` for the
+    ``se:Mark wellKnownName`` marks it represents on the SLD/SE side).
+    """
+
+    type: str = Field("ClosedPath", description="Graphic type")
+    nodes: list[UnitPoint] = Field(..., description="Path vertex nodes")
+
+
 class ColorMap(BaseCartoSymModel):
     """Color mapping for raster/coverage data."""
 

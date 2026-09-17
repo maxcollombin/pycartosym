@@ -1072,6 +1072,42 @@ class TestRectangleGraphic:
         assert el["width"] == {"op": "/", "args": [{"sysId": "viz.sd"}, 1000]}
 
 
+class TestClosedPathGraphicCscssWriteBack:
+    """CartoSym-CSS has no syntax yet for ``ClosedPath.nodes`` (an array of
+    unit points) — write-back must fail loudly, not silently drop the
+    polygon's vertex data (pycartosym issue #96).
+    """
+
+    def setup_method(self):
+        self.converter = Converter()
+
+    def test_closed_path_nodes_raises_on_cscss_write_back(self):
+        csjson = {
+            "stylingRules": [
+                {
+                    "stylingRuleName": "R",
+                    "symbolizer": {
+                        "marker": {
+                            "elements": [
+                                {
+                                    "type": "ClosedPath",
+                                    "fill": {"color": "red"},
+                                    "nodes": [
+                                        {"x": {"px": 0}, "y": {"px": 5}},
+                                        {"x": {"px": -5}, "y": {"px": -5}},
+                                        {"x": {"px": 5}, "y": {"px": -5}},
+                                    ],
+                                }
+                            ]
+                        }
+                    },
+                }
+            ]
+        }
+        with pytest.raises(NotImplementedError):
+            self.converter.csjson_to_cscss(csjson)
+
+
 class TestUnitPointPropertyReference:
     """``UnitPoint.x``/``.y`` (``position``/``center``) accept a bare
     property-name identifier as one coordinate — e.g. ``position: sd 3``.

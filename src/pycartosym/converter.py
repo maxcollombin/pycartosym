@@ -704,6 +704,15 @@ class Converter:
             if size_val is not None:
                 prop_lines.append(f"{size_key}: {self._format_unit_value(size_val)}")
 
+        # nodes (2-shapes ClosedPath) — no CartoSym-CSS syntax exists yet
+        # for an array of unit points, so raise rather than silently drop
+        # the polygon's vertex data (pycartosym issue #96).
+        if _get(el, "nodes") is not None:
+            raise NotImplementedError(
+                "ClosedPath.nodes has no CartoSym-CSS write-back syntax "
+                "in this codec"
+            )
+
         # startAngle / deltaAngle (2-shapes Arc/SectorArc/ChordArc)
         for angle_key in ("startAngle", "deltaAngle"):
             angle = _get(el, angle_key)

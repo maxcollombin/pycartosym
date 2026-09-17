@@ -86,18 +86,32 @@ A ``2-shapes`` shape's outline ``thickness`` (``se:Mark/se:Stroke``'s own
 ``stroke-width``) is wired the same way, via the same
 :func:`_write_numeric_param`/:func:`_parse_flexible_numeric_param`.
 
-``Dot``, ``Circle``, ``Rectangle``, ``Image``, and ``Text`` graphic
-elements (found in either ``Symbolizer.marker.elements`` or
-``Symbolizer.label.elements`` — CartoSym allows Text under either) are
-in scope (the other ``2-shapes`` shape graphics — arbitrary polygons for
-``se:Mark wellKnownName`` values like ``triangle``/``star``/``cross``/
-``x`` — are not, pycartosym issue #88); a filled
-``se:Mark wellKnownName="circle"`` reads back as a ``2-shapes`` ``Circle``
-(``fill`` + ``outline`` + ``radius``), ``wellKnownName="square"`` as a
-``2-shapes`` ``Rectangle`` with equal ``width``/``height`` (``se:Size`` is
-a single scalar — a non-square rectangle has no ``se:Mark`` mapping), and
-a ``Dot`` element still writes (stroke-only mark) for CartoSym-CSS
-sources. On read, an ``se:Mark``/
+``Dot``, ``Circle``, ``Rectangle``, ``ClosedPath``, ``Image``, and
+``Text`` graphic elements (found in either ``Symbolizer.marker.elements``
+or ``Symbolizer.label.elements`` — CartoSym allows Text under either) are
+in scope; a filled ``se:Mark wellKnownName="circle"`` reads back as a
+``2-shapes`` ``Circle`` (``fill`` + ``outline`` + ``radius``),
+``wellKnownName="square"`` as a ``2-shapes`` ``Rectangle`` with equal
+``width``/``height`` (``se:Size`` is a single scalar — a non-square
+rectangle has no ``se:Mark`` mapping), and a ``Dot`` element still writes
+(stroke-only mark) for CartoSym-CSS sources.
+``wellKnownName`` values ``triangle``/``star``/``cross``/``x`` read back
+as a ``2-shapes`` ``ClosedPath`` (arbitrary polygon ``nodes``, ``fill`` +
+``outline``) using this codec's own canonical vertex geometry for each —
+Part 2's own Annex B table maps ``Path``/``ClosedPath`` to
+``se:Mark``/``se:OnlineResource``/``se:MarkIndex`` (an external font-glyph
+reference), not ``WellKnownName``, and doesn't cover these four names at
+all; there is no normative numeric geometry for them anywhere in the
+standard. This mirrors the same kind of narrower, practical deviation
+from Annex B's literal table already made for ``square`` above (pycartosym
+issue #96). On write, a ``ClosedPath`` only maps back to
+``se:Mark wellKnownName`` if its ``nodes`` match one of these four
+canonical shapes at a uniform scale — an arbitrary polygon otherwise has
+no mapping and raises (``se:Mark`` has no construct for inline arbitrary
+vertex data). Any other ``se:Mark wellKnownName`` (e.g. the vendor-only
+``diamond``, reported in the same real-world corpus but not a standard
+SE 1.1.0 name, with no verifiable canonical geometry) stays out of scope.
+On read, an ``se:Mark``/
 ``se:ExternalGraphic`` always reconstructs into ``marker.elements`` and an
 ``se:TextSymbolizer`` always reconstructs into ``label.elements`` (SLD/SE
 has no construct distinguishing CartoSym's separate marker-text vs
@@ -125,8 +139,8 @@ below).
 Strokes") map to ``se:Fill/se:GraphicFill``/``se:Stroke/se:GraphicStroke``
 — pure SE 1.1.0, no vendor extension needed, unlike the GeoServer
 ``shape://`` hatch/stipple fills. The nested ``se:Graphic`` reuses the
-same ``Dot``/``Circle``/``Rectangle``/``Image`` content as a point
-``se:Graphic`` (see :func:`_build_graphic_content`/
+same ``Dot``/``Circle``/``Rectangle``/``ClosedPath``/``Image`` content as
+a point ``se:Graphic`` (see :func:`_build_graphic_content`/
 :func:`_parse_graphic_element`) — ``Text`` is not representable here
 (``se:GraphicFill``/``se:GraphicStroke`` can only hold one ``se:Graphic``,
 i.e. a ``Mark`` or an ``ExternalGraphic``, never a ``TextSymbolizer``),
@@ -164,6 +178,7 @@ concept and still raises.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from typing import Any
 
@@ -473,6 +488,8 @@ def _graphic_elements_to_symbolizers(
             result.append(_build_circle_symbolizer(d, el, base_opacity))
         elif el_type == "Rectangle":
             result.append(_build_rectangle_symbolizer(d, el, base_opacity))
+        elif el_type == "ClosedPath":
+            result.append(_build_closed_path_symbolizer(d, el, base_opacity))
         elif el_type == "Image":
             result.append(_build_image_symbolizer(d, el, base_opacity))
         elif el_type == "Text":
@@ -483,8 +500,8 @@ def _graphic_elements_to_symbolizers(
         else:
             raise NotImplementedError(
                 f"Graphic element type {el_type!r} has no SLD/SE mapping in "
-                "this codec's scope (only Dot/Circle/Rectangle/Image/Text "
-                "are supported)"
+                "this codec's scope (only Dot/Circle/Rectangle/ClosedPath/"
+                "Image/Text are supported)"
             )
     return result
 
@@ -1242,8 +1259,8 @@ def _build_graphic_content(
     ``se:GraphicFill``/``se:GraphicStroke`` with no symbolizer wrapper) —
     the ``se:Graphic`` content itself (``se:Mark``/``se:ExternalGraphic``
     plus ``Opacity``/``Size``/``Rotation``/``Displacement``) is identical
-    either way. Only ``Dot``/``Circle``/``Rectangle``/``Image`` are
-    supported here — ``Text`` has no ``se:Graphic`` representation (it's
+    either way. Only ``Dot``/``Circle``/``Rectangle``/``ClosedPath``/
+    ``Image`` are supported here — ``Text`` has no ``se:Graphic`` representation (it's
     always a sibling ``se:TextSymbolizer``, see
     :func:`_build_text_symbolizer`), so it's dispatched separately by
     :func:`_graphic_elements_to_symbolizers` and never reaches this
@@ -1268,9 +1285,36 @@ def _build_graphic_content(
             _write_numeric_element(d, graphic, "Size", size)
 
         _build_graphic_displacement(d, graphic, _g(element, "position"), "Dot")
-    elif el_type in ("Circle", "Rectangle"):
+    elif el_type in ("Circle", "Rectangle", "ClosedPath"):
+        mark_size: float | None = None
+        if el_type == "Circle":
+            wkn = "circle"
+        elif el_type == "Rectangle":
+            wkn = "square"
+        else:
+            node_field = _g(element, "nodes")
+            if not node_field:
+                raise NotImplementedError("ClosedPath.nodes is required")
+            node_pairs = [_unit_point_xy(n) for n in node_field]
+            if any(
+                not isinstance(v, (int, float)) for pair in node_pairs for v in pair
+            ):
+                raise NotImplementedError(
+                    "Property-driven / expression ClosedPath.nodes has no "
+                    "SLD/SE mapping in this codec"
+                )
+            matched = _match_wkn_shape(node_pairs)
+            if matched is None:
+                raise NotImplementedError(
+                    "ClosedPath.nodes does not match one of this codec's "
+                    "canonical triangle/star/cross/x shapes — an arbitrary "
+                    "polygon has no se:Mark wellKnownName mapping in this "
+                    "codec (se:Mark has no construct for inline arbitrary "
+                    "vertex data)"
+                )
+            wkn, mark_size = matched
+
         mark = d.el("Mark", parent=graphic)
-        wkn = "circle" if el_type == "Circle" else "square"
         d.el("WellKnownName", parent=mark, text=wkn)
 
         fill = _g(element, "fill")
@@ -1295,7 +1339,7 @@ def _build_graphic_content(
                         "has no SLD/SE mapping in this codec"
                     )
                 d.el("Size", parent=graphic, text=format_number(diameter * 2))
-        else:
+        elif el_type == "Rectangle":
             width = _number_of(_g(element, "width"))
             height = _number_of(_g(element, "height"))
             if width is not None or height is not None:
@@ -1312,6 +1356,8 @@ def _build_graphic_content(
                         "single uniform se:Size"
                     )
                 d.el("Size", parent=graphic, text=format_number(width))
+        else:
+            d.el("Size", parent=graphic, text=format_number(mark_size))
 
         _write_rotation(d, graphic, _g(element, "transform"))
         _build_graphic_displacement(d, graphic, _g(element, "position"), el_type)
@@ -1363,8 +1409,8 @@ def _build_graphic_content(
     else:
         raise NotImplementedError(
             f"Graphic element type {el_type!r} has no SLD/SE mapping in "
-            "this codec's scope (only Dot/Circle/Rectangle/Image are "
-            "supported here)"
+            "this codec's scope (only Dot/Circle/Rectangle/ClosedPath/"
+            "Image are supported here)"
         )
 
 
@@ -1450,6 +1496,23 @@ def _build_rectangle_symbolizer(
     ps = d.el("PointSymbolizer")
     graphic = d.el("Graphic", parent=ps)
     _build_graphic_content(d, "Rectangle", rectangle, graphic, base_opacity)
+    return ps
+
+
+def _build_closed_path_symbolizer(
+    d: SldDialect, closed_path: Any, base_opacity: float | None = None
+) -> etree._Element:
+    """Turn a ``2-shapes`` ``ClosedPath`` into ``se:PointSymbolizer``/``se:Mark``.
+
+    Only when ``nodes`` matches one of this codec's canonical
+    triangle/star/cross/x shapes at a uniform scale — see the module
+    docstring and :func:`_match_wkn_shape`. Otherwise the same shape as
+    :func:`_build_circle_symbolizer`: ``fill``/``outline``/``opacity``/
+    ``transform.orientation``/``position`` map the same way.
+    """
+    ps = d.el("PointSymbolizer")
+    graphic = d.el("Graphic", parent=ps)
+    _build_graphic_content(d, "ClosedPath", closed_path, graphic, base_opacity)
     return ps
 
 
@@ -2353,6 +2416,98 @@ def _px(value: float) -> dict:
     return {"px": int(value) if value.is_integer() else value}
 
 
+def _unit_star_nodes() -> list[tuple[float, float]]:
+    """Regular 5-point star outline, canonical geometry chosen by this codec.
+
+    Not specified numerically by the OGC standard (only the 6 predefined
+    ``se:Mark`` *names* are, not their vertex data — see the "Fill.pattern"
+    paragraph above for the same caveat on ``square``). A fixed,
+    self-consistent definition used both ways, inscribed in the
+    ``[-0.5, 0.5]`` unit box that ``se:Graphic/se:Size`` scales (matching
+    :class:`RectangleGraphic`'s own ``width == se:Size`` convention).
+    """
+    outer = 0.5
+    inner = outer * math.cos(math.radians(72)) / math.cos(math.radians(36))
+    nodes = []
+    for k in range(10):
+        radius = outer if k % 2 == 0 else inner
+        angle = math.radians(90 - 36 * k)
+        nodes.append((radius * math.cos(angle), radius * math.sin(angle)))
+    return nodes
+
+
+def _unit_cross_nodes(*, rotated: bool) -> list[tuple[float, float]]:
+    """Plus (``cross``) or diagonal (``x``) outline, canonical geometry.
+
+    Same caveat as :func:`_unit_star_nodes` — chosen by this codec, not
+    specified by the standard. ``x`` is the same outline rotated 45
+    degrees.
+    """
+    third = 1 / 6
+    nodes = [
+        (third, 0.5),
+        (third, third),
+        (0.5, third),
+        (0.5, -third),
+        (third, -third),
+        (third, -0.5),
+        (-third, -0.5),
+        (-third, -third),
+        (-0.5, -third),
+        (-0.5, third),
+        (-third, third),
+        (-third, 0.5),
+    ]
+    if not rotated:
+        return nodes
+    cos45, sin45 = math.cos(math.radians(45)), math.sin(math.radians(45))
+    return [(x * cos45 - y * sin45, x * sin45 + y * cos45) for x, y in nodes]
+
+
+# se:Mark wellKnownName values with no dedicated CartoSym Part 2 shape
+# class, mapped instead to a generic ClosedPath (see the module docstring
+# and pycartosym issue #96) — each value is this codec's own canonical
+# vertex geometry in the [-0.5, 0.5] unit box that se:Graphic/se:Size
+# scales directly (uniform scale factor == se:Size).
+_UNIT_WKN_SHAPES: dict[str, list[tuple[float, float]]] = {
+    "triangle": [(0.0, 0.5), (-0.5, -0.5), (0.5, -0.5)],
+    "star": _unit_star_nodes(),
+    "cross": _unit_cross_nodes(rotated=False),
+    "x": _unit_cross_nodes(rotated=True),
+}
+
+_SUPPORTED_WKN = {"circle", "square", *_UNIT_WKN_SHAPES}
+
+
+def _match_wkn_shape(
+    nodes: list[tuple[float, float]],
+) -> tuple[str, float] | None:
+    """Match literal ``ClosedPath`` nodes against a canonical WKN shape.
+
+    Returns the matched ``(wellKnownName, size)`` pair, or ``None`` if
+    *nodes* doesn't correspond to any canonical shape (same vertex count,
+    same order, all vertices at one consistent uniform scale — every
+    canonical shape's first vertex has a nonzero ``y``, so that scale is
+    read off it directly rather than risking a division by zero on ``x``).
+    """
+    for name, unit_nodes in _UNIT_WKN_SHAPES.items():
+        if len(nodes) != len(unit_nodes):
+            continue
+        _, uy0 = unit_nodes[0]
+        _, y0 = nodes[0]
+        size = y0 / uy0
+        if size <= 0:
+            continue
+        tol = 1e-6 * size
+        if all(
+            math.isclose(x, ux * size, abs_tol=tol)
+            and math.isclose(y, uy * size, abs_tol=tol)
+            for (x, y), (ux, uy) in zip(nodes, unit_nodes)
+        ):
+            return name, size
+    return None
+
+
 def _parse_mark(
     d: SldDialect,
     mark_el: etree._Element,
@@ -2370,19 +2525,25 @@ def _parse_mark(
         )
         if href is not None and href.startswith("ttf://"):
             return _parse_font_glyph_mark(d, mark_el, graphic_el, href)
-    if wkn not in ("circle", "square"):
+    if wkn not in _SUPPORTED_WKN:
         raise NotImplementedError(
             f"se:Mark/se:WellKnownName {wkn!r} is out of scope for this "
-            "codec (only 'circle'/'square' are supported)"
+            f"codec (only {sorted(_SUPPORTED_WKN)} are supported)"
         )
 
     # se:Mark wellKnownName="circle"/"square" — a filled, outlined mark —
     # is a 2-shapes Circle/Rectangle (ClosedShape.fill + abstractShape.
     # outline + radius, or width+height), not a 1-core Dot (which is
     # stroke-only by design and could not carry the fill and the
-    # contrasting outline independently).
+    # contrasting outline independently). triangle/star/cross/x have no
+    # dedicated CartoSym Part 2 shape class, so they become a generic
+    # ClosedPath (see the module docstring, pycartosym issue #96).
+    if wkn in ("circle", "square"):
+        el_type = "Circle" if wkn == "circle" else "Rectangle"
+    else:
+        el_type = "ClosedPath"
     result: dict = {
-        "type": "Circle" if wkn == "circle" else "Rectangle",
+        "type": el_type,
         "position": _graphic_displacement(d, graphic_el),
     }
 
@@ -2424,18 +2585,30 @@ def _parse_mark(
             result["outline"] = outline
 
     size_text = element_text(d.find(graphic_el, "Size"))
-    if size_text is not None:
-        size = parse_number(size_text)
+    size = parse_number(size_text) if size_text is not None else None
+    if wkn == "circle":
         if size is not None:
-            if wkn == "circle":
-                # se:Size is a diameter; CartoSym radius is a radius.
-                result["radius"] = _px(size / 2)
-            else:
-                # se:Size is the square's side length — width == height,
-                # se:Mark has no separate width/height of its own.
-                side = _px(size)
-                result["width"] = side
-                result["height"] = side
+            # se:Size is a diameter; CartoSym radius is a radius.
+            result["radius"] = _px(size / 2)
+    elif wkn == "square":
+        if size is not None:
+            # se:Size is the square's side length — width == height,
+            # se:Mark has no separate width/height of its own.
+            side = _px(size)
+            result["width"] = side
+            result["height"] = side
+    else:
+        # se:Size scales this codec's canonical unit-box geometry (side
+        # 1, centred on the mark's anchor) directly, matching Rectangle's
+        # own width == se:Size convention. A missing se:Size falls back
+        # to the unit-box scale itself (1.0) — this codec has no opinion
+        # on a default absolute pixel size, only on the shape's
+        # proportions.
+        scale = size if size is not None else 1.0
+        result["nodes"] = [
+            {"x": _px(ux * scale), "y": _px(uy * scale)}
+            for ux, uy in _UNIT_WKN_SHAPES[wkn]
+        ]
 
     return result
 

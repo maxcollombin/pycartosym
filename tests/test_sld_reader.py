@@ -127,14 +127,43 @@ class TestReadBasicSymbolizers:
         assert el["width"] == {"px": 6}
         assert el["height"] == {"px": 6}
 
-    def test_non_circle_non_square_mark_raises_not_implemented(self):
+    @pytest.mark.parametrize("wkn", ["triangle", "star", "cross", "x"])
+    def test_named_mark_maps_to_closed_path(self, wkn):
+        """triangle/star/cross/x -> a 2-shapes ClosedPath (pycartosym issue #96)."""
+        from pycartosym.codecs.sld._symbolizer import _UNIT_WKN_SHAPES
+
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se" '
+            'xmlns:ogc="http://www.opengis.net/ogc">'
+            "<NamedLayer><se:Name>x</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule><se:PointSymbolizer><se:Graphic>"
+            f"<se:Mark><se:WellKnownName>{wkn}</se:WellKnownName>"
+            '<se:Fill><se:SvgParameter name="fill">#ff0000</se:SvgParameter>'
+            "</se:Fill></se:Mark><se:Size>10</se:Size>"
+            "</se:Graphic></se:PointSymbolizer></se:Rule>"
+            "</se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        el = SldReader().read(xml).styling_rules[0].symbolizer.marker.elements[0]
+        assert el["type"] == "ClosedPath"
+        assert el["fill"] == {"color": [255, 0, 0]}
+        expected = [
+            {"x": {"px": ux * 10}, "y": {"px": uy * 10}}
+            for ux, uy in _UNIT_WKN_SHAPES[wkn]
+        ]
+        assert el["nodes"] == expected
+
+    def test_vendor_only_mark_raises_not_implemented(self):
+        """``diamond`` is not a standard SE 1.1.0 name (pycartosym issue #96)."""
         xml = (
             '<StyledLayerDescriptor version="1.1.0" '
             'xmlns="http://www.opengis.net/sld" '
             'xmlns:se="http://www.opengis.net/se">'
             "<NamedLayer><se:Name>x</se:Name><UserStyle>"
             "<se:FeatureTypeStyle><se:Rule><se:PointSymbolizer><se:Graphic>"
-            "<se:Mark><se:WellKnownName>triangle</se:WellKnownName></se:Mark>"
+            "<se:Mark><se:WellKnownName>diamond</se:WellKnownName></se:Mark>"
             "</se:Graphic></se:PointSymbolizer></se:Rule>"
             "</se:FeatureTypeStyle></UserStyle></NamedLayer>"
             "</StyledLayerDescriptor>"
