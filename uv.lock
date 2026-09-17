@@ -804,15 +804,8 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
-    { name = "antlr4-tools" },
-    { name = "black" },
     { name = "lxml" },
-    { name = "mypy" },
     { name = "pygeofilter" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "xmlschema" },
 ]
 cql2 = [
     { name = "pygeofilter" },
@@ -838,7 +831,7 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.0.0" },
     { name = "lxml", marker = "extra == 'sld'", specifier = ">=4.9.0" },
     { name = "mypy", marker = "extra == 'dev'" },
-    { name = "pycartosym", extras = ["dev", "sld", "cql2", "maplibre"], marker = "extra == 'all'" },
+    { name = "pycartosym", extras = ["sld", "cql2", "maplibre"], marker = "extra == 'all'" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pygeofilter", marker = "extra == 'cql2'", specifier = ">=0.2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },

@@ -49,7 +49,7 @@ cql2 = [
     "pygeofilter>=0.2.0",
 ]
 all = [
-    "pycartosym[dev,sld,cql2,maplibre]",
+    "pycartosym[sld,cql2,maplibre]",
 ]
 
 [project.urls]
