@@ -55,7 +55,7 @@ class BinaryOperator(str, Enum):
 
     # Relational
     EQUAL = "="
-    NOT_EQUAL = "!="
+    NOT_EQUAL = "<>"
     LESS_THAN = "<"
     LESS_EQUAL = "<="
     GREATER_THAN = ">"

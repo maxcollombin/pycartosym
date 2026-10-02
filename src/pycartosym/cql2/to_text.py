@@ -77,6 +77,8 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         args_str = ", ".join(format_arg(a) for a in args)
         return f"{func_name}({args_str})"
     op = expr.get("op")
+    if op == "!=":  # legacy CS-JSON spelling; CartoSym-CSS only has `<>`
+        op = "<>"
     args = expr.get("args", [])
     if op and isinstance(args, list):
         # Standard infix operators
@@ -84,6 +86,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             "and",
             "or",
             "=",
+            "<>",
             "!=",
             "<",
             ">",

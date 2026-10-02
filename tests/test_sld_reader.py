@@ -379,6 +379,17 @@ class TestReadScaleDenominator:
         )
         assert selector == {"op": "<", "args": [{"sysId": "viz.sd"}, 500000]}
 
+    def test_property_is_not_equal_to_reads_as_cql2_not_equal(self):
+        selector = self._read(
+            filter=(
+                "<ogc:Filter><ogc:PropertyIsNotEqualTo>"
+                "<ogc:PropertyName>NAME</ogc:PropertyName>"
+                "<ogc:Literal>NY</ogc:Literal>"
+                "</ogc:PropertyIsNotEqualTo></ogc:Filter>"
+            )
+        )
+        assert selector == {"op": "<>", "args": [{"property": "NAME"}, "NY"]}
+
     def test_merged_ahead_of_ogc_filter(self):
         selector = self._read(
             filter=(

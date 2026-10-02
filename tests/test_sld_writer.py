@@ -11,6 +11,7 @@ import pytest
 from lxml import etree
 
 from pycartosym.codecs.sld._dialect import SE_1_1_0
+from pycartosym.codecs.sld._filter import selector_to_filter_xml
 from pycartosym.codecs.sld._symbolizer import symbolizer_to_elements
 from pycartosym.codecs.sld.writer import SldWriter
 from pycartosym.converter import Converter
@@ -2639,3 +2640,10 @@ class TestLabelPlacementSpacingRaises:
         )
         with pytest.raises(NotImplementedError):
             SldWriter().write(Style.from_dict(style_dict))
+
+
+@pytest.mark.parametrize("op", ["<>", "!="])
+def test_not_equal_writes_property_is_not_equal_to(op):
+    """CQL2 `<>` (and the legacy `!=` spelling) map to `PropertyIsNotEqualTo`."""
+    xml = selector_to_filter_xml({"op": op, "args": [{"property": "NAME"}, "NY"]})
+    assert etree.QName(xml[0]).localname == "PropertyIsNotEqualTo"

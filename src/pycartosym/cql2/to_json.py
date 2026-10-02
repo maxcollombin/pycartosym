@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 # Tried longest-first so e.g. ">=" matches before its "=" substring.
-_COMPARISON_OPERATORS = [">=", "<=", "!=", "=", ">", "<"]
+_COMPARISON_OPERATORS = [">=", "<=", "<>", "!=", "=", ">", "<"]
 
 
 def split_on_comparison_operator(
@@ -72,6 +72,7 @@ def post_process_selector(selector: Any) -> Any:
                 "<=",
                 ">",
                 ">=",
+                "<>",
                 "!=",
                 "like",
                 "ilike",
@@ -282,7 +283,7 @@ def expression_to_json(expression: Any) -> Any:
         elif "GTE" in op_str or "GREATER_EQUAL" in op_str:
             op = ">="
         elif "NEQ" in op_str or "NOT_EQUAL" in op_str:
-            op = "!="
+            op = "<>"
         else:
             # Extract operator from string representation
             if "." in op_str:
@@ -417,17 +418,28 @@ def convert_antlr_expression(expr_ctx: Any, rule_name: str) -> Any:
 
                     if op_rule in [
                         "relationalOperator",
-                        "binaryLogicalOperator",
                         "arithmeticOperatorAdd",
                         "arithmeticOperatorMul",
                         "arithmeticOperatorExp",
                     ]:
                         # This is a binary operation
                         left_arg = convert_antlr_expression(left_child, "expression")
-                        operator = op_child.getText()
+                        operator = op_child.getText().lower()
                         right_arg = convert_antlr_expression(right_child, "expression")
 
                         return {"op": operator, "args": [left_arg, right_arg]}
+
+                # `and` / `or` are bare tokens in the `expression` rule
+                elif not hasattr(op_child, "getRuleIndex") and (
+                    op_child.getText().lower() in ("and", "or")
+                ):
+                    return {
+                        "op": op_child.getText().lower(),
+                        "args": [
+                            convert_antlr_expression(left_child, "expression"),
+                            convert_antlr_expression(right_child, "expression"),
+                        ],
+                    }
 
                 # Property access pattern: expression + '.' + terminal
                 elif (

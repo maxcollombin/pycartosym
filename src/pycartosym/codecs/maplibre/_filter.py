@@ -61,6 +61,7 @@ _CMP: dict[str, str] = {
     ">=": ">=",
 }
 _CMP_INV = {v: k for k, v in _CMP.items()}
+_CMP_INV["!="] = "!="  # legacy CS-JSON spelling of CQL2 `<>`
 
 _SPECIAL_KEYS = {"$type", "$id"}
 

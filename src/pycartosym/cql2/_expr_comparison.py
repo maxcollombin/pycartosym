@@ -19,9 +19,12 @@ class ComparisonPredicate(BoolExpression):
 
 
 class BinaryComparisonPredicate(ComparisonPredicate):
-    """Binary comparison: {"op": "=|!=|<|<=|>|>=", "args": [...]}."""
+    """Binary comparison: {"op": "=|<>|<|<=|>|>=", "args": [...]}.
 
-    op: Literal["=", "!=", "<", "<=", ">", ">="]
+    ``!=`` is accepted as a legacy spelling of CQL2's ``<>``.
+    """
+
+    op: Literal["=", "<>", "!=", "<", "<=", ">", ">="]
     args: list[NumericExpression | ScalarExpression] = Field(min_length=2, max_length=2)
 
 

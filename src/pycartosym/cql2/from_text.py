@@ -124,9 +124,9 @@ class ExpressionParser:
     # =================================================================
 
     # Operator precedence, low → high. Relational operators all share one
-    # level. This is the SQL / CQL2 convention and matches the historical
-    # text parser; the grammar's own left-recursive alternative order puts
-    # `and`/`or` *above* relational, which we deliberately override.
+    # level. This is the SQL / CQL2 convention, which the grammar's own
+    # left-recursive alternative order also follows; re-climbing the
+    # flattened chain keeps the result independent of that order.
     _PREC_OR = 1
     _PREC_AND = 2
     _PREC_REL = 3
@@ -259,7 +259,7 @@ class ExpressionParser:
         (``op_ctx.AND()``, ``op_ctx.IDIV()`` …), never by their literal text.
         """
         if isinstance(ctx, _G.LogicalExprContext):
-            if ctx.binaryLogicalOperator().AND() is not None:
+            if ctx.AND() is not None:
                 return (BinaryOperator.AND, ExpressionParser._PREC_AND, None)
             return (BinaryOperator.OR, ExpressionParser._PREC_OR, None)
         if isinstance(ctx, _G.RelationalExprContext):
@@ -373,6 +373,7 @@ class ExpressionParser:
     # relationalOperator token accessor -> comparison BinaryOperator
     _REL_COMPARISON = {
         "EQ": BinaryOperator.EQUAL,
+        "NEQ": BinaryOperator.NOT_EQUAL,
         "LTEQ": BinaryOperator.LESS_EQUAL,
         "GTEQ": BinaryOperator.GREATER_EQUAL,
         "LT": BinaryOperator.LESS_THAN,
@@ -503,7 +504,7 @@ class ExpressionParser:
             return cql2
 
         # Check for relational operations (top-level, unquoted)
-        for op in [">=", "<=", "!=", "=", ">", "<"]:
+        for op in [">=", "<=", "<>", "!=", "=", ">", "<"]:
             if ExpressionParser._find_top_level(original_text, f" {op} ") != -1:
                 return ExpressionParser._parse_relational_expression(original_text, op)
 
@@ -795,7 +796,7 @@ class ExpressionParser:
 
         # Parse value
         try:
-            if "." in text:
+            if "." in text or "e" in text.lower():
                 value = float(text)
             else:
                 value = int(text)
@@ -820,6 +821,7 @@ class ExpressionParser:
         """Map operator text to BinaryOperator enum."""
         mapping = {
             "=": BinaryOperator.EQUAL,
+            "<>": BinaryOperator.NOT_EQUAL,
             "!=": BinaryOperator.NOT_EQUAL,
             "<": BinaryOperator.LESS_THAN,
             "<=": BinaryOperator.LESS_EQUAL,
@@ -862,7 +864,7 @@ class ExpressionParser:
             return cql2
 
         # Check for relational operations (top-level, unquoted)
-        for op in [">=", "<=", "!=", "=", ">", "<"]:
+        for op in [">=", "<=", "<>", "!=", "=", ">", "<"]:
             if ExpressionParser._find_top_level(text, f" {op} ") != -1:
                 return ExpressionParser._parse_relational_expression(text, op)
 
