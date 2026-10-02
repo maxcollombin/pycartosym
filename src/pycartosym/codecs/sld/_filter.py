@@ -21,13 +21,15 @@ from ._xml_helpers import GML, ogc_el
 
 _COMPARISON_OPS = {
     "=": "PropertyIsEqualTo",
-    "!=": "PropertyIsNotEqualTo",
+    "<>": "PropertyIsNotEqualTo",
     "<": "PropertyIsLessThan",
     ">": "PropertyIsGreaterThan",
     "<=": "PropertyIsLessThanOrEqualTo",
     ">=": "PropertyIsGreaterThanOrEqualTo",
 }
 _COMPARISON_TAGS = {v: k for k, v in _COMPARISON_OPS.items()}
+# Legacy CS-JSON spelling of CQL2 `<>`, still accepted on write.
+_COMPARISON_OPS["!="] = _COMPARISON_OPS["<>"]
 
 # CQL2 named spatial-relation predicate -> Filter 1.1.0 spatial operator
 # element (all ogc:BinarySpatialOpType, substitutionGroup ogc:spatialOps).
@@ -59,7 +61,15 @@ _DATALAYER_METADATA_SYSIDS = (
 )
 
 _SCALE_SYSID = "viz.sd"
-_FLIP_OP = {"<": ">", "<=": ">=", ">": "<", ">=": "<=", "=": "=", "!=": "!="}
+_FLIP_OP = {
+    "<": ">",
+    "<=": ">=",
+    ">": "<",
+    ">=": "<=",
+    "=": "=",
+    "<>": "<>",
+    "!=": "<>",
+}
 
 
 def _is_sysid_eq(expr: Any, sys_id: str) -> bool:

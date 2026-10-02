@@ -100,7 +100,7 @@ def test_double_not():
 # ── comparisons + arithmetic precedence ─────────────────────────────────────
 
 
-@pytest.mark.parametrize("op, expected", [("=", "="), ("!=", "!="), ("<>", "!=")])
+@pytest.mark.parametrize("op, expected", [("=", "="), ("!=", "<>"), ("<>", "<>")])
 def test_comparison_operators(op, expected):
     model = parse_cql2_text(f"a {op} 1")
     assert model.operator == expected

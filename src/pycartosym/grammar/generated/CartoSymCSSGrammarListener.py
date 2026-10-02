@@ -377,15 +377,6 @@ class CartoSymCSSGrammarListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CartoSymCSSGrammar#binaryLogicalOperator.
-    def enterBinaryLogicalOperator(self, ctx:CartoSymCSSGrammar.BinaryLogicalOperatorContext):
-        pass
-
-    # Exit a parse tree produced by CartoSymCSSGrammar#binaryLogicalOperator.
-    def exitBinaryLogicalOperator(self, ctx:CartoSymCSSGrammar.BinaryLogicalOperatorContext):
-        pass
-
-
     # Enter a parse tree produced by CartoSymCSSGrammar#unaryLogicalOperator.
     def enterUnaryLogicalOperator(self, ctx:CartoSymCSSGrammar.UnaryLogicalOperatorContext):
         pass

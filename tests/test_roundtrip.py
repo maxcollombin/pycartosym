@@ -116,16 +116,90 @@ class TestSelectorParsing:
         assert sel["op"] == "="
         assert sel["args"][1] == "Rivers"
 
-    def test_not_equal_operator_is_not_valid_cscss(self):
-        """CartoSym-CSS has no `!=` / `<>` operator — its grammar's
-        `relationalOperator` is EQ | LT | LTEQ | GT | GTEQ | IN | NOT IN |
-        IS | IS NOT | LIKE | NOT LIKE. `!=` must be a hard syntax error,
-        not silently swallowed.
-        """
+    def test_not_equal_operator(self):
+        """`<>` is CQL2's not-equal; CS-JSON uses the CQL2-JSON `<>` op."""
+        cscss = "[population <> 0]\n{ visibility: true; }"
+        sel = self.converter.cscss_to_csjson(cscss)["stylingRules"][0]["selector"]
+        assert sel == {"op": "<>", "args": [{"property": "population"}, 0]}
+
+    def test_bang_equal_is_not_valid_cscss(self):
+        """CQL2-Text only defines `<>`; `!=` must be a hard syntax error."""
         from pycartosym.exceptions import CartoSymSyntaxError
 
         with pytest.raises(CartoSymSyntaxError):
             self.converter.cscss_to_csjson("[population != 0]\n{ visibility: true; }")
+
+    @pytest.mark.parametrize("op", ["<>", "!="])
+    def test_not_equal_writes_back_as_infix(self, op):
+        """CS-JSON `<>` (and legacy `!=`) writes back as a re-parseable `a <> b`."""
+        doc = {
+            "stylingRules": [
+                {
+                    "selector": {"op": op, "args": [{"property": "population"}, 0]},
+                    "symbolizer": {"visibility": True},
+                }
+            ]
+        }
+        cscss = self.converter.csjson_to_cscss(doc)
+        assert "[population <> 0]" in cscss
+        sel = self.converter.cscss_to_csjson(cscss)["stylingRules"][0]["selector"]
+        assert sel == {"op": "<>", "args": [{"property": "population"}, 0]}
+
+    @pytest.mark.parametrize(
+        "selector, expected",
+        [
+            (
+                "a = 1 AND b = 2",
+                {
+                    "op": "and",
+                    "args": [
+                        {"op": "=", "args": [{"property": "a"}, 1]},
+                        {"op": "=", "args": [{"property": "b"}, 2]},
+                    ],
+                },
+            ),
+            ("a IN (1, 2)", {"op": "in", "args": [{"property": "a"}, [1, 2]]}),
+            (
+                "a Not In (1, 2)",
+                {
+                    "op": "not",
+                    "args": [{"op": "in", "args": [{"property": "a"}, [1, 2]]}],
+                },
+            ),
+            ("a IS NULL", {"op": "isNull", "args": [{"property": "a"}]}),
+            ("a = TRUE", {"op": "=", "args": [{"property": "a"}, True]}),
+        ],
+    )
+    def test_cql2_keywords_are_case_insensitive(self, selector, expected):
+        """CQL2-Text keywords are case-insensitive, so CartoSym-CSS's are too."""
+        cscss = f"[{selector}]\n{{ visibility: true; }}"
+        sel = self.converter.cscss_to_csjson(cscss)["stylingRules"][0]["selector"]
+        assert sel == expected
+
+    def test_not_binds_tighter_than_and(self):
+        cscss = "[not a = 1 and b = 2]\n{ visibility: true; }"
+        sel = self.converter.cscss_to_csjson(cscss)["stylingRules"][0]["selector"]
+        assert sel == {
+            "op": "and",
+            "args": [
+                {"op": "not", "args": [{"op": "=", "args": [{"property": "a"}, 1]}]},
+                {"op": "=", "args": [{"property": "b"}, 2]},
+            ],
+        }
+
+    def test_unary_minus_binds_tighter_than_add(self):
+        cscss = "[x = -a + 2]\n{ visibility: true; }"
+        sel = self.converter.cscss_to_csjson(cscss)["stylingRules"][0]["selector"]
+        assert sel["args"][1] == {
+            "op": "+",
+            "args": [{"op": "-", "args": [{"property": "a"}]}, 2],
+        }
+
+    @pytest.mark.parametrize("literal", ["2e3", "2E3"])
+    def test_exponent_numeric_literal(self, literal):
+        cscss = f"[x = {literal}]\n{{ visibility: true; }}"
+        sel = self.converter.cscss_to_csjson(cscss)["stylingRules"][0]["selector"]
+        assert sel["args"][1] == 2000.0
 
     def test_less_than_selector(self):
         cscss = "[viz.sd < 50000]\n{ visibility: true; }"
