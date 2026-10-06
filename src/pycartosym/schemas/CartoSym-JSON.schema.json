@@ -164,6 +164,8 @@
                      "centerLine": { "$ref": "#/$defs/strokeStyling" },
                      "dashPattern": { "$ref": "#/$defs/dashPattern" },
                      "pattern": { "$ref": "#/$defs/graphic" },
+                     "patternGap": { "type": "number" },
+                     "patternInitialGap": { "type": "number" },
                      "join": { "$ref": "#/$defs/strokeJoin" },
                      "cap": { "$ref": "#/$defs/strokeCap" }
                   }

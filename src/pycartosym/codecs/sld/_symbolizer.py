@@ -1000,11 +1000,27 @@ def _build_stroke_element(
     # se:Stroke/se:GraphicFill (filling the line's width, not stroking
     # along it) has none.
     pattern = _g(stroke, "pattern")
+    gaps = [
+        (tag, value)
+        for tag, field in (
+            ("InitialGap", "pattern_initial_gap"),
+            ("Gap", "pattern_gap"),
+        )
+        if (value := _g(stroke, field)) is not None
+    ]
+    if gaps and (pattern is None or d.version == "1.0.0"):
+        raise NotImplementedError(
+            "Stroke.patternGap/patternInitialGap need a Stroke.pattern and "
+            "SE 1.1.0 (se:GraphicStroke/se:Gap, se:InitialGap)"
+        )
     if pattern is not None:
         graphic_stroke = d.el("GraphicStroke", parent=el)
         graphic_stroke.append(
             _build_pattern_graphic(d, pattern, "Stroke.pattern", base_opacity)
         )
+        # se:GraphicStrokeType order: Graphic, InitialGap?, Gap?.
+        for tag, value in gaps:
+            d.el(tag, parent=graphic_stroke, text=format_number(value))
     color = _g(stroke, "color")
     width = _g(stroke, "width")
     dash_pattern = _g(stroke, "dash_pattern")
@@ -2144,6 +2160,10 @@ def _parse_stroke_element(d: SldDialect, stroke_el: etree._Element) -> dict:
         result["pattern"] = _parse_pattern_graphic(
             d, graphic_stroke_el, "Stroke.pattern"
         )
+        for tag, key in (("InitialGap", "patternInitialGap"), ("Gap", "patternGap")):
+            gap = parse_number(element_text(d.find(graphic_stroke_el, tag)))
+            if gap is not None:
+                result[key] = gap
     _reject_unknown_params(
         d,
         stroke_el,
@@ -2477,6 +2497,14 @@ _UNIT_WKN_SHAPES: dict[str, list[tuple[float, float]]] = {
 }
 
 _SUPPORTED_WKN = {"circle", "square", *_UNIT_WKN_SHAPES}
+
+#: Public read-only view of the canonical shapes above: a producer that
+#: recognises one of them in its own geometry (rotated, offset, any start
+#: vertex) emits these exact nodes, which the writer turns into the matching
+#: ``se:WellKnownName``.
+WELL_KNOWN_SHAPES: dict[str, tuple[tuple[float, float], ...]] = {
+    name: tuple(nodes) for name, nodes in _UNIT_WKN_SHAPES.items()
+}
 
 
 def _match_wkn_shape(

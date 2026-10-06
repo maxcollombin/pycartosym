@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from ..base import Codec
 from ._dialect import SE_1_1_0, SLD_1_0_0, SLD_1_0_0_GEOSERVER, SldDialect
+from ._symbolizer import WELL_KNOWN_SHAPES
 from .reader import SldReader
 from .writer import SldWriter
 
@@ -57,4 +58,5 @@ __all__ = [
     "SE_1_1_0",
     "SLD_1_0_0",
     "SLD_1_0_0_GEOSERVER",
+    "WELL_KNOWN_SHAPES",
 ]
