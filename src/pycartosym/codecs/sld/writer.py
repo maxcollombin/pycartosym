@@ -25,6 +25,7 @@ from ._dialect import SE_1_1_0, SldDialect
 from ._filter import (
     extract_feature_type_name,
     extract_scale_denominators,
+    extract_visualization_pass,
     selector_to_filter_xml,
 )
 from ._symbolizer import has_raster_fields, symbolizer_to_elements
@@ -113,7 +114,7 @@ class SldWriter(CodecWriter):
             flat_rules = list(style.styling_rules)
         groups = self._group_rules_by_feature_type(flat_rules)
         emitted = 0
-        for feature_type_name, rules in groups.items():
+        for (_pass, feature_type_name), rules in groups.items():
             fts = self._build_feature_type_style(feature_type_name, rules)
             if fts is not None:
                 user_style.append(fts)
@@ -128,20 +129,29 @@ class SldWriter(CodecWriter):
 
     def _group_rules_by_feature_type(
         self, rules: list[StylingRule]
-    ) -> OrderedDict[str | None, list[tuple[StylingRule, dict | None]]]:
-        """Group top-level rules by their ``dataLayer.id`` conjunct.
+    ) -> OrderedDict[
+        tuple[int | None, str | None], list[tuple[StylingRule, dict | None]]
+    ]:
+        """Group top-level rules by their ``viz.pass`` and ``dataLayer.id`` conjuncts.
 
-        Rules with no ``dataLayer.id`` conjunct are grouped under the key
-        ``None`` and go into a ``se:FeatureTypeStyle`` with no
+        Each group becomes one ``se:FeatureTypeStyle``, in ascending
+        ``viz.pass`` order (SE draws the styles of a ``se:UserStyle`` one
+        after the other), then in order of first appearance. Rules with no
+        ``dataLayer.id`` conjunct go into a ``se:FeatureTypeStyle`` with no
         ``se:FeatureTypeName`` child. Also strips (without re-emitting)
         any ``dataLayer.type``/``dataLayer.featuresGeometryDimensions``
         conjuncts found alongside it — see
         ``_filter.py::extract_feature_type_name``. SLD/SE has no
         representation for either, so this is a write-only lossy strip.
+
+        Raises:
+            NotImplementedError: If some rendering rules have a ``viz.pass``
+                and others do not — which pass the latter belong to is not
+                defined by the conceptual model.
         """
-        groups: OrderedDict[str | None, list[tuple[StylingRule, dict | None]]] = (
-            OrderedDict()
-        )
+        groups: OrderedDict[
+            tuple[int | None, str | None], list[tuple[StylingRule, dict | None]]
+        ] = OrderedDict()
         for rule in rules:
             selector = rule.selector
             if selector is not None and not isinstance(selector, dict):
@@ -151,8 +161,29 @@ class SldWriter(CodecWriter):
                     "no SLD/SE mapping in this codec"
                 )
             feature_type_name, remaining = extract_feature_type_name(selector)
-            groups.setdefault(feature_type_name, []).append((rule, remaining))
-        return groups
+            pass_number, remaining = extract_visualization_pass(remaining)
+            groups.setdefault((pass_number, feature_type_name), []).append(
+                (rule, remaining)
+            )
+        passes = {key[0] for key, members in groups.items() if self._renders(members)}
+        if None in passes and len(passes) > 1:
+            raise NotImplementedError(
+                "Some styling rules select a viz.pass and others do not: the "
+                "pass of the latter is undefined, so their se:FeatureTypeStyle "
+                "order cannot be decided"
+            )
+        return OrderedDict(sorted(groups.items(), key=lambda item: item[0][0] or 0))
+
+    def _renders(self, members: list[tuple[StylingRule, dict | None]]) -> bool:
+        """Return True if any rule of a group yields a se:Rule (see _build_rule)."""
+        return any(
+            rule.nested_rules
+            or (
+                rule.symbolizer is not None
+                and symbolizer_to_elements(self.d, rule.symbolizer)
+            )
+            for rule, _ in members
+        )
 
     def _build_feature_type_style(
         self,
