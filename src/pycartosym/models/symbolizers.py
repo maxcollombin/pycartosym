@@ -189,6 +189,16 @@ class Stroke(BaseCartoSymModel, AlterMixin):
         ),
     )
     pattern: Graphic | None = Field(None, description="Stroke pattern graphic")
+    pattern_gap: float | None = Field(
+        None,
+        alias="patternGap",
+        description="Gap between instances of the pattern graphic",
+    )
+    pattern_initial_gap: float | None = Field(
+        None,
+        alias="patternInitialGap",
+        description="Initial gap before the first pattern graphic",
+    )
 
     # Part 2 ("shapes") extension: line ends/corners — { butt, round,
     # square } / { miter, round, bevel } respectively.
