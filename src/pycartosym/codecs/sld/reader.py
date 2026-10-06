@@ -24,6 +24,7 @@ from ._filter import (
     filter_xml_to_selector,
     merge_feature_type_name,
     merge_scale_denominators,
+    merge_visualization_pass,
 )
 from ._symbolizer import elements_to_symbolizer
 from ._xml_helpers import OGC, SLD, local_name
@@ -139,14 +140,18 @@ class SldReader(CodecReader):
             if abstract_el is not None and abstract_el.text:
                 metadata["abstract"] = abstract_el.text
 
-        styling_rules: list[dict] = []
-        for fts_el in [
+        styles = [
             child
             for child in user_style
             if isinstance(child.tag, str)
             and local_name(child) in ("FeatureTypeStyle", "CoverageStyle")
-        ]:
-            styling_rules.extend(self._parse_feature_type_style(fts_el))
+        ]
+        styling_rules: list[dict] = []
+        for index, fts_el in enumerate(styles):
+            # Several styles are drawn one after the other: their order is the
+            # viz.pass of their rules (a single style needs none).
+            pass_number = index if len(styles) > 1 else None
+            styling_rules.extend(self._parse_feature_type_style(fts_el, pass_number))
 
         style_dict: dict = {"stylingRules": styling_rules}
         if metadata:
@@ -154,7 +159,9 @@ class SldReader(CodecReader):
         style: Style = Style.from_dict(style_dict)
         return style
 
-    def _parse_feature_type_style(self, fts_el: etree._Element) -> list[dict]:
+    def _parse_feature_type_style(
+        self, fts_el: etree._Element, pass_number: int | None = None
+    ) -> list[dict]:
         ftn_el = self.d.find(fts_el, "FeatureTypeName")
         if ftn_el is None:
             ftn_el = self.d.find(fts_el, "CoverageName")
@@ -177,10 +184,12 @@ class SldReader(CodecReader):
                 attach_to.setdefault("nestedRules", []).append(rule_dict)
                 attach_to = rule_dict
             else:
-                if feature_type_name is not None:
-                    rule_dict["selector"] = merge_feature_type_name(
-                        feature_type_name, rule_dict.get("selector")
-                    )
+                selector = merge_visualization_pass(
+                    pass_number, rule_dict.get("selector")
+                )
+                selector = merge_feature_type_name(feature_type_name, selector)
+                if selector is not None:
+                    rule_dict["selector"] = selector
                 rule_dicts.append(rule_dict)
                 attach_to = rule_dict
 
