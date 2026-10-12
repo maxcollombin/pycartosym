@@ -17,7 +17,9 @@ class BaseCartoSymModel(BaseModel):
     """
 
     model_config = ConfigDict(
-        # Allow extra fields for extensibility
+        # Reject unknown fields (typo protection). The one spec-sanctioned
+        # extension point — ``vendor.<name>.<prop>`` keys on a Symbolizer —
+        # is opened up in ``Symbolizer`` itself.
         extra="forbid",
         # Validate on assignment
         validate_assignment=True,

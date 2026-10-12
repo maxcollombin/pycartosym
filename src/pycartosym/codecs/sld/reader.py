@@ -2,9 +2,10 @@
 
 Scope: vector symbolizers plus basic Part-1 raster/coverage styling; see
 ``writer.py``'s module docstring for the exact scope boundary. Out-of-scope
-SLD/SE constructs (e.g. advanced raster, graphic fills, external graphics)
-raise :exc:`NotImplementedError` rather than being silently skipped, per
-this project's lossless-transcoding requirement.
+SLD/SE constructs (e.g. advanced raster, multi-element or text pattern
+fills, ``ExternalGraphic`` without an ``OnlineResource``) raise
+:exc:`NotImplementedError` rather than being silently skipped, per this
+project's lossless-transcoding requirement.
 
 :class:`SldReader` is parametrised by an
 :class:`~pycartosym.codecs.sld._dialect.SldDialect`; the wiring in
