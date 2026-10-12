@@ -527,9 +527,13 @@ class Cql2TextTreeWalker:
         """Turn ``IDENTIFIER '(' argumentList? ')'`` into the matching CQL2 model.
 
         Only names that are *not* dedicated grammar keywords reach this
-        rule (spatial/temporal/array predicates, WKT tags, CASEI/ACCENTI,
-        DATE/TIMESTAMP/INTERVAL all have their own grammar productions) —
-        so this covers ``S_RELATE``, the geometry-manipulation functions
+        rule (the spatial/temporal/array predicates the grammar lists, WKT
+        tags, CASEI/ACCENTI, DATE/TIMESTAMP/INTERVAL all have their own
+        grammar productions) — so this covers ``S_RELATE``, the two
+        spatial predicates the model supports but ``spatialFunction``
+        omits (``S_COVERS``/``S_COVEREDBY``; the temporal/array branches
+        below are defensive, since their grammar lists match the model's),
+        the geometry-manipulation functions
         (``S_BUFFER``, ``S_INTERSECTION``…), text-op predicates
         (``CONTAINS``/``STARTSWITH``/``ENDSWITH``), the remaining character
         functions (``LOWERCASE``/``CONCATENATE``/…), plus any other
