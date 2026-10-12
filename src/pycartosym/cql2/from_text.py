@@ -482,7 +482,7 @@ class ExpressionParser:
         if not original_text:
             original_text = ctx.getText() if hasattr(ctx, "getText") else str(ctx)
 
-        # Strip a single pair of parentheses that wraps the *entire*
+        # Strip the outer parentheses that wrap the *entire*
         # expression, e.g. `(a = 1 and b = 2)` — otherwise the
         # function-call branch below would mis-read it as a call.
         original_text = ExpressionParser._unwrap_parens(original_text.strip())
@@ -581,7 +581,7 @@ class ExpressionParser:
         # ' and ' — left-associative, matching the ANTLR grammar's own
         # left-recursive `expression` rule.
         for needle, op in ((" or ", BinaryOperator.OR), (" and ", BinaryOperator.AND)):
-            pos = ExpressionParser._find_top_level(text, needle, last=True)
+            pos = ExpressionParser._find_top_level_connective(text, needle)
             if pos != -1:
                 return BinaryOperationExpression(
                     left=ExpressionParser.parse_expression(text[:pos].strip()),
@@ -773,8 +773,8 @@ class ExpressionParser:
 
         The CartoSym-CSS grammar's ``tuple`` rule accepts any run of
         space-separated identifiers/numbers, so CQL2-Text the grammar
-        cannot lex properly — upper-case keywords (``score BETWEEN 0 AND
-        100``), hex literals (``0xFF`` → ``0 xFF``) — parses "cleanly" as
+        cannot lex properly — e.g. hex literals (``0xFF`` → ``0 xFF``) —
+        parses "cleanly" as
         an :class:`ArrayExpression`. A genuine array literal always has
         brackets or commas; a bare tuple here means the grammar path
         failed silently and the ``parse_expression`` text-scan fallback
@@ -925,7 +925,7 @@ class ExpressionParser:
 
     @staticmethod
     def _only_between_and(text: str) -> bool:
-        """Return True if the only ' and ' in *text* is part of a BETWEEN."""
+        """Return True if the only ' and '/' or ' in *text* belong to one BETWEEN."""
         tl = text.lower()
         m = re.search(r"\bbetween\b", tl)
         if not m:
@@ -934,9 +934,11 @@ class ExpressionParser:
         and_pos = tl.find(" and ", m.end())
         if and_pos == -1:
             return False
-        # Check there's no other ' and ' or ' or ' outside the between
+        # Check there's no other ' and ' or ' or ' outside the between,
+        # before it as well as after it
+        before = tl[: m.start()]
         rest = tl[and_pos + 5 :]
-        return " and " not in rest and " or " not in rest
+        return not any(w in s for s in (before, rest) for w in (" and ", " or "))
 
     @staticmethod
     def _try_parse_cql2_operator(text: str) -> _ExprNode | None:
@@ -1009,6 +1011,15 @@ class ExpressionParser:
             val = ExpressionParser._parse_single_expression(text[: m.end(1)])
             pat = ExpressionParser._parse_single_expression(text[m.start(2) :])
             return IsLikePredicate(op="like", args=[val, pat])
+
+        # --- NOT ILIKE 'pattern' ---
+        m = re.match(r"^(.+?)\s+not\s+ilike\s+(.+)$", tl)
+        if m:
+            val = ExpressionParser._parse_single_expression(text[: m.end(1)])
+            pat = ExpressionParser._parse_single_expression(text[m.start(2) :])
+            return NotExpression(
+                args=[IsLikePredicate(op="ilike", args=[val, pat])],
+            )
 
         # --- ILIKE 'pattern' ---
         m = re.match(r"^(.+?)\s+ilike\s+(.+)$", tl)
@@ -1285,7 +1296,7 @@ class ExpressionParser:
 
     @staticmethod
     def _unwrap_parens(text: str) -> str:
-        """Strip one pair of parens iff it wraps the whole expression.
+        """Strip redundant outer parens, as long as one pair wraps the whole text.
 
         ``(a and b)`` -> ``a and b`` ; ``f(x) = g(y)`` -> unchanged ;
         ``(a) or (b)`` -> unchanged.
@@ -1350,6 +1361,30 @@ class ExpressionParser:
             if text[i : i + n].lower() == nl:
                 if not last:
                     return i
+                found = i
+        return found
+
+    @staticmethod
+    def _find_top_level_connective(text: str, needle: str) -> int:
+        """Like ``_find_top_level(last=True)``, skipping a BETWEEN's own ' and '.
+
+        In ``x BETWEEN 1 AND 2 AND b = 1`` the first ' and ' belongs to the
+        BETWEEN and is not a logical connective; each top-level ``between``
+        consumes the next top-level ' and ' after it.
+        """
+        tl = text.lower()
+        between_and: set[int] = set()
+        pending = 0
+        for i, _ in ExpressionParser._iter_top_level(text):
+            if tl.startswith("between", i) and (i == 0 or not tl[i - 1].isalnum()):
+                pending += 1
+            elif pending and tl.startswith(" and ", i):
+                between_and.add(i)
+                pending -= 1
+        nl = needle.lower()
+        found = -1
+        for i, _ in ExpressionParser._iter_top_level(text):
+            if tl.startswith(nl, i) and i not in between_and:
                 found = i
         return found
 

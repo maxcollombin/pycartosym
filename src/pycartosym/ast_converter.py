@@ -85,7 +85,9 @@ def _parse_resource_string(inner: str) -> dict:
 def _parse_hotspot_string(s: str) -> Any:
     """Convert ``'N unit N unit'`` (e.g. ``'50 pc 50 pc'``) to a unitPoint array.
 
-    Produces ``[{unit: N}, {unit: N}]`` as expected by the CS-JSON schema.
+    Four tokens (``N unit N unit``) produce ``[{unit: N}, {unit: N}]`` as
+    expected by the CS-JSON schema; two bare integers produce ``[int, int]``;
+    anything else is returned unchanged.
     """
     parts = s.strip().split()
     if len(parts) == 4:
@@ -336,7 +338,8 @@ def _normalize_graphic_element(el: dict) -> None:
     """Normalise a graphic-element dict in-place to match the CartoSym JSON schema.
 
     Handles:
-    * ``opacity`` / ``bold`` / ``italic`` strings → proper Python types
+    * ``opacity`` strings → numbers (``font`` booleans/sizes are coerced
+      separately, by :func:`_coerce_font_dict`)
     * ``alignment: "left middle"`` → ``["left", "middle"]`` array
     * ``font: "{ face: 'Arial'; size: 12; ... }"`` string → proper dict
     """
@@ -856,7 +859,7 @@ class AstToPydanticConverter:
                 fill_data["alter"] = ast_fill.alter
 
             if hasattr(ast_fill, "color") and ast_fill.color is not None:
-                # Use _convert_literal_value for proper hex/color conversion
+                # Use convert_literal_value for proper hex/color conversion
                 fill_data["color"] = convert_literal_value(str(ast_fill.color))
 
             if hasattr(ast_fill, "opacity") and ast_fill.opacity is not None:
@@ -887,7 +890,7 @@ class AstToPydanticConverter:
                 stroke_data["alter"] = ast_stroke.alter
 
             if hasattr(ast_stroke, "color") and ast_stroke.color is not None:
-                # Use _convert_literal_value for proper hex/color conversion
+                # Use convert_literal_value for proper hex/color conversion
                 stroke_data["color"] = convert_literal_value(str(ast_stroke.color))
 
             if hasattr(ast_stroke, "width") and ast_stroke.width is not None:
@@ -907,7 +910,7 @@ class AstToPydanticConverter:
                     # does not.
                     stroke_data["width"] = width
                 else:
-                    # Use _convert_literal_value for proper unit conversion
+                    # Use convert_literal_value for proper unit conversion
                     width_value = str(width)
                     stroke_data["width"] = convert_literal_value(width_value)
 
@@ -1271,7 +1274,7 @@ class AstToPydanticConverter:
                         else:
                             result["sun"] = value
                     elif key == "colorMap":
-                        # colorMap inside hillShading uses 0-1 values for first element
+                        # colorMap inside hillShading: passed through as-is
                         result["colorMap"] = (
                             value if isinstance(value, (list, dict)) else str(value)
                         )

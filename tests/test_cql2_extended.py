@@ -474,3 +474,23 @@ class TestRoundTrip:
         assert isinstance(result, LowerUpperCaseExpression)
         d = {"op": "lowerCase", "args": [{"property": "name"}]}
         assert writeback(d) == "LOWERCASE(name)"
+
+
+# ── text-scan fallback: NOT ILIKE and mixed BETWEEN/and/or ────────────────
+
+
+def test_not_ilike_is_negated_ilike_not_a_mangled_identifier():
+    """`x NOT ILIKE 'a'` must negate an ILIKE on `x`, not ILIKE on `x NOT`."""
+    result = ExpressionParser._parse_expression_text("x NOT ILIKE 'a'")
+    assert result.op == "not"
+    (inner,) = result.args
+    assert inner.op == "ilike"
+    assert inner.args[0].name == "x"
+
+
+@pytest.mark.parametrize("conn", ["and", "or"])
+def test_between_after_a_leading_connective_is_not_swallowed(conn):
+    """A BETWEEN preceded by `and`/`or` stays one operand of the connective."""
+    result = ExpressionParser.parse_expression(f"a = 1 {conn} x between 1 and 2")
+    assert result.operator == conn
+    assert result.right.op == "between"
