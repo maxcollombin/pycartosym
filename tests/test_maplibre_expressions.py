@@ -303,3 +303,9 @@ def test_expression_through_style_model(mb_expr, _value):
     )
     color = style.styling_rules[0].symbolizer.fill.color
     assert value_to_maplibre_expr(color, "fill.color") == mb_expr
+
+
+def test_is_viz_sd_arithmetic_rejects_a_foreign_sysid_inside_arithmetic():
+    """Only `viz.sd` may be sampled; another sysId in arithmetic is rejected."""
+    value = ArithmeticExpression(op="*", args=[SystemIdentifier(sysId="viz.other"), 2])
+    assert is_viz_sd_arithmetic(value) is False

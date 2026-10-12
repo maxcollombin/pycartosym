@@ -192,6 +192,10 @@ def filter_to_selector(mb_filter: list[Any]) -> dict[str, Any]:
 def strip_datalayer_id(selector: Any) -> Any:
     """Drop a ``sysId dataLayer.id = <literal>`` conjunct from *selector*.
 
+    Only an equality against a literal is dropped; comparing ``dataLayer.id``
+    to another expression (e.g. a property) is kept, so the filter is never
+    silently widened.
+
     Walks the same ``and``-conjunction shape :func:`._zoom.extract_zoom_range`
     does, removing any ``dataLayer.id = <name>`` equality leaf wherever it
     appears (either operand order) and re-collapsing what remains — a
@@ -216,7 +220,10 @@ def strip_datalayer_id(selector: Any) -> Any:
     if op == "=":
         args = selector.get("args", [])
         if len(args) == 2 and any(
-            isinstance(a, dict) and a.get("sysId") == "dataLayer.id" for a in args
+            isinstance(a, dict)
+            and a.get("sysId") == "dataLayer.id"
+            and not isinstance(args[1 - i], dict)
+            for i, a in enumerate(args)
         ):
             return None
     return selector

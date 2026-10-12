@@ -343,3 +343,9 @@ def test_selector_to_filter_not_isnull_is_case_insensitive(spelling):
         "args": [{"op": spelling, "args": [{"property": "name"}]}],
     }
     assert selector_to_filter(selector) == ["has", "name"]
+
+
+def test_strip_datalayer_id_keeps_a_comparison_against_another_expression():
+    """Only an equality against a literal is dropped, never a property compare."""
+    selector = {"op": "=", "args": [{"sysId": "dataLayer.id"}, {"property": "z"}]}
+    assert strip_datalayer_id(selector) == selector

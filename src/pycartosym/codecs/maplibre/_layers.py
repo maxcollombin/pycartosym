@@ -394,7 +394,7 @@ def _line_symbolizer(layer: dict[str, Any]) -> dict[str, Any]:
     paint = layer.get("paint", {})
     layout = layer.get("layout", {})
     _reject_unknown(paint, _LINE_PAINT, "line")
-    # line-round-limit (miter-limit ratio) has no CartoSym Stroke field —
+    # line-round-limit (round-to-miter join threshold) has no CartoSym Stroke field —
     # reject rather than drop. line-cap/line-join map to the Part 2
     # ("shapes") Stroke.cap/Stroke.join extension below.
     _reject_unknown(

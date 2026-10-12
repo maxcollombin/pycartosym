@@ -150,3 +150,11 @@ def test_zoom_filter_conjunct_ignores_non_viz_sd_comparisons():
 def test_extract_zoom_range_ignores_non_viz_sd_conjuncts():
     selector = {"op": "=", "args": [{"property": "class"}, "water"]}
     assert extract_zoom_range(selector) == (None, None, selector)
+
+
+@pytest.mark.parametrize(
+    "args", [[{"sysId": "viz.sd"}, 100.0], [100.0, {"sysId": "viz.sd"}]]
+)
+def test_zoom_filter_conjunct_not_equal_accepts_either_operand_order(args):
+    result = zoom_filter_conjunct({"op": "<>", "args": args})
+    assert result is not None and result[:2] == ["!=", ["zoom"]]

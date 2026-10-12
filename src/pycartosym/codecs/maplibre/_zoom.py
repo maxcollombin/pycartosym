@@ -69,7 +69,15 @@ _TILE_PIXELS = 256.0
 _EARTH_CIRCUMFERENCE_M = 2 * math.pi * 6378137.0
 _PIXEL_SIZE_M = 0.00028
 
-_FLIP_OP = {"<": ">", "<=": ">=", ">": "<", ">=": "<=", "=": "=", "!=": "!="}
+_FLIP_OP = {
+    "<": ">",
+    "<=": ">=",
+    ">": "<",
+    ">=": "<=",
+    "=": "=",
+    "!=": "!=",
+    "<>": "<>",
+}
 
 
 def scale_denominator_from_zoom(zoom: float) -> float:
@@ -185,7 +193,7 @@ def zoom_filter_conjunct(expr: Any) -> list[Any] | None:
 
     Returned as a MapLibre ``filter`` conjunct on the ``["zoom"]``
     expression instead. See the module docstring for why
-    ``<``/``>=``/``=``/``!=`` need this
+    ``<``/``>=``/``=``/``!=``/``<>`` need this
     fallback rather than a (rounded, inexact) ``minzoom``/``maxzoom``.
     ``None`` if *expr* is not such a comparison — including a ``viz.sd``
     comparison :func:`_zoom_bound` already maps to minzoom/maxzoom, or one

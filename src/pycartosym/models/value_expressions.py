@@ -28,9 +28,9 @@ Spec vocabulary, not CQL2 vocabulary.
 ``arithmeticExpression``, and so — like ``PropertyRef`` — arguably *are*
 CQL2 vocabulary already covered by same-named classes in
 :mod:`pycartosym.cql2.model`. They are re-declared here anyway, following
-``PropertyRef``'s own precedent: the ``cql2.model`` versions extend the
-heavier ``Expression`` ABC (plain ``pydantic.BaseModel``, a required
-``type`` discriminant), which doesn't match this module's/``symbolizers.py``'s
+``PropertyRef``'s own precedent: the ``cql2.model`` versions extend
+``NumericExpression``/``BaseExpression`` with an optional ``type``
+discriminant, which doesn't match this module's/``symbolizers.py``'s
 ``BaseCartoSymModel`` conventions (alias-based serialisation, no
 discriminant). This module's ``ArithmeticExpression.op`` is also
 schema-exact (``+``/``-``/``*``/``/``/``^``) — the ``cql2.model`` version

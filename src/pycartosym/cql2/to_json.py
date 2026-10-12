@@ -54,8 +54,8 @@ def split_on_comparison_operator(
 def post_process_selector(selector: Any) -> Any:
     """Post-process a selector: fix parsing issues, ensure proper JSON structure.
 
-    Returns a dict for well-formed selectors, but may also pass through
-    ``None`` / strings / lists unchanged.
+    Returns a dict for well-formed selectors. ``None`` and lists pass
+    through unchanged; a string is parsed into a selector dict.
     """
     left_arg: Any
     right_arg: Any
@@ -172,11 +172,6 @@ def post_process_selector(selector: Any) -> Any:
     elif isinstance(selector, str):
         # Handle string selectors that should be expressions
         return convert_string_to_json_selector(selector)
-    elif isinstance(selector, dict) and "property" in selector and len(selector) == 1:
-        # Invalid standalone property selector - convert to a valid boolean expression
-        prop_name = selector["property"]
-        # Convert standalone property to boolean check (property IS NOT NULL)
-        return {"op": "!=", "args": [{"property": prop_name}, None]}
     else:
         return selector
 

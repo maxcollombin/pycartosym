@@ -139,7 +139,9 @@ def is_viz_sd_arithmetic(value: Any) -> bool:
         return False
     leaves = _flatten_arithmetic(value)
     return any(isinstance(leaf, SystemIdentifier) for leaf in leaves) and all(
-        _is_number(leaf) or isinstance(leaf, SystemIdentifier) for leaf in leaves
+        _is_number(leaf)
+        or (isinstance(leaf, SystemIdentifier) and leaf.sysId == _VIZ_SD_SYSID)
+        for leaf in leaves
     )
 
 
@@ -194,7 +196,8 @@ def maplibre_expr_to_value(value: Any, prop: str) -> Any:
     A literal (number / string / bool / ``None``) passes through unchanged.
     A MapLibre expression array becomes the matching dict shape
     (``{"property": ...}`` for ``get``, ``{"op": ..., "args": [...]}`` for
-    the other five in-scope operators) for the Pydantic ``Style`` model to
+    the other operators, including binary arithmetic; ``literal`` yields
+    its bare argument) for the Pydantic ``Style`` model to
     validate into a typed :mod:`.value_expressions` model downstream.
 
     Raises:
