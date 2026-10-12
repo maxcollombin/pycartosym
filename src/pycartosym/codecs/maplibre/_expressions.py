@@ -57,6 +57,8 @@ import operator
 from collections.abc import Callable
 from typing import Any
 
+from pydantic import ValidationError
+
 from ...models.value_expressions import (
     ArithmeticExpression,
     CaseExpression,
@@ -337,7 +339,12 @@ def value_to_maplibre_expr(value: Any, prop: str) -> Any:
         NotImplementedError: *value* is not a literal or one of the
             typed :mod:`.value_expressions` models this codec maps.
     """
-    value = coerce_numeric_expr(value)
+    try:
+        value = coerce_numeric_expr(value)
+    except ValidationError as exc:
+        raise NotImplementedError(
+            f"{prop}: {value!r} is not a valid CartoSym value expression"
+        ) from exc
     if isinstance(value, PropertyRef):
         return ["get", value.property]
     if isinstance(value, ArithmeticExpression):

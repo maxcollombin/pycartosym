@@ -309,3 +309,9 @@ def test_is_viz_sd_arithmetic_rejects_a_foreign_sysid_inside_arithmetic():
     """Only `viz.sd` may be sampled; another sysId in arithmetic is rejected."""
     value = ArithmeticExpression(op="*", args=[SystemIdentifier(sysId="viz.other"), 2])
     assert is_viz_sd_arithmetic(value) is False
+
+
+def test_value_to_maplibre_expr_rejects_a_malformed_dict_cleanly():
+    """A malformed value dict raises NotImplementedError, not a pydantic error."""
+    with pytest.raises(NotImplementedError):
+        value_to_maplibre_expr({"property": 5}, "prop")
