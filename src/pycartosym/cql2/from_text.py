@@ -12,8 +12,8 @@ implementation. Two entry points:
   (``or < and < relational < + - < * / < ^``) rather than the grammar's
   own left-recursive alternative order.
 * :meth:`ExpressionParser._parse_expression_text` (str) — the CQL2-Text
-  entry point (``cql2.parse_text``), plus ``parse_expression`` and the
-  repair sites in ``ast_converter``. It first tries the standalone
+  entry point (``cql2.parse_text``), also used by ``cql2.to_json``'s
+  property-repair site. It first tries the standalone
   ``CQL2Text.g4`` tree-walker (:func:`.from_cql2text.parse_cql2_text`);
   only on failure does it fall back to lexing+parsing the string as a
   CartoSym-CSS ``expression`` and walking that tree
@@ -940,7 +940,9 @@ class ExpressionParser:
 
     @staticmethod
     def _try_parse_cql2_operator(text: str) -> _ExprNode | None:
-        """Try to parse CQL2 postfix operators: BETWEEN, IN, LIKE, IS NULL.
+        """Try to parse CQL2 postfix operators.
+
+        BETWEEN, IN, LIKE, ILIKE, IS NULL (and their NOT variants).
 
         Returns the parsed Expression or None if no CQL2 operator was found.
         """
@@ -1021,8 +1023,11 @@ class ExpressionParser:
     def _try_parse_cql2_function(text: str) -> _ExprNode | None:
         """Try to parse CQL2 function-style expressions.
 
-        Handles: spatial predicates, temporal predicates, array predicates,
-        WKT geometry literals, BBOX, DATE, TIMESTAMP, INTERVAL.
+        Handles: spatial predicates (incl. S_RELATE), temporal predicates,
+        array predicates, text-op predicates, WKT geometry literals, BBOX,
+        DATE, TIMESTAMP, INTERVAL, CASEI/ACCENTI/LOWERCASE/UPPERCASE/
+        CONCATENATE/SUBSTITUTE/FORMAT, and the geometry-manipulation and
+        buffer functions.
 
         Returns the parsed Expression or None if not a CQL2 function.
         """

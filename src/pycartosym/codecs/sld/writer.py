@@ -1,8 +1,9 @@
 """SLD/SE writer — serialise Style models to OGC SLD / Symbology Encoding XML.
 
 Scope: vector symbolizers (Point/Line/Polygon/Text) plus basic Part-1
-raster/coverage styling. GeoServer vendor extensions and advanced/Part-4
-raster are out of scope. Out-of-scope content raises
+raster/coverage styling. Advanced/Part-4 raster is out of scope, and
+GeoServer vendor options are accepted only by the ``sld:geoserver``
+dialect (the standard dialects reject them). Out-of-scope content raises
 :exc:`NotImplementedError` naming the unsupported field rather than being
 silently dropped, per this project's lossless-transcoding requirement.
 

@@ -11,8 +11,9 @@ kept as a safety net for constructs outside CQL2-Text proper (the
 hand-rolled scanner this tree-walker used to fall back to has since been
 removed).
 
-Model choice mirrors :class:`.from_text.ExpressionParser` exactly, so a
-future switch-over does not change the shape of what callers see:
+Model choice mirrors :class:`.from_text.ExpressionParser`, except that
+temporal and array operator names are canonicalised here (the fallback
+scanner keeps the raw lower-cased name):
 
 * AND / OR / arithmetic / comparison (``= != < <= > >=``) -> the generic
   :class:`~.model.BinaryOperationExpression` / :class:`~.model.UnaryOperationExpression`

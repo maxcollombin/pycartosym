@@ -217,9 +217,6 @@ def extract_zoom_range(
     Returns ``(minzoom, maxzoom, remaining_selector)``. When several
     bounds land on the same side, the tightest (highest resulting
     ``minzoom``, or lowest resulting ``maxzoom``) wins.
-
-    Raises:
-        NotImplementedError: see :func:`_zoom_bound`.
     """
     if selector is None:
         return None, None, None

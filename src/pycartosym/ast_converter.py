@@ -106,7 +106,7 @@ def _parse_hotspot_string(s: str) -> Any:
 
 
 def _parse_nested_props(props_str: str) -> dict:
-    """Brace-aware CSS property parser (mirrors parser._parse_element_props)."""
+    """Brace-aware CSS property parser."""
     props = {}
     parts = []
     current = ""
@@ -566,8 +566,7 @@ class AstToPydanticConverter:
         """Recursively resolve ``@variable`` references before model conversion.
 
         Walks all attributes of the AST node. String values like
-        ``"@baseColor"`` are replaced with the variable's value.  The
-        resolved value is coerced to int/float when appropriate.
+        ``"@baseColor"`` are replaced with the variable's value.
         """
         if ast_node is None:
             return

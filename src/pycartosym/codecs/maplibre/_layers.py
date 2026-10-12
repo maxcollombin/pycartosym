@@ -2,9 +2,9 @@
 
 Scope of this pass: ``fill`` / ``line`` / ``circle`` / ``symbol`` /
 ``background`` layers whose paint / layout scalar values are constants,
-or one of six MapLibre value-expression operators — ``get`` / ``case`` /
-``match`` / ``interpolate`` / ``step`` / ``coalesce`` (see
-:mod:`._expressions`). Anything else — ``raster`` layers, legacy
+or a mapped MapLibre value expression — ``get`` / ``case`` / ``match`` /
+``interpolate`` / ``step`` / ``coalesce``, binary arithmetic and
+``literal`` (see :mod:`._expressions`). Anything else — ``raster`` layers, legacy
 zoom/property functions (``{"stops": …}``), or any other expression
 operator — raises :exc:`NotImplementedError`. A partial mapping would
 silently drop styling, which this project does not do. Layer ``filter``
@@ -212,8 +212,9 @@ def _constant(value: Any, prop: str) -> Any:
     """Return *value*, mapping a MapLibre expression to its CartoSym form.
 
     A ``list`` is a MapLibre expression (``["get", "x"]`` …) — mapped via
-    :func:`._expressions.maplibre_expr_to_value` for the six operators it
-    covers, and rejected for anything else. A ``dict`` is a legacy
+    :func:`._expressions.maplibre_expr_to_value` for the operators it
+    covers (six value operators, binary arithmetic, ``literal``), and
+    rejected for anything else. A ``dict`` is a legacy
     zoom/property function (``{"stops": …}``) — out of scope, always
     rejected.
     """

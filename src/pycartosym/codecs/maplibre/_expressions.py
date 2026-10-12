@@ -3,7 +3,7 @@
 Scope: the six MapLibre operators this pass originally targeted — ``get``,
 ``case``, ``match``, ``interpolate``, ``step``, ``coalesce`` — mapped onto
 the typed models in :mod:`pycartosym.models.value_expressions`, plus the
-5 binary arithmetic operators (``+``/``-``/``*``/``/``/``^``, the
+``literal`` and the 5 binary arithmetic operators (``+``/``-``/``*``/``/``/``^``, the
 CartoSym-JSON schema's own ``arithmeticExpression`` op set — see
 :mod:`pycartosym.models.value_expressions`'s ``ArithmeticExpression``),
 which MapLibre spells identically. Every other MapLibre expression

@@ -94,7 +94,7 @@ in scope; a filled ``se:Mark wellKnownName="circle"`` reads back as a
 ``wellKnownName="square"`` as a ``2-shapes`` ``Rectangle`` with equal
 ``width``/``height`` (``se:Size`` is a single scalar — a non-square
 rectangle has no ``se:Mark`` mapping), and a ``Dot`` element still writes
-(stroke-only mark) for CartoSym-CSS sources.
+(a filled ``circle`` mark, its colour as the fill) for CartoSym-CSS sources.
 ``wellKnownName`` values ``triangle``/``star``/``cross``/``x`` read back
 as a ``2-shapes`` ``ClosedPath`` (arbitrary polygon ``nodes``, ``fill`` +
 ``outline``) using this codec's own canonical vertex geometry for each —
@@ -161,16 +161,13 @@ context (unlike most other constructs this codec maps), and a single
 font glyph as a *repeated pattern* has no obvious CartoSym-side meaning
 the way a single marker glyph does, so this stays out of scope for
 ``pattern`` specifically.
-``patternGap``/``patternInitialGap`` are not modeled
-yet — no CartoSym-JSON schema/Pydantic field exists for them, so this
-codec has nothing to read them into or write them from. (Annex B's own
-"Pattern Strokes" worked example represents them with
-``stroke-dasharray``/``stroke-dashoffset`` ``SvgParameter``s, but that
-example is itself SLD 1.0.0 vocabulary wrapped in a document claiming SE
-1.1.0 — the real SE 1.1.0 elements for this are ``se:GraphicStroke``'s
-own ``se:InitialGap``/``se:Gap`` children, confirmed against
-``Symbolizer.xsd``; a future implementation of these two fields should
-target those, not the ``SvgParameter`` form the example shows.)
+``Stroke.patternGap``/``patternInitialGap`` map to ``se:GraphicStroke``'s
+``se:Gap``/``se:InitialGap`` children (SE 1.1.0 only; they require a
+``pattern`` and raise on SLD 1.0.0). Annex B's own "Pattern Strokes" worked
+example represents them with ``stroke-dasharray``/``stroke-dashoffset``
+``SvgParameter``s, but that example is itself SLD 1.0.0 vocabulary wrapped
+in a document claiming SE 1.1.0; the real SE 1.1.0 elements, confirmed
+against ``Symbolizer.xsd``, are the ones used here.
 ``se:Stroke/se:GraphicFill`` (filling a line's width with a repeated
 graphic, as opposed to stroking *along* it) has no CartoSym ``Stroke``
 concept and still raises.
@@ -415,7 +412,7 @@ def _combine_opacity(base: float | None, own: Any) -> str | None:
 
 
 def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
-    """Convert one CartoSym ``Symbolizer`` into 1..N sibling SLD/SE elements."""
+    """Convert one CartoSym ``Symbolizer`` into 0..N sibling SLD/SE elements."""
     elements: list[etree._Element] = []
     fill = _g(sym, "fill")
     stroke = _g(sym, "stroke")
@@ -698,8 +695,10 @@ def _write_color_param(
     ``StepExpression``, ``CoalesceExpression``) has no SLD/SE mapping in
     this codec yet and raises. SE 1.1.0 only — SLD 1.0.0 has no native
     ``Recode``/``Interpolate``/``LookupValue``/``MapItem``/
-    ``InterpolationPoint`` (those are SE 1.1.0 additions), so this is not
-    called for that dialect (see the caller).
+    ``InterpolationPoint`` (those are SE 1.1.0 additions), so ``Recode``/
+    ``Interpolate`` raise :exc:`NotImplementedError` on that dialect (in
+    :func:`_write_recode`/:func:`_write_interpolate`); a ``PropertyRef`` is
+    written on both.
     """
     color = _coerce_color_expr(color)
     if isinstance(color, PropertyRef):
@@ -2440,8 +2439,9 @@ def _unit_star_nodes() -> list[tuple[float, float]]:
     """Regular 5-point star outline, canonical geometry chosen by this codec.
 
     Not specified numerically by the OGC standard (only the 6 predefined
-    ``se:Mark`` *names* are, not their vertex data — see the "Fill.pattern"
-    paragraph above for the same caveat on ``square``). A fixed,
+    ``se:Mark`` *names* are, not their vertex data — see the "Dot, Circle,
+    Rectangle, ClosedPath" paragraph of the module docstring for the same
+    caveat on ``square``). A fixed,
     self-consistent definition used both ways, inscribed in the
     ``[-0.5, 0.5]`` unit box that ``se:Graphic/se:Size`` scales (matching
     :class:`RectangleGraphic`'s own ``width == se:Size`` convention).

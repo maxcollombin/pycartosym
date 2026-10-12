@@ -1,7 +1,8 @@
 """MapLibre / MapBox GL Style writer — CartoSym Style models → style JSON.
 
 The inverse of :mod:`.reader`, and with the same scope: a ``fill`` /
-``line`` / ``marker`` / ``label`` symbolizer with constant values maps to
+``line`` / ``marker`` / ``label`` symbolizer with constant or mapped-expression
+values maps to
 a MapLibre layer (``fill`` / ``line`` / ``circle`` / ``symbol``); a rule
 selector maps to the layer ``filter``, except any ``viz.sd`` conjuncts
 that match MapLibre's own zoom-range shape, which map to

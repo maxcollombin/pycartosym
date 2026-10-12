@@ -1,10 +1,12 @@
 """MapLibre / MapBox GL Style reader — style JSON → CartoSym Style models.
 
-Scope: ``fill`` / ``line`` / ``circle`` layers with constant paint values
-and layer ``filter`` (see ``_layers`` / ``_filter``). Everything else
-raises :exc:`NotImplementedError` rather than being silently dropped, per
-this project's lossless-transcoding requirement. Symbol layers and
-MapLibre value expressions land in later passes.
+Scope: ``fill`` / ``line`` / ``circle`` / ``symbol`` / ``background``
+layers, paint / layout values that are constants or mapped value
+expressions, and layer ``filter`` (see ``_layers`` / ``_expressions`` /
+``_filter``). Everything else (``raster`` layers, legacy ``{"stops": …}``
+functions, unmapped operators) raises :exc:`NotImplementedError` rather
+than being silently dropped, per this project's lossless-transcoding
+requirement.
 
 One MapLibre layer can produce more than one ``stylingRule`` — a
 top-level ``["step", ["zoom"], …]`` paint/layout value (a discrete,
