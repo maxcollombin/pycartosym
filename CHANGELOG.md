@@ -35,16 +35,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- `<>` (not equal) is read and written; it is the canonical CS-JSON operator, and `!=` is still accepted on input.
+- `<>` (not equal) is accepted in CartoSym-CSS selectors; it was a syntax error before.
 
 ### Changed
 
-- CQL2 keywords are case-insensitive in CartoSym-CSS (`AND`, `OR`, `IN`, `IS NULL`, ...). Previously an upper-case `AND` was silently read as a property name.
+- Not equal is now `<>` in CS-JSON and is written back as `<>` in CartoSym-CSS (it was `!=`). `!=` is still accepted on input and normalized to `<>`.
+- CQL2 keywords are case-insensitive in CartoSym-CSS (`AND`, `OR`, `IN`, `IS NULL`, ...). Previously an upper-case keyword was silently mis-parsed as an identifier.
 
 ### Fixed
 
-- Precedence of the unary `not` and `-` operators in CartoSym-CSS expressions.
-- Exponent literals such as `2e3` are read as floats.
+- Precedence of the unary `not` and `-` operators in CartoSym-CSS expressions: `not a = 1 and b = 2` was read as `not (a = 1 and b = 2)`; they now bind to their own operand.
+- Exponent literals such as `2e3` are read as floats (they were split into `2` and an identifier `e3`).
 
 ## [0.3.5] - 2026-09-17
 
@@ -73,7 +74,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - `UnitPoint.x` and `.y` accept the `{unit: value}` shorthand (e.g. `ImageGraphic(hot_spot=[{"pc": 50}, {"pc": 50}])`).
-- SLD/SE writer: fields reachable only through their JSON alias (e.g. `ImageGraphic.hot_spot`) were ignored on typed instances, so `se:AnchorPoint` was never written.
+- SLD/SE writer: `se:AnchorPoint` was silently not written for an `ImageGraphic` built through the typed API, because `hot_spot` is only reachable through its `hotSpot` alias.
 
 ## [0.3.1] - 2026-09-12
 
