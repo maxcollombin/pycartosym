@@ -27,6 +27,7 @@ jobs:
       - run: uv run ruff check src/ tests/
       - run: uv run black --check src/pycartosym/ tests/
       - run: uv run mypy src/pycartosym/
+      - run: uvx --from python-kacl==0.7.7 kacl-cli verify
 
   test:
     runs-on: ubuntu-latest

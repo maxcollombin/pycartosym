@@ -48,7 +48,10 @@ run after a failed attempt requires bumping the version first.
 
 ## Publishing a real release
 
-1. Bump `version` in `pyproject.toml`.
+1. Move the `[Unreleased]` entries of `CHANGELOG.md` under a new dated
+   version heading (Keep a Changelog format, validated in CI by
+   `uvx --from python-kacl kacl-cli verify`) and update the compare links
+   at the bottom, then bump `version` in `pyproject.toml`.
 2. **Before committing, verify `README.md` — PyPI's rendered
    `long_description` — is accurate and matches what's about to ship.**
    This has shipped wrong twice before: v0.2.1 fixed a stale

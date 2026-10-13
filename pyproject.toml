@@ -57,6 +57,7 @@ Homepage = "https://github.com/maxcollombin/pycartosym"
 Documentation = "https://github.com/maxcollombin/pycartosym/blob/main/README.md"
 Repository = "https://github.com/maxcollombin/pycartosym.git"
 Issues = "https://github.com/maxcollombin/pycartosym/issues"
+Changelog = "https://github.com/maxcollombin/pycartosym/blob/main/CHANGELOG.md"
 
 [project.scripts]
 cartosym = "pycartosym.cli:main"
