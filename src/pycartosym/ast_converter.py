@@ -694,6 +694,7 @@ class AstToPydanticConverter:
 
             return StylingRule(
                 name=rule_name,
+                comment=getattr(ast_rule, "comment", None),
                 selector=selector,
                 symbolizer=symbolizer,
                 nested_rules=nested_rules,
@@ -839,6 +840,8 @@ class AstToPydanticConverter:
                     ast_symbolizer.hillShading
                 )
 
+            if getattr(ast_symbolizer, "comment", None):
+                symbolizer_data["comment"] = ast_symbolizer.comment
             return Symbolizer(**symbolizer_data) if symbolizer_data else None
 
         except Exception as e:

@@ -94,6 +94,38 @@ def _strip_inline_comment(s: str) -> str:
     return "".join(result).rstrip()
 
 
+def _comment_text(raw: str) -> str:
+    """Return the text of a ``//`` or ``/* */`` comment token, delimiters removed."""
+    body = raw[2:-2] if raw.startswith("/*") else raw[2:]
+    return "\n".join(line.strip() for line in body.splitlines()).strip()
+
+
+def _leading_comment(ctx) -> str | None:
+    """Return the comment(s) on the lines just before *ctx*, joined by newlines.
+
+    The grammar sends comments to a hidden channel, so they are read back
+    from the token stream. A comment that follows other code on the same
+    line (``a: 1; // note``) belongs to that code, not to what comes next,
+    and is left out. Returns ``None`` when there is none.
+    """
+    parser = getattr(ctx, "parser", None)
+    if parser is None or ctx.start is None:
+        return None
+    stream = parser.getTokenStream()
+    hidden = stream.getHiddenTokensToLeft(ctx.start.tokenIndex)
+    if not hidden:
+        return None
+    first = hidden[0].tokenIndex
+    prev = stream.get(first - 1) if first > 0 else None
+    prev_end_line = prev.line + prev.text.count("\n") if prev is not None else 0
+    texts = [
+        _comment_text(t.text)
+        for t in hidden
+        if t.channel == CartoSymCSSLexer.COMMENTS and t.line != prev_end_line
+    ]
+    return "\n".join(t for t in texts if t) or None
+
+
 class CartoSymParser:
     """Main parser class for CartoSym CSS files."""
 
@@ -539,10 +571,13 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         if pai_list is None:
             return result
         ctx_map: dict = {}
+        comments: list[str] = []
         for pai in cls._collect_inferred_assignments(pai_list):
             pa = pai.propertyAssignment()
             if pa is None:
                 continue
+            if comment := _leading_comment(pa):
+                comments.append(comment)
             key = pa.lhValue().getText()
             expr = pa.expression()
             # Nested object? (e.g. font: { ... } or image: { ... })
@@ -581,6 +616,8 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 ctx_map[key] = expr
         if ctx_map:
             result["_expr_ctx"] = ctx_map
+        if comments:
+            result["$comment"] = "\n".join(comments)
         return result
 
     @classmethod
@@ -776,6 +813,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 }
             )
         self.current_rule = StylingRule()
+        self.current_rule.comment = _leading_comment(ctx)
         self.current_assignments = []
         self.current_selectors = []
         # Inherit any pending marker element assignments from the parent
@@ -861,6 +899,12 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 )
                 break
             self._pending_marker_element_assignments = {}
+        # Comments on the lines before the rule's properties describe its symbolizer
+        sym_comments = [
+            c for a in self.current_assignments if (c := getattr(a, "_comment", None))
+        ]
+        if sym_comments:
+            effective_sym.comment = "\n".join(sym_comments)
         # Attach symbolizer to rule
         self.current_rule.symbolizer = effective_sym
         # Always set selectors, even if only one selector or only conditions
@@ -962,6 +1006,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 # Attach the ANTLR expression context for structured extraction
                 # (used by marker/label handlers instead of regex).
                 assignment._antlr_expr_ctx = ctx.expression()
+                assignment._comment = _leading_comment(ctx)
                 self.current_assignments.append(assignment)
 
     def exitPropertyAssignment(self, ctx):

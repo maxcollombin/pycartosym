@@ -60,6 +60,8 @@ class StylingRule:
     nested_rules: list[StylingRule] = field(default_factory=list)
     # all property assignments, for post-processing
     property_assignments: list = field(default_factory=list)
+    # comment on the lines just before the rule
+    comment: str | None = None
 
 
 @dataclass

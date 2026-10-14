@@ -57,6 +57,7 @@
             ]
           },
           "symbolizer": {
+            "$comment": "A Circle is a closed shape graphic: an interior fill, a contrasting\noutline, and a radius, each controlled independently (unlike a Dot,\nwhose single Stroke carries both its colour and its size).",
             "visibility": true,
             "marker": {
               "elements": [

@@ -43,10 +43,12 @@
         ]
       },
       "symbolizer": {
+        "$comment": "Do not show Landuse layer by default",
         "visibility": false
       },
       "nestedRules": [
         {
+          "$comment": "Show land use if zoomed in more than 1:200,000 for data valid within visualization's selected time range",
           "selector": {
             "op": "and",
             "args": [
@@ -106,6 +108,7 @@
           },
           "nestedRules": [
             {
+              "$comment": "Select different fill and stroke color based on FunctionCode property",
               "selector": {
                 "op": "=",
                 "args": [
@@ -173,6 +176,7 @@
               }
             },
             {
+              "$comment": "If zoomed in more than 1:10,000",
               "selector": {
                 "op": "<",
                 "args": [
@@ -183,6 +187,7 @@
                 ]
               },
               "symbolizer": {
+                "$comment": "Change stroke width to 4 pixels\nAdd a text marker (positioned at centroid + horizontal offset) showing FunctionTitle property",
                 "stroke": {
                   "alter": true,
                   "width": {
@@ -218,6 +223,7 @@
               },
               "nestedRules": [
                 {
+                  "$comment": "Add icons at centroid based on land use function code property",
                   "selector": {
                     "op": "=",
                     "args": [
@@ -382,6 +388,7 @@
             ]
           },
           "symbolizer": {
+            "$comment": "This color map is mapped from elevation values",
             "visibility": true,
             "opacity": 0.8,
             "zOrder": 1,
