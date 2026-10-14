@@ -23,7 +23,7 @@ def test_variable_parsing():
 
 
 def test_styling_rule_name_parsing():
-    """Test that .name 'value' (stylingRuleName) is extracted from cscss."""
+    """Test that .name 'value' (rule ``name``) is extracted from cscss."""
     cscss = """
     Roads[type = 'highway']
     {
@@ -36,10 +36,8 @@ def test_styling_rule_name_parsing():
 
     assert len(style.styling_rules) >= 1
     rule = style.styling_rules[0]
-    # stylingRuleName should be extracted
-    assert (
-        rule.styling_rule_name == "Highways"
-    ), f"Expected styling_rule_name='Highways', got {rule.styling_rule_name!r}"
+    # the explicit .name is extracted
+    assert rule.name == "Highways", f"Expected name='Highways', got {rule.name!r}"
     # Selector and symbolizer should still be present
     assert rule.selector is not None
     assert rule.symbolizer is not None
@@ -65,16 +63,16 @@ def test_variable_and_stylingrulename_combined():
     assert style.variables[0].name == "roadColor"
     assert style.variables[0].value == "gray"
 
-    # StylingRuleName
+    # Rule name
     rule = style.styling_rules[0]
-    assert rule.styling_rule_name == "Highways"
+    assert rule.name == "Highways"
 
     # Symbolizer with stroke
     assert rule.symbolizer is not None
 
 
 def test_name_absent_when_not_in_source():
-    """With no ``.name`` in the cscss, CS-JSON must not contain ``stylingRuleName``."""
+    """With no ``.name`` in the cscss, CS-JSON must not contain ``name``."""
     cscss = """
     Roads[type = 'highway']
     {
@@ -86,17 +84,17 @@ def test_name_absent_when_not_in_source():
     rule = style.styling_rules[0]
 
     # model attribute should be None
-    assert rule.styling_rule_name is None
+    assert rule.name is None
 
     # serialized dict must not contain the key
     d = rule.to_dict()
     assert (
-        "stylingRuleName" not in d
-    ), f"'stylingRuleName' should not appear in JSON when absent from source, got: {d}"
+        "name" not in d
+    ), f"'name' should not appear in JSON when absent from source, got: {d}"
 
 
 def test_name_present_when_in_source():
-    """With ``.name 'X'`` in the cscss, CS-JSON must contain that stylingRuleName."""
+    """With ``.name 'X'`` in the cscss, CS-JSON must contain that name."""
     cscss = """
     Roads[type = 'highway']
     {
@@ -110,12 +108,12 @@ def test_name_present_when_in_source():
 
     d = rule.to_dict()
     assert (
-        d.get("stylingRuleName") == "MyRoads"
-    ), f"Expected stylingRuleName='MyRoads' in serialized dict, got: {d}"
+        d.get("name") == "MyRoads"
+    ), f"Expected name='MyRoads' in serialized dict, got: {d}"
 
 
 def test_field_order_in_serialized_json():
-    """JSON key order: name → stylingRuleName → selector → symbolizer → nestedRules."""
+    """JSON key order: name → selector → symbolizer → nestedRules."""
     cscss = """
     Landuse[type = 'forest']
     {
@@ -147,7 +145,7 @@ def test_field_order_in_serialized_json():
 
 
 def test_stylingrulename_roundtrip():
-    """A ``stylingRuleName`` must survive a .cscss → CS-JSON → .cscss round-trip."""
+    """A ``name`` must survive a .cscss → CS-JSON → .cscss round-trip."""
     from pycartosym.converter import Converter
 
     cscss_src = """
@@ -160,7 +158,7 @@ def test_stylingrulename_roundtrip():
     converter = Converter()
     # Forward: CSCSS → CS-JSON
     cs_json = converter.cscss_to_csjson(cscss_src)
-    assert cs_json["stylingRules"][0].get("stylingRuleName") == "My Layer Name"
+    assert cs_json["stylingRules"][0].get("name") == "My Layer Name"
 
     # Reverse: CS-JSON → CSCSS
     style = Style.from_dict(cs_json)
@@ -169,3 +167,12 @@ def test_stylingrulename_roundtrip():
     assert (
         ".name 'My Layer Name'" in cscss_out
     ), f"Expected .name directive in round-trip CSCSS output, got:\n{cscss_out}"
+
+
+def test_legacy_styling_rule_name_key_is_rejected():
+    """The pre-1.0 ``stylingRuleName`` key is gone: ``name`` is the only key."""
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Style.from_dict({"stylingRules": [{"stylingRuleName": "R"}]})

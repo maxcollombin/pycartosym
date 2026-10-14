@@ -228,11 +228,12 @@ class TestSelectorParsing:
         assert sel["args"][0] == {"sysId": "dataLayer.id"}
 
     def test_named_rule_selector(self):
-        """A named rule like 'RuleName[selector]' should produce name + selector."""
+        """A layer shorthand 'Name[selector]' yields a selector, not a ``name``."""
         cscss = "Cities[dataLayer.id = Cities]\n{ visibility: true; }"
         result = self.converter.cscss_to_csjson(cscss)
         rule = result["stylingRules"][0]
-        assert rule.get("name") == "Cities"
+        # the layer id lives in the selector; ``name`` is for an explicit ``.name``
+        assert "name" not in rule
         # Named rules produce a compound selector
         assert "op" in rule["selector"]
 
@@ -1159,7 +1160,7 @@ class TestClosedPathGraphicCscssWriteBack:
         csjson = {
             "stylingRules": [
                 {
-                    "stylingRuleName": "R",
+                    "name": "R",
                     "symbolizer": {
                         "marker": {
                             "elements": [

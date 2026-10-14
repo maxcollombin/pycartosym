@@ -84,6 +84,25 @@ def test_stroke_width_unwraps_a_px_unit_value():
     assert_maplibre_valid(out)
 
 
+def test_layer_id_falls_back_to_the_datalayer_id_selector():
+    """A CSCSS ``Roads { ... }`` rule has no ``name``; its layer id is ``Roads``."""
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {
+                    "selector": {
+                        "op": "=",
+                        "args": [{"sysId": "dataLayer.id"}, "Roads"],
+                    },
+                    "symbolizer": {"stroke": {"width": {"px": 2.0}}},
+                }
+            ]
+        }
+    )
+    out = MaplibreWriter().write(style)
+    assert [layer["id"] for layer in out["layers"]] == ["Roads"]
+
+
 def test_stroke_width_in_a_non_px_unit_is_rejected():
     style = Style.from_dict(
         {

@@ -201,11 +201,12 @@ class SldReader(CodecReader):
 
         name_el = self.d.find(rule_el, "Name")
         if name_el is not None and name_el.text:
-            rule_dict["stylingRuleName"] = name_el.text
+            rule_dict["name"] = name_el.text
 
-        # se:Rule/se:Title and se:Rule/se:Abstract map to stylingRule.name
-        # and $comment — distinct from se:Rule/se:Name above (stylingRuleName)
-        # so there's no collision. SE 1.1.0 wraps them in se:Description;
+        # se:Rule/se:Abstract maps to $comment (StylingRule has no abstract).
+        # se:Rule/se:Title has no Annex B entry: it is only the fallback
+        # for ``name`` when there is no se:Name. SE 1.1.0 wraps them in
+        # se:Description;
         # SLD 1.0.0 puts them directly under Rule — same asymmetry as
         # _parse_user_style.
         desc = (
@@ -217,7 +218,7 @@ class SldReader(CodecReader):
             title_el = self.d.find(desc, "Title")
             abstract_el = self.d.find(desc, "Abstract")
             if title_el is not None and title_el.text:
-                rule_dict["name"] = title_el.text
+                rule_dict.setdefault("name", title_el.text)
             if abstract_el is not None and abstract_el.text:
                 rule_dict["$comment"] = abstract_el.text
 

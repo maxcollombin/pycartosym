@@ -98,6 +98,7 @@ from ...models.value_expressions import (
 )
 from .._cascade import flatten_cascade_rules
 from ..base import CodecWriter
+from ..sld._filter import extract_feature_type_name
 from . import _raster
 from ._expressions import (
     coerce_numeric_expr,
@@ -806,7 +807,7 @@ def _flatten_rules(styling_rules: list[StylingRule]) -> list[StylingRule]:
     (selector AND + symbolizer merge), one top-level rule's subtree at a
     time so a name synthesized below never leaks across siblings.
 
-    A flattened rule with no ``name``/``stylingRuleName`` of its own — the
+    A flattened rule with no ``name`` of its own — the
     common case for a refinement, which usually only narrows the selector
     — inherits its nearest named ancestor's name, disambiguated with a
     positional suffix (a MapLibre layer id must be unique, unlike an SE
@@ -819,13 +820,19 @@ def _flatten_rules(styling_rules: list[StylingRule]) -> list[StylingRule]:
     for rule in styling_rules:
         current_name: str | None = None
         counter = 0
+        # A rule identified only by its layer shorthand (``Roads { ... }``)
+        # has no ``name``: its layer id is the ``dataLayer.id`` it selects.
+        top_level = True
         for flat in flatten_cascade_rules([rule.to_dict()]):
             if flat.get("nestedRules"):
                 raise NotImplementedError(
                     "a selector-less nestedRules entry (OGC 'else' rule) has "
                     "no MapLibre mapping in this codec"
                 )
-            name = flat.get("name") or flat.get("stylingRuleName")
+            name = flat.get("name")
+            if top_level and not name:
+                name = extract_feature_type_name(flat.get("selector"))[0]
+            top_level = False
             if name:
                 current_name = name
                 counter = 0
@@ -1051,7 +1058,7 @@ def _rule_to_layers(rule: Any) -> list[dict[str, Any]]:
     if sym is None:
         raise NotImplementedError("styling rule without a symbolizer")
 
-    layer_id = rule.name or rule.styling_rule_name
+    layer_id = rule.name or extract_feature_type_name(rule.selector)[0]
     if not layer_id:
         raise NotImplementedError("styling rule without a name → MapLibre layer id")
 

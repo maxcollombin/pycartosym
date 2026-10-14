@@ -5,7 +5,6 @@
   },
   "stylingRules": [
     {
-      "name": "Landuse",
       "selector": {
         "op": "and",
         "args": [
@@ -345,7 +344,6 @@
       ]
     },
     {
-      "name": "Elevation",
       "selector": {
         "op": "and",
         "args": [

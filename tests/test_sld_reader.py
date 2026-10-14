@@ -448,7 +448,7 @@ class TestReadMetadata:
 
 
 class TestReadRuleMetadata:
-    def test_rule_title_and_abstract_map_to_name_and_comment(self):
+    def test_rule_name_and_abstract_map_to_name_and_comment(self):
         xml = (
             '<StyledLayerDescriptor version="1.1.0" '
             'xmlns="http://www.opengis.net/sld" '
@@ -465,9 +465,24 @@ class TestReadRuleMetadata:
             "</StyledLayerDescriptor>"
         )
         rule = SldReader().read(xml).styling_rules[0]
-        assert rule.styling_rule_name == "rule1"
-        assert rule.name == "Red areas"
+        # se:Name wins; the differing se:Title has no counterpart (Annex B).
+        assert rule.name == "rule1"
         assert rule.comment == "Areas classified as red"
+
+    def test_rule_title_is_the_fallback_name_without_se_name(self):
+        xml = (
+            '<StyledLayerDescriptor version="1.1.0" '
+            'xmlns="http://www.opengis.net/sld" '
+            'xmlns:se="http://www.opengis.net/se">'
+            "<NamedLayer><se:Name>L</se:Name><UserStyle>"
+            "<se:FeatureTypeStyle><se:Rule>"
+            "<se:Description><se:Title>Red areas</se:Title></se:Description>"
+            '<se:PolygonSymbolizer><se:Fill><se:SvgParameter name="fill">'
+            "#ff0000</se:SvgParameter></se:Fill></se:PolygonSymbolizer>"
+            "</se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>"
+            "</StyledLayerDescriptor>"
+        )
+        assert SldReader().read(xml).styling_rules[0].name == "Red areas"
 
     def test_rule_without_title_abstract_leaves_name_and_comment_unset(self):
         xml = (

@@ -5,7 +5,6 @@
   },
   "stylingRules": [
     {
-      "name": "Roads",
       "selector": {
         "op": "and",
         "args": [

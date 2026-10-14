@@ -44,7 +44,7 @@ def _and(a: Any | None, b: Any | None) -> Any | None:
 
 
 def _carry_name(rule: dict[str, Any]) -> dict[str, Any]:
-    return {k: rule[k] for k in ("name", "stylingRuleName") if k in rule}
+    return {"name": rule["name"]} if "name" in rule else {}
 
 
 def _flatten(

@@ -10,7 +10,6 @@
   },
   "stylingRules": [
     {
-      "name": "ne_10m_admin_0_countries",
       "selector": {
         "op": "and",
         "args": [

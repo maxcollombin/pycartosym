@@ -38,7 +38,7 @@ def _write(style_dict) -> etree._Element:
 
 
 def _rule_style(symbolizer, selector=None, nested_rules=None):
-    rule = {"stylingRuleName": "R", "symbolizer": symbolizer}
+    rule = {"name": "R", "symbolizer": symbolizer}
     if selector is not None:
         rule["selector"] = selector
     if nested_rules is not None:
@@ -680,6 +680,7 @@ class TestWriteScaleDenominator:
         kids = [etree.QName(c).localname for c in rule]
         assert kids == [
             "Name",
+            "Description",
             "Filter",
             "MinScaleDenominator",
             "MaxScaleDenominator",
@@ -741,27 +742,18 @@ class TestWriteRuleTitleAbstract:
             }
         )
         rule = root.find(".//se:Rule", NS)
-        assert rule.find("se:Name", NS) is None
+        # Annex B: name <-> se:Name; the Title repeats it (as in its examples).
+        assert rule.find("se:Name", NS).text == "Red areas"
         title = rule.find("se:Description/se:Title", NS)
         abstract = rule.find("se:Description/se:Abstract", NS)
         assert title.text == "Red areas"
         assert abstract.text == "Areas classified as red"
 
-    def test_rule_styling_rule_name_and_name_both_present(self):
-        root = _write(
-            {
-                "stylingRules": [
-                    {
-                        "name": "Red areas",
-                        "stylingRuleName": "rule1",
-                        "symbolizer": {"fill": {"color": "red"}},
-                    }
-                ]
-            }
-        )
+    def test_unnamed_rule_writes_no_name_nor_title(self):
+        root = _write({"stylingRules": [{"symbolizer": {"fill": {"color": "red"}}}]})
         rule = root.find(".//se:Rule", NS)
-        assert rule.find("se:Name", NS).text == "rule1"
-        assert rule.find("se:Description/se:Title", NS).text == "Red areas"
+        assert rule.find("se:Name", NS) is None
+        assert rule.find("se:Description", NS) is None
 
     def test_rule_title_abstract_round_trips_through_reader(self):
         from pycartosym.codecs.sld.reader import SldReader
@@ -769,9 +761,8 @@ class TestWriteRuleTitleAbstract:
         style_dict = {
             "stylingRules": [
                 {
-                    "name": "Red areas",
+                    "name": "rule1",
                     "$comment": "Areas classified as red",
-                    "stylingRuleName": "rule1",
                     "symbolizer": {"fill": {"color": [255, 0, 0]}},
                 }
             ]
@@ -780,9 +771,8 @@ class TestWriteRuleTitleAbstract:
         xml = SldWriter().write(style1)
         style2 = SldReader().read(xml)
         rule2 = style2.styling_rules[0]
-        assert rule2.name == "Red areas"
+        assert rule2.name == "rule1"
         assert rule2.comment == "Areas classified as red"
-        assert rule2.styling_rule_name == "rule1"
 
 
 class TestWriteFeatureTypeName:

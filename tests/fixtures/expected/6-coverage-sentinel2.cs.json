@@ -5,7 +5,6 @@
   },
   "stylingRules": [
     {
-      "name": "sentinel2-l2a",
       "selector": {
         "op": "and",
         "args": [

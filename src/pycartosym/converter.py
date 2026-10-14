@@ -248,9 +248,8 @@ class Converter:
             lines.append(f"{pad}{selector_str}")
         # Add symbolizer
         lines.append(f"{pad}{{")
-        # Emit .name directive only when stylingRuleName is explicitly set
-        if getattr(rule, "styling_rule_name", None):
-            lines.append(f"{pad}    .name '{rule.styling_rule_name}'")
+        if rule.name:
+            lines.append(f"{pad}    .name '{rule.name}'")
         if rule.symbolizer:
             for line in self._symbolizer_to_css(rule.symbolizer, indent=indent + 1):
                 lines.append(f"{pad}    {line.lstrip()}")

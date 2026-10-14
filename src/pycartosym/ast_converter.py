@@ -613,15 +613,14 @@ class AstToPydanticConverter:
     def _convert_styling_rule(self, ast_rule: AstStylingRule) -> StylingRule | None:
         """Convert AST StylingRule to Pydantic StylingRule.
 
-        Includes nested selectors and ``stylingRuleName``.
+        Includes nested selectors and the explicit ``.name``.
         """
         try:
             selector: Any = None
             rule_name = None
-            styling_rule_name = None
-            # Support explicit stylingRuleName if present
+            # Explicit ``.name 'x'`` (grammar rule ``stylingRuleName``)
             if hasattr(ast_rule, "styling_rule_name") and ast_rule.styling_rule_name:
-                styling_rule_name = ast_rule.styling_rule_name
+                rule_name = ast_rule.styling_rule_name
             # Always process selectors for any rule (top-level or nested)
             if hasattr(ast_rule, "selectors") and ast_rule.selectors:
                 if len(ast_rule.selectors) > 1:
@@ -634,8 +633,6 @@ class AstToPydanticConverter:
                                     "args": [{"sysId": "dataLayer.id"}, sel.name],
                                 }
                             )
-                            if not rule_name:
-                                rule_name = sel.name
                         elif hasattr(sel, "conditions") and sel.conditions:
                             for condition in sel.conditions:
                                 json_condition = expression_to_json(condition)
@@ -656,7 +653,6 @@ class AstToPydanticConverter:
                 else:
                     sel = ast_rule.selectors[0]
                     if hasattr(sel, "name") and sel.name:
-                        rule_name = sel.name
                         selector = {
                             "op": "=",
                             "args": [{"sysId": "dataLayer.id"}, sel.name],
@@ -677,8 +673,8 @@ class AstToPydanticConverter:
                     if selector:
                         selector = post_process_selector(selector)
             elif hasattr(ast_rule, "name") and ast_rule.name:
-                rule_name = ast_rule.name
-                selector = [rule_name]
+                rule_name = rule_name or ast_rule.name
+                selector = [ast_rule.name]
             elif hasattr(ast_rule, "selector") and ast_rule.selector:
                 selector = ["Unknown"]
 
@@ -698,7 +694,6 @@ class AstToPydanticConverter:
 
             return StylingRule(
                 name=rule_name,
-                styling_rule_name=styling_rule_name,
                 selector=selector,
                 symbolizer=symbolizer,
                 nested_rules=nested_rules,

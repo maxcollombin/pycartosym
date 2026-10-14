@@ -5,7 +5,6 @@
   },
   "stylingRules": [
     {
-      "name": "Amenities",
       "selector": {
         "op": "and",
         "args": [

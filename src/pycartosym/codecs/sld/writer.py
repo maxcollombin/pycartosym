@@ -274,21 +274,18 @@ class SldWriter(CodecWriter):
                 logger.warning(
                     "SLD/SE writer: dropping symbolizer-less rule %r "
                     "(carried %s) — not representable in SE 1.1.0",
-                    rule.styling_rule_name or rule.name or "<unnamed>",
+                    rule.name or "<unnamed>",
                     ", ".join(carried),
                 )
             return None
 
         rule_el = self.d.el("Rule")
-        if rule.styling_rule_name:
-            self.d.el("Name", parent=rule_el, text=rule.styling_rule_name)
+        if rule.name:
+            self.d.el("Name", parent=rule_el, text=rule.name)
 
-        # rule.name/.comment map to se:Rule/se:Title/se:Abstract, distinct
-        # from stylingRuleName -> se:Name above. rule.name previously
-        # fell back into se:Name when stylingRuleName was absent, but that
-        # would collide with this new Title mapping on round-trip (an
-        # SLD Title-only rule would gain a spurious se:Name after one
-        # write, see issue #90) — se:Name is now stylingRuleName-only.
+        # Annex B maps StylingRule.name to se:Name only. se:Title has no
+        # entry; it repeats the name, as in the Annex B examples, so a
+        # Title-only SLD rule round-trips. .comment maps to se:Abstract.
         if rule.name or rule.comment:
             desc = (
                 self.d.el("Description", parent=rule_el)

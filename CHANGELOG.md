@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking** (CS-JSON): a styling rule's name is now the single `name` key, as in the schema and Annex B (`name` ↔ `se:Name`). The non-standard `stylingRuleName` key is gone and is rejected on read. `name` only holds an explicit `.name 'x'` (CSCSS) or `se:Name`; it no longer repeats the layer id of a layer shorthand (`Roads[...]`), which lives in the `dataLayer.id` selector only. Old files that carried the layer id in `name` now round-trip it as `.name '…'`.
+- SLD/SE: `se:Rule/se:Name` ↔ `name` (was `stylingRuleName`); `se:Title` is only the fallback `name` when there is no `se:Name`, and is written as a copy of `name`.
+- MapLibre writer: a rule without `name` takes its layer id from its `dataLayer.id` selector.
+
 ## [0.3.9] - 2026-10-13
 
 ### Fixed
