@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
 ### Changed
 
 - **Breaking** (CS-JSON): a styling rule's name is now the single `name` key, as in the schema and Annex B (`name` ↔ `se:Name`). The non-standard `stylingRuleName` key is gone and is rejected on read. `name` only holds an explicit `.name 'x'` (CSCSS) or `se:Name`; it no longer repeats the layer id of a layer shorthand (`Roads[...]`), which lives in the `dataLayer.id` selector only. Old files that carried the layer id in `name` now round-trip it as `.name '…'`.
@@ -98,7 +100,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.3.9...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/maxcollombin/pycartosym/compare/v0.3.9...v0.4.0
 [0.3.9]: https://github.com/maxcollombin/pycartosym/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/maxcollombin/pycartosym/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/maxcollombin/pycartosym/compare/v0.3.6...v0.3.7
