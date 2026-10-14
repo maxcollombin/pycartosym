@@ -176,6 +176,9 @@ class Converter:
         # stylingRuleList?`` puts .include alongside .title/.abstract/etc.,
         # before any @variable declaration).
         header_lines = []
+        for comment in (style.comment, style.metadata and style.metadata.comment):
+            if comment:
+                header_lines.extend(self._comment_lines(comment))
         if style.metadata:
             if getattr(style.metadata, "title", None):
                 header_lines.append(f".title '{style.metadata.title}'")
@@ -235,13 +238,24 @@ class Converter:
             return str(value)
         return f"'{value}'"
 
+    @staticmethod
+    def _comment_lines(text: str) -> list[str]:
+        """Render a ``$comment`` as CSCSS comment line(s).
+
+        A single line without ``*/`` becomes ``/* … */``; anything else is
+        written as one ``//`` comment per line, which cannot be cut short.
+        """
+        if "\n" not in text and "*/" not in text:
+            return [f"/* {text} */"]
+        return [f"// {line}".rstrip() for line in text.splitlines()]
+
     def _rule_to_css(self, rule, emit_nested=True, indent=0) -> list:
         """Convert StylingRule model to CSS lines with pretty-print indentation."""
-        lines = []
+        lines: list[str] = []
         pad = "    " * indent
         # Add rule comment if present
         if rule.comment:
-            lines.append(f"{pad}/* {rule.comment} */")
+            lines.extend(f"{pad}{c}" for c in self._comment_lines(rule.comment))
         # Add selector
         if rule.selector:
             selector_str = self._selector_to_cscss(rule.selector)
@@ -251,6 +265,11 @@ class Converter:
         if rule.name:
             lines.append(f"{pad}    .name '{rule.name}'")
         if rule.symbolizer:
+            if getattr(rule.symbolizer, "comment", None):
+                lines.extend(
+                    f"{pad}    {c}"
+                    for c in self._comment_lines(rule.symbolizer.comment)
+                )
             for line in self._symbolizer_to_css(rule.symbolizer, indent=indent + 1):
                 lines.append(f"{pad}    {line.lstrip()}")
         # Emit nested rules only within this block
@@ -859,6 +878,11 @@ class Converter:
         body = (";\n" + inner_pad).join(prop_lines)
         if prop_lines:
             body += ";"
+        comment = _get(el, "$comment") or _get(el, "comment")
+        if comment:
+            body = f"\n{inner_pad}".join(self._comment_lines(comment)) + (
+                f"\n{inner_pad}{body}" if body else ""
+            )
         return f"{el_type} {{\n{inner_pad}{body}\n{pad}}}"
 
     def _format_color(self, color) -> str:
