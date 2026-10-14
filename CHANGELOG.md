@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-14
+
 ### Added
 
 - CartoSym-CSS → CS-JSON: a comment on the lines just before a styling rule becomes the rule's `$comment`; comments before a rule's properties become its symbolizer's `$comment` (joined with newlines), and before a property inside a graphic element, that element's. A comment that follows code on the same line (`a: 1; // note`) is not attached to anything.
@@ -108,7 +110,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/maxcollombin/pycartosym/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/maxcollombin/pycartosym/compare/v0.3.9...v0.4.0
 [0.3.9]: https://github.com/maxcollombin/pycartosym/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/maxcollombin/pycartosym/compare/v0.3.7...v0.3.8
