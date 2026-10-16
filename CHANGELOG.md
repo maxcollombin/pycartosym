@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CQL2: a single-quoted string used as a function argument, or on the left of `like`, stays a string literal instead of becoming a property reference (`contains(name, 'sl')` now selects the text `sl`, not the property `sl`).
+
 ## [0.4.1] - 2026-10-14
 
 ### Added
