@@ -27,9 +27,7 @@
       {
         "property": "name"
       },
-      {
-        "property": "ville"
-      }
+      "ville"
     ],
     "op": "contains"
   },
@@ -260,9 +258,7 @@
       },
       {
         "args": [
-          {
-            "property": "paris"
-          }
+          "paris"
         ],
         "op": "casei"
       }
@@ -1038,11 +1034,22 @@
     {
       "args": [
         {
+          "sysId": "viz.sd"
+        },
+        100000
+      ],
+      "op": "<"
+    }
+  ],
+  "file:13-vector-point-circle.cscss": [
+    {
+      "args": [
+        {
           "args": [
             {
               "sysId": "dataLayer.id"
             },
-            "Landuse"
+            "Amenities"
           ],
           "op": "="
         },
@@ -1062,7 +1069,7 @@
                 {
                   "sysId": "dataLayer.featuresGeometryDimensions"
                 },
-                2
+                0
               ],
               "op": "="
             }
@@ -1075,145 +1082,9 @@
     {
       "args": [
         {
-          "args": [
-            {
-              "args": [
-                {
-                  "sysId": "viz.sd"
-                },
-                200000
-              ],
-              "op": "<"
-            },
-            {
-              "args": [
-                {
-                  "property": "validDate"
-                },
-                {
-                  "sysId": "viz.timeInterval.start.date"
-                }
-              ],
-              "op": ">="
-            }
-          ],
-          "op": "and"
-        },
-        {
-          "args": [
-            {
-              "property": "validDate"
-            },
-            {
-              "sysId": "viz.timeInterval.end.date"
-            }
-          ],
-          "op": "<="
-        }
-      ],
-      "op": "and"
-    },
-    {
-      "args": [
-        {
-          "property": "FunctionCode"
-        },
-        "parking"
-      ],
-      "op": "="
-    },
-    {
-      "args": [
-        {
-          "property": "FunctionCode"
-        },
-        "park"
-      ],
-      "op": "="
-    },
-    {
-      "args": [
-        {
-          "property": "FunctionCode"
-        },
-        "commercial"
-      ],
-      "op": "="
-    },
-    {
-      "args": [
-        {
           "sysId": "viz.sd"
         },
         10000
-      ],
-      "op": "<"
-    },
-    {
-      "args": [
-        {
-          "property": "FunctionCode"
-        },
-        "parking"
-      ],
-      "op": "="
-    },
-    {
-      "args": [
-        {
-          "property": "FunctionCode"
-        },
-        "park"
-      ],
-      "op": "="
-    },
-    {
-      "args": [
-        {
-          "property": "FunctionCode"
-        },
-        "commercial"
-      ],
-      "op": "="
-    },
-    {
-      "args": [
-        {
-          "args": [
-            {
-              "sysId": "dataLayer.id"
-            },
-            "Elevation"
-          ],
-          "op": "="
-        },
-        {
-          "args": [
-            {
-              "sysId": "dataLayer.type"
-            },
-            "coverage"
-          ],
-          "op": "="
-        }
-      ],
-      "op": "and"
-    },
-    {
-      "args": [
-        {
-          "sysId": "viz.sd"
-        },
-        200000
-      ],
-      "op": "<"
-    },
-    {
-      "args": [
-        {
-          "sysId": "viz.sd"
-        },
-        100000
       ],
       "op": "<"
     }

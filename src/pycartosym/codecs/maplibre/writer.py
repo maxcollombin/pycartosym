@@ -1294,6 +1294,10 @@ class MaplibreWriter(CodecWriter):
             NotImplementedError: the style uses a construct this codec
                 does not map yet (see the module docstring).
         """
+        if style.include:
+            raise NotImplementedError(
+                "Style.$include has no MapLibre mapping in this codec"
+            )
         style = style.resolve_variables()  # MapLibre has no variables
         rules = _flatten_rules(style.styling_rules)
         layers: list[dict[str, Any]] = []

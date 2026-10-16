@@ -20,9 +20,14 @@ _UNIT_KEYS = {u.value for u in UnitType}
 class Converter:
     """Main converter class for format transformations using Pydantic models."""
 
-    def __init__(self) -> None:
-        """Create the converter with a fresh :class:`CartoSymParser`."""
-        self.parser = CartoSymParser()
+    def __init__(self, inline_includes: bool = False) -> None:
+        """Create the converter with a fresh :class:`CartoSymParser`.
+
+        Args:
+            inline_includes: Merge ``.include``d files into the result instead
+                of writing their paths as ``$include``.
+        """
+        self.parser = CartoSymParser(inline_includes=inline_includes)
 
     def _resolve_path(self, path: str | Path) -> Path:
         """Resolve *path* relative to the project root (the ``pyproject.toml`` dir).

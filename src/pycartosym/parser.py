@@ -149,9 +149,17 @@ def _leading_comment(ctx) -> str | None:
 class CartoSymParser:
     """Main parser class for CartoSym CSS files."""
 
-    def __init__(self, log_level: str = "INFO"):
-        """Initialize the parser with the specified log level."""
+    def __init__(self, log_level: str = "INFO", inline_includes: bool = False):
+        """Initialize the parser.
+
+        Args:
+            log_level: Logging level name.
+            inline_includes: Merge the rules and variables of ``.include``d
+                files into the result. By default (``False``) the include
+                paths are kept in ``StyleSheet.includes``, for ``$include``.
+        """
         self.logger = self._configure_logging(log_level)
+        self.inline_includes = inline_includes
 
     def _configure_logging(self, log_level: str) -> logging.Logger:
         """Configure logging based on the provided log level."""
@@ -169,10 +177,11 @@ class CartoSymParser:
         """Parse a CartoSym CSS file and return an AST.
 
         Each `.include` directive is resolved relative to the including file
-        and parsed on its own; its variables and rules are placed before the
-        including file's own (so its rules come first in the cascade).
-        Included files' metadata is dropped. Includes are recursive;
-        circular includes raise ``ValueError``.
+        and parsed on its own (a missing file or a circular include raises).
+        With ``inline_includes`` its variables and rules are placed before the
+        including file's own (so its rules come first in the cascade) and its
+        metadata is dropped; otherwise only the paths are recorded in
+        ``StyleSheet.includes``.
         """
         file_path = Path(file_path).resolve()
 
@@ -197,8 +206,8 @@ class CartoSymParser:
         with open(file_path, encoding="utf-8") as file:
             content = file.read()
 
-        include_paths = self._INCLUDE_RE.findall(content)
-        sheet = self.parse_string(self._INCLUDE_RE.sub("", content))
+        sheet = self.parse_string(content)
+        include_paths = sheet.includes
 
         included_variables = []
         included_rules = []
@@ -215,10 +224,14 @@ class CartoSymParser:
                     f"(resolved to {abs_path})"
                 )
             child = self._parse_file(abs_path, (*ancestors, abs_path))
-            included_variables.extend(child.variables)
+            included_variables.extend(child.inherited_variables + child.variables)
             if child.styling_rules:
                 included_rules.extend(child.styling_rules.rules)
 
+        if not self.inline_includes:
+            sheet.inherited_variables = included_variables
+            return sheet
+        sheet.includes = []
         if included_variables:
             sheet.variables = included_variables + sheet.variables
         if included_rules:
@@ -239,10 +252,15 @@ class CartoSymParser:
     def parse_string(self, content: str) -> StyleSheet:
         """Parse a CartoSym CSS string and return an AST.
 
+        `.include` lines are not resolved here (there is no file context): the
+        paths are returned in ``StyleSheet.includes``.
+
         Raises:
             CartoSymSyntaxError: if the lexer or parser reports any syntax
                 error (rather than returning a partially-built tree).
         """
+        include_paths = self._INCLUDE_RE.findall(content)
+        content = self._INCLUDE_RE.sub("", content)
         error_listener = _CollectingErrorListener()
 
         input_stream = InputStream(content)
@@ -284,6 +302,7 @@ class CartoSymParser:
         assert listener.stylesheet is not None
         # Post-process AST to merge orphaned marker.elements[N] assignments
         self._merge_marker_elements(listener.stylesheet)
+        listener.stylesheet.includes = include_paths
         return listener.stylesheet
 
     def _merge_marker_elements(self, stylesheet):

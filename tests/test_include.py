@@ -28,7 +28,7 @@ class TestIncludeDirective:
     """Tests for .include directive resolution in CSCSS files."""
 
     def setup_method(self):
-        self.parser = CartoSymParser()
+        self.parser = CartoSymParser(inline_includes=True)
 
     # ── Detection & resolution ────────────────────────────────────
 

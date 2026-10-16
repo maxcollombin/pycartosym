@@ -111,8 +111,11 @@ class Style(BaseCartoSymModel, CommentMixin):
         def _resolve(node: Any) -> Any:
             if isinstance(node, dict):
                 ref = node.get("$ref")
-                if isinstance(ref, str) and ref.startswith(_VARIABLES_POINTER):
-                    return _resolve(variables[ref.removeprefix(_VARIABLES_POINTER)])
+                name = (
+                    ref.removeprefix(_VARIABLES_POINTER) if isinstance(ref, str) else ""
+                )
+                if name in variables:  # others come from an included file
+                    return _resolve(variables[name])
                 return {k: _resolve(v) for k, v in node.items()}
             if isinstance(node, list):
                 return [_resolve(v) for v in node]

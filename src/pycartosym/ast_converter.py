@@ -275,15 +275,14 @@ def _number_or_expression(value: Any) -> Any:
     return value
 
 
-def _reference_variables(style: Style) -> Style:
+def _reference_variables(style: Style, names: set[str]) -> Style:
     """Turn each ``"@name"`` string that names a variable into a ``$ref``.
 
     Property values reach the models as the raw text ``@name``; the CartoSym-JSON
     form is ``{"$ref": "#/$variables/name"}``.
     """
-    if not style.variables:
+    if not names:
         return style
-    names = set(style.variables)
 
     def _walk(node: Any) -> Any:
         if isinstance(node, str) and node.startswith("@") and node[1:] in names:
@@ -580,11 +579,18 @@ class AstToPydanticConverter:
                     if pydantic_rule:
                         styling_rules.append(pydantic_rule)
 
+            includes = getattr(ast_stylesheet, "includes", None) or None
             style = Style(
-                metadata=metadata, styling_rules=styling_rules, variables=variables
+                include=(includes[0] if includes and len(includes) == 1 else includes),
+                metadata=metadata,
+                styling_rules=styling_rules,
+                variables=variables,
             )
 
-            return _reference_variables(style)
+            known_names = set(variables or {}) | {
+                v.name for v in getattr(ast_stylesheet, "inherited_variables", [])
+            }
+            return _reference_variables(style, known_names)
         except Exception as e:
             raise ValueError(f"Failed to convert AST stylesheet: {e}") from e
 

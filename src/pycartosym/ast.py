@@ -25,6 +25,10 @@ class StyleSheet:
     metadata: list[Metadata] = field(default_factory=list)
     styling_rules: StylingRuleList | None = None
     variables: list[Variable] = field(default_factory=list)
+    includes: list[str] = field(default_factory=list)
+    """``.include`` paths as written, when the files are not inlined."""
+    inherited_variables: list[Variable] = field(default_factory=list)
+    """Variables defined by the included files (so ``@name`` can be referenced)."""
 
 
 @dataclass
