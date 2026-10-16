@@ -9,7 +9,7 @@ import logging
 import re
 from pathlib import Path
 
-from antlr4 import CommonTokenStream, InputStream, ParseTreeWalker
+from antlr4 import CommonTokenStream, InputStream, ParseTreeWalker, Token
 from antlr4.error.ErrorListener import ErrorListener
 
 from pycartosym.exceptions import CartoSymSyntaxError
@@ -167,96 +167,63 @@ class CartoSymParser:
     def parse_file(self, file_path: str | Path) -> StyleSheet:
         """Parse a CartoSym CSS file and return an AST.
 
-        Resolves `.include` directives before parsing: each directive is
-        replaced by the content of the referenced file (resolved relative
-        to the including file).  Includes are recursive; circular includes
-        raise ``ValueError``.
+        Each `.include` directive is resolved relative to the including file
+        and parsed on its own; its variables and rules are placed before the
+        including file's own (so its rules come first in the cascade).
+        Included files' metadata is dropped. Includes are recursive;
+        circular includes raise ``ValueError``.
         """
         file_path = Path(file_path).resolve()
 
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        self.logger.info(f"Parsing file: {file_path}")
+        return self._parse_file(file_path, (file_path,))
 
-        with open(file_path, encoding="utf-8") as file:
-            content = file.read()
-
-        # Resolve .include directives (textual preprocessor)
-        content = self._resolve_includes(content, file_path.parent, {file_path})
-
-        return self.parse_string(content)
-
-    # Regex matching a metadata directive (`.title 'x'`, `.abstract 'x'`,
-    # `.keywords 'x'`, ... — the grammar's `metadata` rule accepts any
-    # identifier, not a fixed set: `'.' IDENTIFIER CHARACTER_LITERAL`).
-    # Excludes `.include`, which is resolved separately, before this runs.
-    _METADATA_RE = re.compile(
-        r"^\s*\.(?!include\b)\w+\s+['\"].*?['\"]\s*$", re.MULTILINE
-    )
-
-    def _resolve_includes(
-        self,
-        content: str,
-        base_dir: Path,
-        seen: set[Path],
-    ) -> str:
-        """Recursively resolve `.include` directives by textual substitution.
+    def _parse_file(self, file_path: Path, ancestors: tuple[Path, ...]) -> StyleSheet:
+        """Parse *file_path*, merging the stylesheets it includes.
 
         Args:
-            content: Raw CSCSS text (may contain `.include` lines).
-            base_dir: Directory used to resolve relative include paths.
-            seen: Set of already-included absolute paths (cycle detection).
-
-        Returns:
-            The fully-resolved CSCSS text with all includes inlined.
+            file_path: Absolute path of the file to parse.
+            ancestors: Files currently being included (cycle detection).
 
         Raises:
             FileNotFoundError: If an included file does not exist.
             ValueError: If a circular include is detected.
         """
+        self.logger.info(f"Parsing file: {file_path}")
 
-        def _replacer(match: re.Match) -> str:
-            rel_path = match.group(1)
-            abs_path = (base_dir / rel_path).resolve()
+        with open(file_path, encoding="utf-8") as file:
+            content = file.read()
 
+        include_paths = self._INCLUDE_RE.findall(content)
+        sheet = self.parse_string(self._INCLUDE_RE.sub("", content))
+
+        included_variables = []
+        included_rules = []
+        for rel_path in include_paths:
+            abs_path = (file_path.parent / rel_path).resolve()
             if not abs_path.exists():
                 raise FileNotFoundError(
                     f"Included file not found: '{rel_path}' "
                     f"(resolved to {abs_path})"
                 )
-
-            if abs_path in seen:
+            if abs_path in ancestors:
                 raise ValueError(
                     f"Circular include detected: '{rel_path}' "
                     f"(resolved to {abs_path})"
                 )
+            child = self._parse_file(abs_path, (*ancestors, abs_path))
+            included_variables.extend(child.variables)
+            if child.styling_rules:
+                included_rules.extend(child.styling_rules.rules)
 
-            seen.add(abs_path)
-            with open(abs_path, encoding="utf-8") as f:
-                included = f.read()
-
-            # Strip metadata directives from included files — the ANTLR
-            # grammar only supports metadata at the top of the stylesheet
-            # (`styleSheet: metadata* variableDef* stylingRuleList?`), not
-            # between styling rules. Only strip within the leading portion
-            # before the first `{`: `.identifier 'literal'` has the exact
-            # same shape as `stylingRuleName` (`.name 'x'`, grammar rule
-            # `stylingRuleName`), which legitimately appears just inside a
-            # rule body — e.g. `Landuse { .name 'x'; ... }` — and must not
-            # be stripped.
-            brace_idx = included.find("{")
-            head, tail = (
-                (included, "")
-                if brace_idx == -1
-                else (included[:brace_idx], included[brace_idx:])
-            )
-            included = self._METADATA_RE.sub("", head) + tail
-
-            # Recurse: the included file may itself contain .include
-            return self._resolve_includes(included, abs_path.parent, seen)
-
-        return self._INCLUDE_RE.sub(_replacer, content)
+        if included_variables:
+            sheet.variables = included_variables + sheet.variables
+        if included_rules:
+            own_rules = sheet.styling_rules.rules if sheet.styling_rules else []
+            sheet.styling_rules = StylingRuleList(included_rules + own_rules)
+        return sheet
 
     def parse_file_to_pydantic(self, file_path: str | Path) -> Style:
         """Parse a CartoSym CSS file and return a Pydantic Style model."""
@@ -288,6 +255,20 @@ class CartoSymParser:
         parser.addErrorListener(error_listener)
 
         tree = parser.styleSheet()
+
+        # The grammar's start rule has no EOF, so ANTLR stops silently at the
+        # first construct it cannot continue from and drops the rest.
+        trailing = stream.LT(1)
+        if trailing.type != Token.EOF:
+            error_listener.syntaxError(
+                parser,
+                trailing,
+                trailing.line,
+                trailing.column,
+                f"unexpected input {trailing.text!r}, the rest of the "
+                "stylesheet was not parsed (variables must come before rules)",
+                None,
+            )
 
         if error_listener.errors:
             raise CartoSymSyntaxError(
