@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CS-JSON: `metadata.keywords` is also accepted as a comma-separated string (as CartoSym-CSS `.keywords 'a, b'` writes it), not only as an array.
+
 ## [0.4.1] - 2026-10-14
 
 ### Added
