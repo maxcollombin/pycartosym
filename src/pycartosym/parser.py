@@ -962,7 +962,13 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 # Walk the ANTLR ExpressionContext parse tree directly
                 # instead of re-scanning the selector text.
                 expr_ctx = ctx.expression()
-                expr = ExpressionParser.parse_expression_ctx(expr_ctx)
+                # Parse the original text with the CQL2-Text grammar first: the
+                # tree walk below mangles quoted-string lists such as
+                # ``('water', 'river')``.
+                source = expr_ctx.start.getInputStream().getText(
+                    expr_ctx.start.start, expr_ctx.stop.stop
+                )
+                expr = ExpressionParser._parse_expression_text(source)
                 if expr is None:
                     raise ValueError("empty selector expression")
                 selector.conditions = [expr]

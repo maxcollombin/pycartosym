@@ -231,7 +231,12 @@ def expression_to_json(expression: Any) -> Any:
         return {}
 
     # NULL literal -> JSON null (checked before the falsy guard below).
-    from .model import NullLiteral, StringExpression
+    from .model import (
+        ArrayExpression,
+        ConditionalExpression,
+        NullLiteral,
+        StringExpression,
+    )
 
     if isinstance(expression, NullLiteral):
         return None
@@ -250,6 +255,19 @@ def expression_to_json(expression: Any) -> Any:
 
         rule_name = CartoSymCSSGrammar.ruleNames[expression.getRuleIndex()]
         return convert_antlr_expression(expression, rule_name)
+
+    # Array literal -> JSON array; `c ? a : b` -> the schema's "?:" operator.
+    if isinstance(expression, ArrayExpression):
+        return [expression_to_json(item) for item in expression.elements]
+    if isinstance(expression, ConditionalExpression):
+        return {
+            "op": "?:",
+            "args": [
+                expression_to_json(expression.condition),
+                expression_to_json(expression.true_value),
+                expression_to_json(expression.false_value),
+            ],
+        }
 
     # Handle UnaryOperationExpression (`not <expr>`) — check before the
     # binary branch (unary has `operator` + `operand`, no left/right).
@@ -276,7 +294,9 @@ def expression_to_json(expression: Any) -> Any:
 
         # Map operator enum to string
         op_str = str(expression.operator)
-        if "AND" in op_str:
+        if getattr(expression.operator, "value", expression.operator) == "**":
+            op = "^"  # CQL2-JSON / schema power operator
+        elif "AND" in op_str:
             op = "and"
         elif "OR" in op_str:
             op = "or"

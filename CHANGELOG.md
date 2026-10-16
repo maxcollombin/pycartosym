@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CQL2-JSON: array literals are JSON arrays (`a_overlaps(tags, ('water', 'river'))` was mangled into one string), `c ? a : b` is the schema's `{"op": "?:"}` and `^` is `{"op": "^"}` (was `**`). A `[selector]` is now parsed from its original text with the CQL2-Text grammar.
 - CQL2: a single-quoted string used as a function argument, or on the left of `like`, stays a string literal instead of becoming a property reference (`contains(name, 'sl')` now selects the text `sl`, not the property `sl`).
 
 ## [0.4.1] - 2026-10-14
