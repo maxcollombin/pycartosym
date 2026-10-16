@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16
+
 ### Changed
 
 - **Breaking** (CS-JSON): CartoSym-CSS `.include 'x.cscss'` is written as `$include` (a string, or an array for several files) instead of merging the included rules and variables into the output, as the CartoSym 2.0 draft requires. The included files are still parsed, so `@name` in the including file references a variable they define. `Converter(inline_includes=True)` and `CartoSymParser(inline_includes=True)` keep the old merging; the CLI applies it automatically for SLD and MapLibre output, which have no include. The MapLibre writer raises `NotImplementedError` on `$include`, like the SLD writer.
@@ -127,7 +129,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/maxcollombin/pycartosym/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/maxcollombin/pycartosym/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/maxcollombin/pycartosym/compare/v0.3.9...v0.4.0
 [0.3.9]: https://github.com/maxcollombin/pycartosym/compare/v0.3.8...v0.3.9
