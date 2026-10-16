@@ -30,6 +30,14 @@ class Metadata(BaseCartoSymModel, CommentMixin):
         None, alias="geoDataClasses", description="Geographic data classes (URIs)"
     )
 
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def _split_keywords_string(cls, value: Any) -> Any:
+        """Accept a comma-separated string, as CartoSym-CSS ``.keywords`` writes it."""
+        if isinstance(value, str):
+            return [kw.strip() for kw in value.split(",") if kw.strip()]
+        return value
+
 
 class StylingRule(BaseCartoSymModel, CommentMixin):
     """Individual styling rule with optional selector and symbolizer.
