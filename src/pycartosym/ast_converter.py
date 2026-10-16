@@ -14,6 +14,7 @@ from .ast import StylingRule as AstStylingRule
 from .cql2.to_json import (
     convert_literal_value,
     convert_numeric_expression_value,
+    convert_property_expression,
     expression_to_json,
     post_process_selector,
 )
@@ -400,9 +401,12 @@ def _normalize_graphic_element(el: dict) -> None:
                 t.startswith('"') and t.endswith('"')
             ):
                 el["text"] = t[1:-1]  # strip quotes → literal string
-            else:
+            elif _IDENTIFIER_RE.match(t):
                 # bare identifier → property reference
                 el["text"] = {"property": t}
+            else:
+                # e.g. upperCase(name): an expression, not a property name
+                el["text"] = convert_property_expression(t) or {"property": t}
 
         # alignment: "left middle"  OR  { left, middle }  → ["left", "middle"]
         if "alignment" in el and isinstance(el["alignment"], str):

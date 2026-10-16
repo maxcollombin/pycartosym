@@ -17,6 +17,7 @@ __all__ = [
     "convert_identifier",
     "convert_literal_value",
     "convert_numeric_expression_value",
+    "convert_property_expression",
     "split_on_comparison_operator",
 ]
 
@@ -278,10 +279,10 @@ def expression_to_json(expression: Any) -> Any:
     ):
         op_str = str(expression.operator).lower()
         op = "not" if "not" in op_str else op_str.rsplit(".", 1)[-1]
-        return {
-            "op": op,
-            "args": [expression_to_json(expression.operand)],
-        }
+        operand = expression_to_json(expression.operand)
+        if op == "-" and isinstance(operand, (int, float)):
+            return -operand  # `-1` is the number -1, not a unary operation
+        return {"op": op, "args": [operand]}
 
     # Handle BinaryOperationExpression (AST objects)
     if (
@@ -738,3 +739,31 @@ def convert_numeric_expression_value(prop_value: str, expr_ctx: Any = None) -> A
         if _is_supported_numeric_expr(parsed):
             return parsed
     return literal
+
+
+def convert_property_expression(text: str) -> dict[str, Any] | int | float | None:
+    """Parse a property value such as ``upperCase(name)`` to CQL2-JSON.
+
+    Returns the JSON operation (or number) the expression parses to, or
+    ``None`` when *text* is not an operation (a bare word is a property name,
+    handled by the caller), so callers can warn instead of
+    dropping the value silently.
+    """
+    from .from_text import ExpressionParser
+
+    try:
+        result = post_process_selector(
+            expression_to_json(ExpressionParser._parse_expression_text(text))
+        )
+    except Exception:  # noqa: BLE001 - not an expression the parser understands
+        return None
+    if isinstance(result, (int, float)):
+        return result
+    # Only a real operation: a bare word or opaque text parses to a "property".
+    if (
+        isinstance(result, dict)
+        and "op" in result
+        and "ExpressionType" not in str(result)
+    ):
+        return result
+    return None

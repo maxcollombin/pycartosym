@@ -37,7 +37,10 @@ from .cql2.model import (
     Selector,
     StringExpression,
 )
-from .cql2.to_json import convert_numeric_expression_value
+from .cql2.to_json import (
+    convert_numeric_expression_value,
+    convert_property_expression,
+)
 from .grammar.generated import (
     CartoSymCSSGrammar,
     CartoSymCSSGrammarListener,
@@ -64,6 +67,22 @@ class _CollectingErrorListener(ErrorListener):
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         self.errors.append(f"line {line}:{column} {msg}")
         self.error_tuples.append((line, column, msg))
+
+
+def _opacity_value(text: str) -> float | dict | None:
+    """Parse an ``opacity`` value: a number, or an expression as CQL2-JSON.
+
+    Returns ``None`` (with a warning) for anything else, so the opacity is not
+    dropped without a trace.
+    """
+    try:
+        return float(text)
+    except ValueError:
+        pass
+    expr = convert_property_expression(text)
+    if expr is None:
+        logger.warning("opacity: cannot parse %r, ignored", text)
+    return expr
 
 
 def _strip_inline_comment(s: str) -> str:
@@ -404,10 +423,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 if k == "color":
                     symbolizer.fill.color = v
                 elif k == "opacity":
-                    try:
-                        symbolizer.fill.opacity = float(v)
-                    except ValueError:
-                        pass
+                    symbolizer.fill.opacity = _opacity_value(v)
                 elif k in ("hatch", "dotpattern", "stipple") and expr_ctx is not None:
                     inner = self._extract_top_level_dict_value(expr_ctx, k)
                     if inner is not None:
@@ -431,10 +447,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 elif k == "width":
                     symbolizer.stroke.width = v
                 elif k == "opacity":
-                    try:
-                        symbolizer.stroke.opacity = float(v)
-                    except ValueError:
-                        pass
+                    symbolizer.stroke.opacity = _opacity_value(v)
         elif prop_name_lower == "zorder" or prop_name_lower == "z_order":
             try:
                 symbolizer.z_order = int(
@@ -1133,10 +1146,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     if attr_name.lower() == "color":
                         symbolizer.fill.color = prop_value
                     elif attr_name.lower() == "opacity":
-                        try:
-                            symbolizer.fill.opacity = float(prop_value)
-                        except ValueError:
-                            pass
+                        symbolizer.fill.opacity = _opacity_value(prop_value)
                 elif obj_name.lower() == "stroke":
                     if not symbolizer.stroke:
                         symbolizer.stroke = ModelStroke()
@@ -1157,10 +1167,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                             prop_value, expr_ctx
                         )
                     elif attr_name.lower() == "opacity":
-                        try:
-                            symbolizer.stroke.opacity = float(prop_value)
-                        except ValueError:
-                            pass
+                        symbolizer.stroke.opacity = _opacity_value(prop_value)
         else:
             # Handle direct properties
             prop_name_lower = prop_name.lower()
@@ -1178,10 +1185,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     elif prop_value.lower() == "true":
                         symbolizer.visibility = True
                 elif prop_name_lower == "opacity":
-                    try:
-                        symbolizer.opacity = float(prop_value)
-                    except ValueError:
-                        pass
+                    symbolizer.opacity = _opacity_value(prop_value)
                 elif prop_name_lower in ("zorder", "z_order"):
                     try:
                         symbolizer.z_order = int(prop_value)
