@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CartoSym-CSS → CS-JSON: a file with `.include` and its own variables no longer silently loses its own rules and variables. Included stylesheets are now parsed separately and merged (their variables and rules come before the file's own). Input left unparsed after a point where parsing cannot continue (such as a variable after a rule) is now a syntax error instead of being dropped.
+
 ## [0.4.1] - 2026-10-14
 
 ### Added
@@ -14,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CartoSym-CSS → CS-JSON: a file with `.include` and its own variables (or any input after a point where parsing cannot continue, such as a variable after a rule) no longer silently loses its own rules and variables. Included stylesheets are now parsed separately and merged (variables and rules before the file's own); input left unparsed is a syntax error.
 - CS-JSON → CartoSym-CSS: `$comment` on the style, the metadata, a symbolizer and a marker element is written as a comment, not only a rule's (those four were silently dropped). A multi-line comment, or one containing `*/`, is written as `//` lines.
 
 ## [0.4.0] - 2026-10-14
