@@ -17,9 +17,7 @@ def test_variable_parsing():
 
     # Variable must be extracted
     assert style.variables is not None, "variables should not be None"
-    assert len(style.variables) == 1
-    assert style.variables[0].name == "roadColor"
-    assert style.variables[0].value == "gray"
+    assert style.variables == {"roadColor": "gray"}
 
 
 def test_styling_rule_name_parsing():
@@ -59,9 +57,7 @@ def test_variable_and_stylingrulename_combined():
 
     # Variables
     assert style.variables is not None
-    assert len(style.variables) == 1
-    assert style.variables[0].name == "roadColor"
-    assert style.variables[0].value == "gray"
+    assert style.variables == {"roadColor": "gray"}
 
     # Rule name
     rule = style.styling_rules[0]

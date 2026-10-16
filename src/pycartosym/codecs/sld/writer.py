@@ -50,7 +50,8 @@ class SldWriter(CodecWriter):
 
     def write(self, style: Style) -> str:
         """Serialise a Style model to an SLD/SE XML string."""
-        root = self._build_sld(style)
+        # SLD has no variables: write each reference as its value.
+        root = self._build_sld(style.resolve_variables())
         xml: bytes = etree.tostring(
             root, pretty_print=True, xml_declaration=True, encoding="UTF-8"
         )
@@ -90,10 +91,6 @@ class SldWriter(CodecWriter):
                     self.d.el("Title", parent=desc, text=metadata.title)
                 if metadata.abstract:
                     self.d.el("Abstract", parent=desc, text=metadata.abstract)
-        if style.variables:
-            raise NotImplementedError(
-                "Style.$variables has no SLD/SE mapping in this codec"
-            )
         if style.include:
             raise NotImplementedError(
                 "Style.$include has no SLD/SE mapping in this codec"

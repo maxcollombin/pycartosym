@@ -99,6 +99,9 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             if isinstance(pushed, dict) and len(pushed) == 1:
                 return f"{pushed[unit]} {unit}"
             return expression_to_text(pushed)
+    # Reference to a style variable: {"$ref": "#/$variables/w"} -> `@w`
+    if len(expr) == 1 and str(expr.get("$ref", "")).startswith("#/$variables/"):
+        return "@" + str(expr["$ref"]).removeprefix("#/$variables/")
     # Conditional: {"op": "?:", "args": [c, a, b]} -> `c ? a : b`
     if expr.get("op") == "?:" and len(expr.get("args", [])) == 3:
         cond, yes, no = (_infix_operand(a, "?:") for a in expr["args"])

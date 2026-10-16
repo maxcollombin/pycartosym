@@ -265,6 +265,40 @@ def _coerce_unit_scalar(v: str, expr_ctx: Any = None):
     return v
 
 
+def _number_or_expression(value: Any) -> Any:
+    """``float(value)``, or *value* itself when it is an expression/reference.
+
+    A string that is not a number still raises ``ValueError``.
+    """
+    if isinstance(value, (str, int, float)):
+        return float(value)
+    return value
+
+
+def _reference_variables(style: Style) -> Style:
+    """Turn each ``"@name"`` string that names a variable into a ``$ref``.
+
+    Property values reach the models as the raw text ``@name``; the CartoSym-JSON
+    form is ``{"$ref": "#/$variables/name"}``.
+    """
+    if not style.variables:
+        return style
+    names = set(style.variables)
+
+    def _walk(node: Any) -> Any:
+        if isinstance(node, str) and node.startswith("@") and node[1:] in names:
+            return {"$ref": f"#/$variables/{node[1:]}"}
+        if isinstance(node, dict):
+            return {k: _walk(v) for k, v in node.items()}
+        if isinstance(node, list):
+            return [_walk(v) for v in node]
+        return node
+
+    data = style.model_dump(exclude_none=True)
+    data["stylingRules"] = _walk(data["stylingRules"])
+    return Style.model_validate(data)
+
+
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 
 
@@ -532,22 +566,9 @@ class AstToPydanticConverter:
                 if metadata_dict:
                     metadata = Metadata(**metadata_dict)
 
-            # Convert variables (if present)
             variables = None
-            if hasattr(ast_stylesheet, "variables") and ast_stylesheet.variables:
-                from .models.styles import Variable
-
-                variables = [
-                    Variable(name=v.name, value=v.value, type=getattr(v, "type", None))
-                    for v in ast_stylesheet.variables
-                ]
-
-            # Build variable lookup and resolve references in the AST
-            # before Pydantic model validation
-            var_lookup = {}
-            if hasattr(ast_stylesheet, "variables") and ast_stylesheet.variables:
-                for v in ast_stylesheet.variables:
-                    var_lookup[v.name] = v.value
+            if getattr(ast_stylesheet, "variables", None):
+                variables = {v.name: v.value for v in ast_stylesheet.variables}
 
             # Convert only top-level styling rules (do not flatten nested rules)
             styling_rules = []
@@ -555,8 +576,6 @@ class AstToPydanticConverter:
                 ast_stylesheet.styling_rules, "rules"
             ):
                 for ast_rule in ast_stylesheet.styling_rules.rules:
-                    if var_lookup:
-                        self._resolve_ast_variables(ast_rule, var_lookup)
                     pydantic_rule = self._convert_styling_rule(ast_rule)
                     if pydantic_rule:
                         styling_rules.append(pydantic_rule)
@@ -565,54 +584,9 @@ class AstToPydanticConverter:
                 metadata=metadata, styling_rules=styling_rules, variables=variables
             )
 
-            return style
+            return _reference_variables(style)
         except Exception as e:
             raise ValueError(f"Failed to convert AST stylesheet: {e}") from e
-
-    def _resolve_ast_variables(self, ast_node, var_lookup: dict):
-        """Recursively resolve ``@variable`` references before model conversion.
-
-        Walks all attributes of the AST node. String values like
-        ``"@baseColor"`` are replaced with the variable's value.
-        """
-        if ast_node is None:
-            return
-
-        def _resolve_value(v):
-            if isinstance(v, str) and v.startswith("@"):
-                var_name = v[1:]
-                if var_name in var_lookup:
-                    return var_lookup[var_name]
-            return v
-
-        # Walk all attributes of the AST node
-        for attr_name in list(vars(ast_node).keys()):
-            val = getattr(ast_node, attr_name, None)
-            if val is None:
-                continue
-            if isinstance(val, str):
-                resolved = _resolve_value(val)
-                if resolved is not val:
-                    setattr(ast_node, attr_name, resolved)
-            elif isinstance(val, list):
-                for i, item in enumerate(val):
-                    if isinstance(item, str):
-                        resolved = _resolve_value(item)
-                        if resolved is not item:
-                            val[i] = resolved
-                    elif hasattr(item, "__dict__"):
-                        self._resolve_ast_variables(item, var_lookup)
-            elif isinstance(val, dict):
-                for k in list(val.keys()):
-                    v = val[k]
-                    if isinstance(v, str):
-                        resolved = _resolve_value(v)
-                        if resolved is not v:
-                            val[k] = resolved
-                    elif hasattr(v, "__dict__"):
-                        self._resolve_ast_variables(v, var_lookup)
-            elif hasattr(val, "__dict__"):
-                self._resolve_ast_variables(val, var_lookup)
 
     def _convert_styling_rule(self, ast_rule: AstStylingRule) -> StylingRule | None:
         """Convert AST StylingRule to Pydantic StylingRule.
@@ -865,7 +839,7 @@ class AstToPydanticConverter:
                 fill_data["color"] = convert_literal_value(str(ast_fill.color))
 
             if hasattr(ast_fill, "opacity") and ast_fill.opacity is not None:
-                fill_data["opacity"] = float(ast_fill.opacity)
+                fill_data["opacity"] = _number_or_expression(ast_fill.opacity)
 
             # Pattern fields (hatch/dotpattern/stipple/pattern): only ever
             # arrive here already as typed Pydantic instances — built by
@@ -920,7 +894,7 @@ class AstToPydanticConverter:
                     stroke_data["width"] = literal
 
             if hasattr(ast_stroke, "opacity") and ast_stroke.opacity is not None:
-                stroke_data["opacity"] = float(ast_stroke.opacity)
+                stroke_data["opacity"] = _number_or_expression(ast_stroke.opacity)
 
             return Stroke(**stroke_data) if stroke_data else None
 

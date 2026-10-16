@@ -38,6 +38,7 @@ from .cql2.model import (
     StringExpression,
 )
 from .cql2.to_json import (
+    convert_literal_value,
     convert_numeric_expression_value,
     convert_property_expression,
 )
@@ -793,7 +794,13 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     try:
                         value = float(text)
                     except ValueError:
-                        value = text
+                        # `3 px`, `@a * 2`...: an expression, not opaque text
+                        source = expr_ctx.start.getInputStream().getText(
+                            expr_ctx.start.start, expr_ctx.stop.stop
+                        )
+                        value = convert_property_expression(
+                            source
+                        ) or convert_literal_value(text)
         var = AstVariable(name=name, value=value)
         if self.stylesheet.variables is None:
             self.stylesheet.variables = []
@@ -1072,17 +1079,6 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         self, prop_name: str, prop_value: str, symbolizer, assignment=None
     ):
         """Enhanced property assignment handler with expression support."""
-        # Resolve @variable references before processing
-        if isinstance(prop_value, str) and prop_value.startswith("@"):
-            var_name = prop_value[1:]
-            if self.stylesheet is not None and self.stylesheet.variables:
-                for v in self.stylesheet.variables:
-                    if v.name == var_name:
-                        prop_value = (
-                            str(v.value) if not isinstance(v.value, str) else v.value
-                        )
-                        break
-
         # Retrieve the ANTLR expression context stored during enterPropertyAssignment
         expr_ctx = getattr(assignment, "_antlr_expr_ctx", None) if assignment else None
 

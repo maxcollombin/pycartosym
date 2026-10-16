@@ -483,13 +483,13 @@ class TestMetadataParsing:
         """
         cscss = "@roadColor = gray;\n[Base]\n{ stroke: { color: @roadColor }; }"
         result = self.converter.cscss_to_csjson(cscss)
-        assert result["$variables"] == [{"name": "roadColor", "value": "gray"}]
+        assert result["$variables"] == {"roadColor": "gray"}
         back = self.converter.style_to_cscss(Style.from_dict(result))
         assert "@roadColor = 'gray';" in back
         # And it re-parses back to the same $variables.
-        assert self.converter.cscss_to_csjson(back)["$variables"] == [
-            {"name": "roadColor", "value": "gray"}
-        ]
+        assert self.converter.cscss_to_csjson(back)["$variables"] == {
+            "roadColor": "gray"
+        }
 
     def _fill_pattern_roundtrip(self, fill_dict):
         style = Style.from_dict({"stylingRules": [{"symbolizer": {"fill": fill_dict}}]})
@@ -1452,21 +1452,21 @@ class TestColorParsing:
 
 
 class TestVariableResolution:
-    """Verify that @variable references are resolved during parsing."""
+    """Verify that @variable references become ``$ref`` to ``$variables``."""
 
     def setup_method(self):
         self.converter = Converter()
 
     def test_variable_substitution_in_fill(self, tmp_path):
-        """Variables are resolved during file pre-processing."""
+        """A variable reference is kept as a ``$ref``, not inlined."""
         f = tmp_path / "vars.cscss"
         f.write_text(
             "@baseColor = #336699;\n\nLanduse\n{\n   fill: {color: @baseColor};\n}\n"
         )
         result = self.converter.cscss_to_csjson(f)
         fill = result["stylingRules"][0]["symbolizer"]["fill"]
-        # Variable should be resolved to the hex color
-        assert fill["color"] == [51, 102, 153]
+        assert fill["color"] == {"$ref": "#/$variables/baseColor"}
+        assert result["$variables"] == {"baseColor": [51, 102, 153]}
 
     def test_variable_substitution_numeric(self, tmp_path):
         f = tmp_path / "vars.cscss"
@@ -1475,4 +1475,5 @@ class TestVariableResolution:
         )
         result = self.converter.cscss_to_csjson(f)
         sym = result["stylingRules"][0]["symbolizer"]
-        assert sym["opacity"] == 0.7
+        assert sym["opacity"] == {"$ref": "#/$variables/baseOpacity"}
+        assert result["$variables"] == {"baseOpacity": 0.7}

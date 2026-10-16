@@ -611,6 +611,10 @@ def convert_identifier(name: str) -> Any:
 
         return {"op": op, "args": [left_arg, right_arg]}
 
+    # `@name` is a reference to a style variable
+    if name.startswith("@") and name[1:].isidentifier():
+        return {"$ref": f"#/$variables/{name[1:]}"}
+
     # No operator - determine property type
     if "." in name:
         if any(name.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]):
@@ -806,7 +810,7 @@ def convert_property_expression(text: str) -> dict[str, Any] | int | float | Non
     # Only a real operation: a bare word or opaque text parses to a "property".
     if (
         isinstance(result, dict)
-        and ("op" in result or _unit_of(result))
+        and ("op" in result or "$ref" in result or _unit_of(result))
         and "ExpressionType" not in str(result)
     ):
         return result

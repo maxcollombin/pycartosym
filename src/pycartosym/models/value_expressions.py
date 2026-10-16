@@ -185,6 +185,21 @@ class CoalesceExpression(BaseCartoSymModel):
     args: list[ValueExpressionArg] = Field(min_length=1)
 
 
+class VariableRef(BaseCartoSymModel):
+    """Reference to a style variable: ``{"$ref": "#/$variables/name"}``."""
+
+    ref: str = Field(
+        alias="$ref",
+        pattern=r"^#/\$variables/.+",
+        description="JSON Pointer to a member of the top-level $variables object",
+    )
+
+    @property
+    def variable_name(self) -> str:
+        """Name of the referenced variable."""
+        return self.ref.removeprefix("#/$variables/")
+
+
 class OperationExpression(BaseCartoSymModel):
     """Any other CQL2-JSON operation: ``{"op": ..., "args": [...]}``.
 
@@ -199,6 +214,7 @@ class OperationExpression(BaseCartoSymModel):
 
 ValueExpression = (
     PropertyRef
+    | VariableRef
     | SystemIdentifier
     | ArithmeticExpression
     | CaseExpression

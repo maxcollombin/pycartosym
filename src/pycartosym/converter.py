@@ -218,8 +218,8 @@ class Converter:
         # itself round-trips; re-emitting it is still strictly better than
         # dropping it, and lets a re-parse repopulate ``style.variables``.
         if style.variables:
-            for var in style.variables:
-                lines.append(f"@{var.name} = {self._format_variable_value(var.value)};")
+            for name, value in style.variables.items():
+                lines.append(f"@{name} = {self._format_variable_value(value)};")
             lines.append("")  # Empty line after variable declarations
 
         # Add only top-level rules; nested rules are emitted only within their parent
@@ -239,6 +239,10 @@ class Converter:
         """
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             return str(value)
+        if isinstance(value, dict):  # an expression: `3 px`, `@a * 2`...
+            return self._format_selector_expr(value)
+        if isinstance(value, list):  # a colour: [r, g, b]
+            return self._format_color(value)
         return f"'{value}'"
 
     @staticmethod
@@ -909,6 +913,9 @@ class Converter:
                 )
             except (TypeError, ValueError):
                 pass
+        expr = self._format_numeric_expression(color)
+        if expr is not None:  # e.g. a reference to a variable: @c
+            return expr
         return str(color)
 
     def _format_value(self, value) -> str:
@@ -925,7 +932,7 @@ class Converter:
             value = value.model_dump(exclude_none=True)
         if not isinstance(value, dict):
             return None
-        if "sysId" in value or "property" in value or "op" in value:
+        if "sysId" in value or "property" in value or "op" in value or "$ref" in value:
             return self._format_selector_expr(value)
         if len(value) == 1 and next(iter(value)) in _UNIT_KEYS:
             return self._format_selector_expr(value)

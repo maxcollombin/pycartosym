@@ -212,6 +212,16 @@ _UNIT_STRING_RE = re.compile(
 )
 
 
+def _format_unit_magnitude(magnitude: Any) -> str:
+    """Format the number inside a unit value; an expression has no SLD form."""
+    if isinstance(magnitude, dict):
+        raise NotImplementedError(
+            f"unit value computed by an expression {magnitude!r} has no "
+            "SLD/SE equivalent in this codec"
+        )
+    return _format_number(magnitude)
+
+
 def format_unit_value(value: Any) -> str:
     """Format a CartoSym unit-bearing value as a bare SLD number string.
 
@@ -234,10 +244,10 @@ def format_unit_value(value: Any) -> str:
         sizing has no SLD/SE equivalent in this codec's scope).
     """
     if hasattr(value, "value") and hasattr(value, "unit"):
-        return _format_number(value.value)
+        return _format_unit_magnitude(value.value)
     if isinstance(value, dict) and len(value) == 1:
         ((_, v),) = value.items()
-        return _format_number(v)
+        return _format_unit_magnitude(v)
     if isinstance(value, (int, float)):
         return _format_number(value)
     if isinstance(value, str):

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking** (CS-JSON): variables follow the CartoSym 2.0 draft. `$variables` is an object `{name: value}` (was a list of `{name, value}`), and every `@name` reference is written `{"$ref": "#/$variables/name"}`, in plain property values (`color: @c`) and inside expressions (`@w * 2 px` → `{"px": {"op": "*", "args": [{"$ref": ...}, 2]}}`). References are no longer replaced by the variable's value. The old list form is still read. A variable value may be an expression (`@a = 2 px`).
+- SLD and MapLibre writers write a reference as its value. The SLD writer no longer refuses a style with `$variables`, but a width computed by an expression has no SLD form and raises `NotImplementedError`.
+- Bundled schema: `variableRef` is accepted wherever `propertyRef` is, and the `{r, g, b}` colour object rejects other keys (a `{"property": …}` or `$ref` colour matched both branches of its `oneOf`).
+
 ### Fixed
 
 - Expressions with units, as property values: `6 px` stays `{"px": 6}` inside `? :` and operations, and a unit shared by an arithmetic expression is written around it (`lanes * 2 px` ↔ `{"px": {"op": "*", ...}}`, the schema's `unitValue`). `stroke.width: lanes > 2 ? 6 px : 2 px` and any other operation are converted instead of kept as text. Mixed units in one operation are rejected. Written back to CartoSym-CSS as expressions (`? :`, `^`, parentheses), not Python reprs.

@@ -31,14 +31,6 @@ class Metadata(BaseCartoSymModel, CommentMixin):
     )
 
 
-class Variable(BaseCartoSymModel):
-    """Represents a variable definition in CartoSym CSS."""
-
-    name: str = Field(..., description="Variable name")
-    value: Any = Field(..., description="Variable value")
-    type: str | None = Field(None, description="Variable type (optional)")
-
-
 class StylingRule(BaseCartoSymModel, CommentMixin):
     """Individual styling rule with optional selector and symbolizer.
 
@@ -87,10 +79,51 @@ class Style(BaseCartoSymModel, CommentMixin):
     styling_rules: list[StylingRule] = Field(
         ..., alias="stylingRules", description="List of styling rules"
     )
-    variables: list[Variable] | None = Field(
-        None, alias="$variables", description="Style variables (as objects)"
+    variables: dict[str, Any] | None = Field(
+        None,
+        alias="$variables",
+        description="Style variables: name -> value (a literal or an expression)",
     )
 
+    @field_validator("variables", mode="before")
+    @classmethod
+    def _variables_from_legacy_list(cls, value: Any) -> Any:
+        """Accept the pre-0.5 ``[{"name": ..., "value": ...}]`` list form."""
+        if isinstance(value, list):
+            return {
+                (v["name"] if isinstance(v, dict) else v.name): (
+                    v["value"] if isinstance(v, dict) else v.value
+                )
+                for v in value
+            }
+        return value
+
+    def resolve_variables(self) -> Style:
+        """Return a copy with every ``$ref`` to a variable replaced by its value.
+
+        For consumers (renderers, SLD, MapLibre) that have no notion of
+        variables. The copy has no ``$variables``.
+        """
+        if not self.variables:
+            return self
+        variables = self.variables
+
+        def _resolve(node: Any) -> Any:
+            if isinstance(node, dict):
+                ref = node.get("$ref")
+                if isinstance(ref, str) and ref.startswith(_VARIABLES_POINTER):
+                    return _resolve(variables[ref.removeprefix(_VARIABLES_POINTER)])
+                return {k: _resolve(v) for k, v in node.items()}
+            if isinstance(node, list):
+                return [_resolve(v) for v in node]
+            return node
+
+        data = _resolve(self.model_dump(exclude_none=True))
+        data.pop("$variables", None)
+        return type(self).model_validate(data)
+
+
+_VARIABLES_POINTER = "#/$variables/"
 
 # Enable forward references
 StylingRule.model_rebuild()

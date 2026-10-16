@@ -868,7 +868,8 @@
                "g": { "$ref": "#/$defs/colorComponent0to255" },
                "b": { "$ref": "#/$defs/colorComponent0to255" },
                "alter": { "type": "boolean" }
-            }
+            },
+            "additionalProperties": false
          },
          {
             "type": "array",
@@ -1015,6 +1016,7 @@
     "idOrFnExpression": {
        "anyOf": [
           { "$ref": "#/$defs/systemIdentifier" },
+          { "$ref": "#/$defs/variableRef" },
           { "$ref": "#/$defs/propertyRef" },
           { "$ref": "#/$defs/functionCall" },
           { "$ref": "#/$defs/conditionalExpression" }
@@ -1182,6 +1184,7 @@
     "temporalInstantExpression": {
       "oneOf": [
         { "$ref": "#/$defs/instantInstance" },
+        { "$ref": "#/$defs/variableRef" },
         { "$ref": "#/$defs/propertyRef" },
         { "$ref": "#/$defs/systemIdentifier" },
         { "$ref": "#/$defs/functionCall" },
@@ -1282,6 +1285,7 @@
         { "$ref": "#/$defs/bitwiseShift" },
         { "$ref": "#/$defs/bitwiseNot" },
         { "type": "number" },
+        { "$ref": "#/$defs/variableRef" },
         { "$ref": "#/$defs/propertyRef" },
         { "$ref": "#/$defs/systemIdentifier" },
         { "$ref": "#/$defs/functionCall" },
@@ -1371,6 +1375,7 @@
     "geomExpression": {
       "oneOf": [
         { "$ref": "#/$defs/spatialInstance" },
+        { "$ref": "#/$defs/variableRef" },
         { "$ref": "#/$defs/propertyRef" },
         { "$ref": "#/$defs/systemIdentifier" },
         { "$ref": "#/$defs/functionCall" },
@@ -1415,6 +1420,7 @@
     "temporalExpression": {
       "oneOf": [
         { "$ref": "#/$defs/temporalInstance" },
+        { "$ref": "#/$defs/variableRef" },
         { "$ref": "#/$defs/propertyRef" },
         { "$ref": "#/$defs/systemIdentifier" },
         { "$ref": "#/$defs/functionCall" },
@@ -1444,6 +1450,7 @@
       "items": {
         "oneOf": [
           { "$ref": "#/$defs/array" },
+          { "$ref": "#/$defs/variableRef" },
           { "$ref": "#/$defs/propertyRef" },
           { "$ref": "#/$defs/systemIdentifier" },
           { "$ref": "#/$defs/functionCall" },
@@ -1456,6 +1463,7 @@
       "items": {
         "oneOf": [
           { "$ref": "#/$defs/array" },
+          { "$ref": "#/$defs/variableRef" },
           { "$ref": "#/$defs/propertyRef" },
           { "$ref": "#/$defs/systemIdentifier" },
           { "$ref": "#/$defs/functionCall" },
@@ -1499,6 +1507,7 @@
           { "$ref": "#/$defs/bitwiseLogical" },
           { "$ref": "#/$defs/bitwiseShift" },
           { "$ref": "#/$defs/bitwiseNot" },
+          { "$ref": "#/$defs/variableRef" },
           { "$ref": "#/$defs/propertyRef" },
           { "$ref": "#/$defs/systemIdentifier" },
           { "$ref": "#/$defs/functionCall" },
@@ -1571,6 +1580,7 @@
           { "$ref": "#/$defs/bitwiseLogical" },
           { "$ref": "#/$defs/bitwiseShift" },
           { "$ref": "#/$defs/bitwiseNot" },
+          { "$ref": "#/$defs/variableRef" },
           { "$ref": "#/$defs/propertyRef" },
           { "$ref": "#/$defs/systemIdentifier" },
           { "$ref": "#/$defs/functionCall" },
@@ -1578,6 +1588,14 @@
           { "type": "integer" },
           { "$ref": "#/$defs/hexNumber" }
         ]
+    },
+    "variableRef": {
+      "type": "object",
+      "required": [ "$ref" ],
+      "properties": {
+        "$ref": { "type": "string", "pattern": "^#/\\$variables/" }
+      },
+      "additionalProperties": false
     },
     "propertyRef": {
       "type": "object",
@@ -1698,6 +1716,7 @@
         { "$ref": "#/$defs/substitute" },
         { "$ref": "#/$defs/format" },
         { "type": "string" },
+        { "$ref": "#/$defs/variableRef" },
         { "$ref": "#/$defs/propertyRef" },
         { "$ref": "#/$defs/systemIdentifier" },
         { "$ref": "#/$defs/functionCall" },
@@ -1864,6 +1883,7 @@
         "oneOf": [
           { "$ref": "#/$defs/instantString" },
           { "type": "string", "enum": [ ".." ] },
+          { "$ref": "#/$defs/variableRef" },
           { "$ref": "#/$defs/propertyRef" },
           { "$ref": "#/$defs/systemIdentifier" },
           { "$ref": "#/$defs/functionCall" },
