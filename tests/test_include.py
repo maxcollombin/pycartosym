@@ -191,3 +191,40 @@ class TestIncludeDirective:
         # treated as unknown directives (ignored or passed through)
         result = self.parser.parse_string(content)
         assert result.styling_rules is not None
+
+    # ── Variables alongside includes ──────────────────────────────
+
+    def test_include_with_own_variables_keeps_rules_and_variables(self, tmp_path):
+        """A file with `.include`, its own variables and rules loses nothing."""
+        (tmp_path / "base.cscss").write_text("Water { fill: { color: blue }; }\n")
+        main = tmp_path / "main.cscss"
+        main.write_text(
+            ".include 'base.cscss'\n"
+            "@roadWidth = 3;\n"
+            "Roads { stroke: { width: @roadWidth * 2 px; color: red }; }\n"
+        )
+
+        result = self.parser.parse_file(main)
+
+        names = [_rule_selector_name(r) for r in result.styling_rules.rules]
+        assert names == ["Water", "Roads"]
+        assert [v.name for v in result.variables] == ["roadWidth"]
+
+    def test_included_variables_come_before_own_variables(self, tmp_path):
+        (tmp_path / "base.cscss").write_text("@a = 1;\nWater { opacity: 1; }\n")
+        main = tmp_path / "main.cscss"
+        main.write_text(".include 'base.cscss'\n@b = 2;\nRoads { opacity: 1; }\n")
+
+        result = self.parser.parse_file(main)
+
+        assert [v.name for v in result.variables] == ["a", "b"]
+
+
+def test_input_after_a_rule_that_cannot_continue_is_an_error():
+    """A variable after a rule must raise, not silently drop what follows."""
+    from pycartosym.exceptions import CartoSymSyntaxError
+
+    with pytest.raises(CartoSymSyntaxError):
+        CartoSymParser().parse_string(
+            "Water { opacity: 1; }\n@w = 3;\nRoads { opacity: 1; }\n"
+        )
