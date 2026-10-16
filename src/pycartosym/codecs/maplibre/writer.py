@@ -665,7 +665,11 @@ def _hot_spot_fraction(component: Any) -> float | None:
     """
     if isinstance(component, dict) and set(component) == {"pc"}:
         return float(component["pc"]) / 100
-    if isinstance(component, UnitValue) and component.unit == UnitType.PICAS:
+    if (
+        isinstance(component, UnitValue)
+        and component.unit == UnitType.PICAS
+        and not isinstance(component.value, dict)
+    ):
         return component.value / 100
     return None
 

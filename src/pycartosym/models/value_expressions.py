@@ -40,7 +40,7 @@ does not.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 
@@ -185,6 +185,18 @@ class CoalesceExpression(BaseCartoSymModel):
     args: list[ValueExpressionArg] = Field(min_length=1)
 
 
+class OperationExpression(BaseCartoSymModel):
+    """Any other CQL2-JSON operation: ``{"op": ..., "args": [...]}``.
+
+    Pass-through for operations without a typed model above (``?:``, string
+    functions such as ``upperCase``, comparisons...), kept as the plain JSON
+    the converter produced rather than rejected.
+    """
+
+    op: str
+    args: list[Any] = Field(min_length=1)
+
+
 ValueExpression = (
     PropertyRef
     | SystemIdentifier
@@ -194,6 +206,7 @@ ValueExpression = (
     | StepExpression
     | InterpolateExpression
     | CoalesceExpression
+    | OperationExpression
 )
 """Any of the typed MapLibre-derived value expressions."""
 
@@ -207,6 +220,7 @@ for _cls in (
     StepExpression,
     InterpolateExpression,
     CoalesceExpression,
+    OperationExpression,
 ):
     _cls.model_rebuild()
 del _cls

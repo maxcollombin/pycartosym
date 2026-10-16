@@ -11,6 +11,63 @@ from __future__ import annotations
 
 __all__ = ["expression_to_text", "geojson_to_wkt"]
 
+_UNITS = {"px", "mm", "cm", "in", "pt", "em", "pc", "m", "ft"}
+_ARITHMETIC_OPS = {"+", "-", "*", "/", "^"}
+# Binding strength of the infix operators, to know where parentheses are needed.
+_PRECEDENCE = {
+    "or": 1,
+    "and": 2,
+    "=": 3,
+    "<>": 3,
+    "!=": 3,
+    "<": 3,
+    ">": 3,
+    "<=": 3,
+    ">=": 3,
+    "+": 4,
+    "-": 4,
+    "*": 5,
+    "/": 5,
+    "^": 6,
+}
+
+
+def _push_unit(unit: str, inner):
+    """Move ``{unit: expr}`` back onto the numeric literals of ``expr``.
+
+    The inverse of the unit hoisting done when reading CartoSym-CSS:
+    ``{"px": {"op": "*", "args": [w, 2]}}`` is written ``w * 2 px``.
+
+    Raises:
+        ValueError: If the expression has no numeric literal to carry the unit.
+    """
+    if isinstance(inner, (int, float)) and not isinstance(inner, bool):
+        return {unit: inner}
+    if isinstance(inner, dict) and inner.get("op") in _ARITHMETIC_OPS:
+        args = [_push_unit(unit, a) if _carries_unit(a) else a for a in inner["args"]]
+        if any(a is not b for a, b in zip(args, inner["args"], strict=True)):
+            return {**inner, "args": args}
+    raise ValueError(f"cannot write unit {unit!r} on expression {inner!r}")
+
+
+def _carries_unit(arg) -> bool:
+    """Whether *arg* is a number or an arithmetic operation that may take a unit."""
+    if isinstance(arg, (int, float)) and not isinstance(arg, bool):
+        return True
+    return isinstance(arg, dict) and arg.get("op") in _ARITHMETIC_OPS
+
+
+def _infix_operand(arg, parent_op: str) -> str:
+    """Format an operand of an infix operator, parenthesised if it binds looser."""
+    text = expression_to_text(arg)
+    if isinstance(arg, dict):
+        inner = _PRECEDENCE.get(arg.get("op", ""))
+        if inner is not None and inner < _PRECEDENCE.get(parent_op, 0):
+            return f"({text})"
+        if arg.get("op") == "?:":
+            return f"({text})"
+    return text
+
 
 def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     """Recursively format a selector expression dict as a CSCSS filter string.
@@ -34,6 +91,18 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             return s
         # Plain string value → single-quote it
         return f"'{s}'"
+    # Unit around an expression: {"px": 6} -> `6 px`, {"px": w * 2} -> `w * 2 px`
+    if len(expr) == 1:
+        ((unit, inner),) = expr.items()
+        if unit in _UNITS:
+            pushed = _push_unit(unit, inner)
+            if isinstance(pushed, dict) and len(pushed) == 1:
+                return f"{pushed[unit]} {unit}"
+            return expression_to_text(pushed)
+    # Conditional: {"op": "?:", "args": [c, a, b]} -> `c ? a : b`
+    if expr.get("op") == "?:" and len(expr.get("args", [])) == 3:
+        cond, yes, no = (_infix_operand(a, "?:") for a in expr["args"])
+        return f"{cond} ? {yes} : {no}"
     # Handle bare property reference (e.g., {"property": "viz.date"})
     if "property" in expr and len(expr) == 1:
         return str(expr["property"])
@@ -96,6 +165,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             "-",
             "*",
             "/",
+            "^",
         }
 
         # --- CQL2 predicate function-call ops (S_INTERSECTS, T_BEFORE, etc.) ---
@@ -242,10 +312,13 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         # Format binary comparison ops
         if len(args) == 2:
             left_arg, right_arg = args[0], args[1]
-            left = expression_to_text(left_arg)
+            left = _infix_operand(left_arg, op)
             # If left side is a sysId, right side is an identifier/enum — don't quote
             right_quote = not (isinstance(left_arg, dict) and "sysId" in left_arg)
-            right = expression_to_text(right_arg, quote_bare_strings=right_quote)
+            if isinstance(right_arg, dict) and right_quote:
+                right = _infix_operand(right_arg, op)
+            else:
+                right = expression_to_text(right_arg, quote_bare_strings=right_quote)
             return f"{left} {op} {right}"
     # Handle sysId
     if "sysId" in expr:

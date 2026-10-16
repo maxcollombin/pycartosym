@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- Expressions with units, as property values: `6 px` stays `{"px": 6}` inside `? :` and operations, and a unit shared by an arithmetic expression is written around it (`lanes * 2 px` ↔ `{"px": {"op": "*", ...}}`, the schema's `unitValue`). `stroke.width: lanes > 2 ? 6 px : 2 px` and any other operation are converted instead of kept as text. Mixed units in one operation are rejected. Written back to CartoSym-CSS as expressions (`? :`, `^`, parentheses), not Python reprs.
 - CartoSym-CSS → CS-JSON: an operation used as a property value (`text: upperCase(name)`, `opacity: 2 ^ -1`) becomes CQL2-JSON instead of a property named `upperCase(name)` or a dropped value; an `opacity` that cannot be parsed logs a warning. `-1` is the number -1, not a unary operation.
 - CQL2-JSON: array literals are JSON arrays (`a_overlaps(tags, ('water', 'river'))` was mangled into one string), `c ? a : b` is the schema's `{"op": "?:"}` and `^` is `{"op": "^"}` (was `**`). A `[selector]` is now parsed from its original text with the CQL2-Text grammar.
 - CQL2: a single-quoted string used as a function argument, or on the left of `like`, stays a string literal instead of becoming a property reference (`contains(name, 'sl')` now selects the text `sl`, not the property `sl`).

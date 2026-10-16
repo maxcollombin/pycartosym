@@ -914,7 +914,10 @@ class AstToPydanticConverter:
                 else:
                     # Use convert_literal_value for proper unit conversion
                     width_value = str(width)
-                    stroke_data["width"] = convert_literal_value(width_value)
+                    literal = convert_literal_value(width_value)
+                    if isinstance(literal, str):
+                        literal = convert_property_expression(width_value) or literal
+                    stroke_data["width"] = literal
 
             if hasattr(ast_stroke, "opacity") and ast_stroke.opacity is not None:
                 stroke_data["opacity"] = float(ast_stroke.opacity)

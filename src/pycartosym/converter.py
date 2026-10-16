@@ -11,7 +11,10 @@ from typing import Any
 
 from .cql2.to_json import split_on_comparison_operator
 from .models import Style
+from .models.types import UnitType
 from .parser import CartoSymParser
+
+_UNIT_KEYS = {u.value for u in UnitType}
 
 
 class Converter:
@@ -378,7 +381,7 @@ class Converter:
         if getattr(symbolizer, "visibility", None) is not None:
             lines.append(f"  visibility: {str(symbolizer.visibility).lower()};")
         if getattr(symbolizer, "opacity", None) is not None:
-            lines.append(f"  opacity: {symbolizer.opacity};")
+            lines.append(f"  opacity: {self._format_value(symbolizer.opacity)};")
         # Support both z_order and zOrder
         zorder_val = getattr(symbolizer, "zOrder", None)
         if zorder_val is None:
@@ -762,6 +765,8 @@ class Converter:
                 prop_lines.append(f"text: {text['property']}")
             elif isinstance(text, str):
                 prop_lines.append(f"text: '{text}'")
+            elif isinstance(text, dict) and "op" in text:
+                prop_lines.append(f"text: {self._format_selector_expr(text)}")
             else:
                 prop_lines.append(f"text: {text}")
 
@@ -873,7 +878,7 @@ class Converter:
         opacity = _get(el, "opacity")
         font_has_own_opacity = isinstance(font, dict) and "opacity" in font
         if opacity is not None and not font_has_own_opacity:
-            prop_lines.append(f"opacity: {opacity}")
+            prop_lines.append(f"opacity: {self._format_value(opacity)}")
 
         body = (";\n" + inner_pad).join(prop_lines)
         if prop_lines:
@@ -906,27 +911,24 @@ class Converter:
                 pass
         return str(color)
 
+    def _format_value(self, value) -> str:
+        """Format a scalar property value: an expression as text, else ``str``."""
+        return self._format_numeric_expression(value) or str(value)
+
     def _format_numeric_expression(self, value) -> str | None:
-        """Render a system identifier / arithmetic expression as CartoSym-CSS text.
+        """Render an expression (CQL2-JSON or typed model) as CartoSym-CSS text.
 
-        E.g. ``viz.sd / 1000``. Returns ``None`` if ``value`` isn't one of
-        these (a plain unit value/number instead).
+        E.g. ``viz.sd / 1000``, ``lanes > 2 ? 6 px : 2 px``. Returns ``None``
+        if ``value`` isn't an expression (a plain unit value/number instead).
         """
-
-        def _get(o, k):
-            return o.get(k) if isinstance(o, dict) else getattr(o, k, None)
-
-        sys_id = _get(value, "sysId")
-        if sys_id is not None:
-            return str(sys_id)
-        prop = _get(value, "property")
-        if prop is not None:
-            return str(prop)
-        op = _get(value, "op")
-        args = _get(value, "args")
-        if op is not None and args is not None:
-            parts = [self._format_numeric_expression(a) or str(a) for a in args]
-            return f"{parts[0]} {op} {parts[1]}"
+        if hasattr(value, "model_dump") and not hasattr(value, "unit"):
+            value = value.model_dump(exclude_none=True)
+        if not isinstance(value, dict):
+            return None
+        if "sysId" in value or "property" in value or "op" in value:
+            return self._format_selector_expr(value)
+        if len(value) == 1 and next(iter(value)) in _UNIT_KEYS:
+            return self._format_selector_expr(value)
         return None
 
     def _format_axis_value(self, v) -> str:
@@ -955,6 +957,8 @@ class Converter:
             return expr
         if hasattr(uv, "value") and hasattr(uv, "unit"):
             unit_str = uv.unit.value if hasattr(uv.unit, "value") else str(uv.unit)
+            if isinstance(uv.value, dict):  # unit around an expression
+                return self._format_selector_expr({unit_str: uv.value})
             return f"{uv.value} {unit_str}"
         if isinstance(uv, dict) and len(uv) == 1:
             unit, val = next(iter(uv.items()))
@@ -1038,7 +1042,7 @@ class Converter:
             if color is not None:
                 lines.append(f"  fill.color: {self._format_color(color)};")
             if opacity is not None:
-                lines.append(f"  fill.opacity: {opacity};")
+                lines.append(f"  fill.opacity: {self._format_value(opacity)};")
             return lines
 
         # Normal mode: always use a compound block to avoid injecting
@@ -1047,7 +1051,7 @@ class Converter:
         if color is not None:
             parts.append(f"color: {self._format_color(color)}")
         if opacity is not None:
-            parts.append(f"opacity: {opacity}")
+            parts.append(f"opacity: {self._format_value(opacity)}")
         if hatch is not None:
             block = self._fill_pattern_block(
                 hatch,
@@ -1120,7 +1124,7 @@ class Converter:
             if width is not None:
                 lines.append(f"  stroke.width: {self._format_unit_value(width)};")
             if opacity is not None:
-                lines.append(f"  stroke.opacity: {opacity};")
+                lines.append(f"  stroke.opacity: {self._format_value(opacity)};")
             return lines
 
         # Normal mode: always use compound block to avoid injecting alter on re-parse
@@ -1132,7 +1136,7 @@ class Converter:
             if width is not None:
                 parts.append(f"width: {self._format_unit_value(width)}")
             if opacity is not None:
-                parts.append(f"opacity: {opacity}")
+                parts.append(f"opacity: {self._format_value(opacity)}")
             return [f"  stroke: {{{'; '.join(parts)}}};"]
 
         return []

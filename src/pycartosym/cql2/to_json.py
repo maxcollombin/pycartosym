@@ -72,6 +72,9 @@ def post_process_selector(selector: Any) -> Any:
     left_arg: Any
     right_arg: Any
     if isinstance(selector, dict):
+        unit = _unit_of(selector)
+        if unit is not None and isinstance(unit[1], dict):
+            return {unit[0]: post_process_selector(unit[1])}
         if "op" in selector and "args" in selector:
             # Post-process arguments recursively
             processed_args: list = []
@@ -226,6 +229,35 @@ def convert_string_to_json_selector(selector_str: str) -> dict[str, Any]:
     return {"property": selector_str}
 
 
+def _unit_of(arg: Any) -> tuple[str, Any] | None:
+    """``{"px": 6}`` -> ``("px", 6)``; ``None`` for anything else."""
+    if isinstance(arg, dict) and len(arg) == 1:
+        ((key, inner),) = arg.items()
+        if key in _UNITS:
+            return key, inner
+    return None
+
+
+def _hoist_common_unit(op: str, args: list[Any]) -> dict[str, Any]:
+    """Build an arithmetic operation, moving a shared unit outside of it.
+
+    The schema puts the unit around the whole numeric expression
+    (``{"px": {"op": "*", "args": [w, 2]}}``), not on each operand.
+
+    Raises:
+        ValueError: If operands use different units, which the schema
+            cannot express.
+    """
+    units = {u[0] for a in args if (u := _unit_of(a))}
+    if not units:
+        return {"op": op, "args": args}
+    if len(units) > 1:
+        raise ValueError(f"cannot mix units {sorted(units)} in one expression ({op!r})")
+    (unit,) = units
+    bare = [u[1] if (u := _unit_of(a)) else a for a in args]
+    return {unit: {"op": op, "args": bare}}
+
+
 def expression_to_json(expression: Any) -> Any:
     """Convert an ANTLR expression to CS-JSON selector format."""
     if expression is None:
@@ -321,6 +353,8 @@ def expression_to_json(expression: Any) -> Any:
             else:
                 op = str(expression.operator)
 
+        if op in _ARITHMETIC_OPS:
+            return _hoist_common_unit(op, [left_arg, right_arg])
         return {"op": op, "args": [left_arg, right_arg]}
 
     # Handle MemberAccessExpression (system properties, recursive for deep access)
@@ -411,6 +445,12 @@ def expression_to_json(expression: Any) -> Any:
     # Handle IdentifierExpression (simple properties)
     if hasattr(expression, "name"):
         return convert_identifier(expression.name)
+
+    # A constant with a unit (`6 px`) is the schema's unitValue: {"px": 6}.
+    if getattr(expression, "unit", None) and hasattr(expression, "value"):
+        return {
+            str(getattr(expression.unit, "value", expression.unit)): expression.value
+        }
 
     # Handle LiteralExpression/ConstantExpression
     if hasattr(expression, "value"):
@@ -702,6 +742,7 @@ def convert_literal_value(value: str | int | float) -> Any:
 
 
 _ARITHMETIC_OPS = {"+", "-", "*", "/", "^"}
+_UNITS = {"px", "mm", "cm", "in", "pt", "em", "pc", "m", "ft"}
 
 
 def _is_supported_numeric_expr(value: Any) -> bool:
@@ -735,6 +776,9 @@ def convert_numeric_expression_value(prop_value: str, expr_ctx: Any = None) -> A
     """
     literal = convert_literal_value(prop_value)
     if isinstance(literal, str) and expr_ctx is not None:
+        parsed = convert_property_expression(prop_value)
+        if parsed is not None:
+            return parsed
         parsed = convert_antlr_expression(expr_ctx, "expression")
         if _is_supported_numeric_expr(parsed):
             return parsed
@@ -762,7 +806,7 @@ def convert_property_expression(text: str) -> dict[str, Any] | int | float | Non
     # Only a real operation: a bare word or opaque text parses to a "property".
     if (
         isinstance(result, dict)
-        and "op" in result
+        and ("op" in result or _unit_of(result))
         and "ExpressionType" not in str(result)
     ):
         return result

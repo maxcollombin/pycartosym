@@ -1568,7 +1568,11 @@ def _percent_to_fraction(value: Any) -> float:
     """
     if isinstance(value, dict) and set(value) == {"pc"}:
         return float(value["pc"]) / 100
-    if isinstance(value, UnitValue) and value.unit == UnitType.PICAS:
+    if (
+        isinstance(value, UnitValue)
+        and value.unit == UnitType.PICAS
+        and not isinstance(value.value, dict)
+    ):
         return float(value.value) / 100
     raise NotImplementedError(
         f"ImageGraphic.hotSpot component {value!r} is not a percent (pc) "

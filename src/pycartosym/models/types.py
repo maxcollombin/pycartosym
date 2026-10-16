@@ -7,7 +7,7 @@ including colors, units, ranges, and custom validators.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
@@ -254,7 +254,9 @@ class UnitValue(BaseModel):
     validator was inert and has been removed).
     """
 
-    value: float = Field(..., description="Numeric value")
+    value: float | dict[str, Any] = Field(
+        ..., description="Numeric value, or a numeric CQL2-JSON expression"
+    )
     unit: UnitType = Field(..., description="Unit type")
 
     def __str__(self) -> str:
