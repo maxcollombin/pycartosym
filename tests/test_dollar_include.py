@@ -65,13 +65,6 @@ def test_include_round_trips_through_cscss(project):
     assert converter.cscss_to_csjson(text) == first
 
 
-def test_cli_inline_includes_flag(project, tmp_path):
-    out = tmp_path / "out.cs.json"
-    code = _cli(str(project / "main.cscss"), "-o", str(out), "--inline-includes")
-    assert code == 0
-    assert "$include" not in json.loads(out.read_text())
-
-
 def test_cli_inlines_for_maplibre(project, tmp_path):
     out = tmp_path / "out.maplibre.json"
     code = _cli(str(project / "main.cscss"), "-o", str(out))

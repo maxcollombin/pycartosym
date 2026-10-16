@@ -166,12 +166,6 @@ def _create_convert_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="Overwrite the output file if it exists"
     )
     parser.add_argument(
-        "--inline-includes",
-        action="store_true",
-        help="Merge the files named by .include into the output instead of "
-        "writing them as $include (always done for SLD and MapLibre)",
-    )
-    parser.add_argument(
         "--from-format",
         choices=_ALL_FORMATS,
         help="Source format (auto-detected from the file extension if omitted; "
@@ -341,9 +335,7 @@ def convert_command(args) -> int:
     # itself (caught below) rather than a separate throwaway parse here —
     # a cscss source used to get lexed and parsed twice unconditionally.
     # SLD and MapLibre have no include: merge the included files for them.
-    converter = Converter(
-        inline_includes=args.inline_includes or to_format not in ("csjson", "cscss")
-    )
+    converter = Converter(inline_includes=to_format not in ("csjson", "cscss"))
     if from_format == "csjson":
         problem = _validate_csjson_instance(input_path)
         if problem is not None:
