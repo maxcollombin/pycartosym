@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - CartoSym-CSS → CS-JSON: a file with `.include` and its own variables no longer silently loses its own rules and variables. Included stylesheets are now parsed separately and merged (their variables and rules come before the file's own). Input left unparsed after a point where parsing cannot continue (such as a variable after a rule) is now a syntax error instead of being dropped.
+- CS-JSON: `metadata.keywords` is also accepted as a comma-separated string (as CartoSym-CSS `.keywords 'a, b'` writes it), not only as an array.
 
 ## [0.4.1] - 2026-10-14
 
