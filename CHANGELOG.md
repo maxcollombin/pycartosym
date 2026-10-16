@@ -12,6 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - CartoSym-CSS → CS-JSON: an operation used as a property value (`text: upperCase(name)`, `opacity: 2 ^ -1`) becomes CQL2-JSON instead of a property named `upperCase(name)` or a dropped value; an `opacity` that cannot be parsed logs a warning. `-1` is the number -1, not a unary operation.
 - CQL2-JSON: array literals are JSON arrays (`a_overlaps(tags, ('water', 'river'))` was mangled into one string), `c ? a : b` is the schema's `{"op": "?:"}` and `^` is `{"op": "^"}` (was `**`). A `[selector]` is now parsed from its original text with the CQL2-Text grammar.
 - CQL2: a single-quoted string used as a function argument, or on the left of `like`, stays a string literal instead of becoming a property reference (`contains(name, 'sl')` now selects the text `sl`, not the property `sl`).
+- CartoSym-CSS → CS-JSON: an operation used as a property value (`text: upperCase(name)`, `opacity: 2 ^ -1`) becomes CQL2-JSON instead of a property named `upperCase(name)` or a dropped value; an `opacity` that cannot be parsed logs a warning. `-1` is the number -1, not a unary operation.
+- CQL2-JSON: array literals are JSON arrays (`a_overlaps(tags, ('water', 'river'))` was mangled into one string), `c ? a : b` is the schema's `{"op": "?:"}` and `^` is `{"op": "^"}` (was `**`). A `[selector]` is now parsed from its original text with the CQL2-Text grammar.
+- CQL2: a single-quoted string used as a function argument, or on the left of `like`, stays a string literal instead of becoming a property reference (`contains(name, 'sl')` now selects the text `sl`, not the property `sl`).
+- CQL2-JSON: array literals are JSON arrays (`a_overlaps(tags, ('water', 'river'))` was mangled into one string), `c ? a : b` is the schema's `{"op": "?:"}` and `^` is `{"op": "^"}` (was `**`). A `[selector]` is now parsed from its original text with the CQL2-Text grammar.
+- CQL2: a single-quoted string used as a function argument, or on the left of `like`, stays a string literal instead of becoming a property reference (`contains(name, 'sl')` now selects the text `sl`, not the property `sl`).
+- CartoSym-CSS → CS-JSON: a file with `.include` and its own variables no longer silently loses its own rules and variables. Included stylesheets are now parsed separately and merged (their variables and rules come before the file's own). Input left unparsed after a point where parsing cannot continue (such as a variable after a rule) is now a syntax error instead of being dropped.
+- CS-JSON: `metadata.keywords` is also accepted as a comma-separated string (as CartoSym-CSS `.keywords 'a, b'` writes it), not only as an array.
 
 ## [0.4.1] - 2026-10-14
 
@@ -21,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CartoSym-CSS → CS-JSON: a file with `.include` and its own variables (or any input after a point where parsing cannot continue, such as a variable after a rule) no longer silently loses its own rules and variables. Included stylesheets are now parsed separately and merged (variables and rules before the file's own); input left unparsed is a syntax error.
 - CS-JSON → CartoSym-CSS: `$comment` on the style, the metadata, a symbolizer and a marker element is written as a comment, not only a rule's (those four were silently dropped). A multi-line comment, or one containing `*/`, is written as `//` lines.
 
 ## [0.4.0] - 2026-10-14
