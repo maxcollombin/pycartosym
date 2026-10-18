@@ -1095,13 +1095,11 @@ class Converter:
         """Convert Stroke model to CSS lines.
 
         Raises:
-            NotImplementedError: If the stroke carries casing, a center
-                line, a dash pattern, a pattern graphic, or an explicit
-                cap/join. The CartoSym-CSS grammar has no syntax for any
-                of these yet (only CS-JSON/SLD input can populate them);
-                dropping them silently would break the lossless guarantee
-                (same reasoning as :meth:`_fill_to_css`'s pattern-graphic
-                guard).
+            NotImplementedError: If the stroke carries a pattern graphic,
+                which is not yet written back to CartoSym-CSS (only
+                CS-JSON/SLD input can populate it); dropping it silently
+                would break the lossless guarantee (same reasoning as
+                :meth:`_fill_to_css`'s pattern-graphic guard).
         """
 
         def _get(o, attr, alias):
@@ -1109,49 +1107,65 @@ class Converter:
                 return o.get(alias, o.get(attr))
             return getattr(o, attr, None)
 
-        for attr, alias in (
-            ("casing", "casing"),
-            ("center_line", "centerLine"),
-            ("dash_pattern", "dashPattern"),
-            ("pattern", "pattern"),
-            ("cap", "cap"),
-            ("join", "join"),
-        ):
-            if _get(stroke, attr, alias) is not None:
-                raise NotImplementedError(
-                    f"stroke.{alias}: not yet written back to CartoSym-CSS "
-                    "(no grammar syntax for it)"
-                )
+        if _get(stroke, "pattern", "pattern") is not None:
+            raise NotImplementedError(
+                "stroke.pattern: not yet written back to CartoSym-CSS "
+                "(no grammar syntax for it)"
+            )
 
         color = getattr(stroke, "color", None)
         width = getattr(stroke, "width", None)
         opacity = getattr(stroke, "opacity", None)
         is_alter = getattr(stroke, "alter", None)
 
+        props: list[tuple[str, str]] = []
+        if color is not None:
+            props.append(("color", self._format_color(color)))
+        if width is not None:
+            props.append(("width", self._format_unit_value(width)))
+        if opacity is not None:
+            props.append(("opacity", self._format_value(opacity)))
+        for attr, alias in (("cap", "cap"), ("join", "join")):
+            value = _get(stroke, attr, alias)
+            if value is not None:
+                props.append((alias, str(getattr(value, "value", value))))
+        dash = _get(stroke, "dash_pattern", "dashPattern")
+        if dash is not None:
+            if not isinstance(dash, list):
+                raise NotImplementedError(
+                    "stroke.dashPattern: only an array of numbers is written "
+                    "back to CartoSym-CSS"
+                )
+            props.append(("dashPattern", "[" + ", ".join(str(d) for d in dash) + "]"))
+        for attr, alias, css_name in (
+            ("casing", "casing", "casing"),
+            ("center_line", "centerLine", "center"),
+        ):
+            styling = _get(stroke, attr, alias)
+            if styling is not None:
+                props.append((css_name, self._stroke_styling_to_css(styling, _get)))
+
+        if not props:
+            return []
         if is_alter:
             # Alter mode: use dot-notation
-            lines = []
-            if color is not None:
-                lines.append(f"  stroke.color: {self._format_color(color)};")
-            if width is not None:
-                lines.append(f"  stroke.width: {self._format_unit_value(width)};")
-            if opacity is not None:
-                lines.append(f"  stroke.opacity: {self._format_value(opacity)};")
-            return lines
-
+            return [f"  stroke.{name}: {value};" for name, value in props]
         # Normal mode: always use compound block to avoid injecting alter on re-parse
-        set_props = sum(1 for v in (color, width, opacity) if v is not None)
-        if set_props > 0:
-            parts = []
-            if color is not None:
-                parts.append(f"color: {self._format_color(color)}")
-            if width is not None:
-                parts.append(f"width: {self._format_unit_value(width)}")
-            if opacity is not None:
-                parts.append(f"opacity: {self._format_value(opacity)}")
-            return [f"  stroke: {{{'; '.join(parts)}}};"]
+        return [f"  stroke: {{{'; '.join(f'{n}: {v}' for n, v in props)}}};"]
 
-        return []
+    def _stroke_styling_to_css(self, styling, _get) -> str:
+        """Write a ``casing`` / ``center`` StrokeStyling as a ``{...}`` block."""
+        parts = []
+        color = _get(styling, "color", "color")
+        width = _get(styling, "width", "width")
+        opacity = _get(styling, "opacity", "opacity")
+        if color is not None:
+            parts.append(f"color: {self._format_color(color)}")
+        if width is not None:
+            parts.append(f"width: {self._format_unit_value(width)}")
+        if opacity is not None:
+            parts.append(f"opacity: {self._format_value(opacity)}")
+        return "{" + "; ".join(parts) + "}"
 
     def _fix_unit_values(self, data):
         """Fix this node's own unit-value shape in place, if any.

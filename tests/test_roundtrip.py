@@ -572,28 +572,9 @@ class TestMetadataParsing:
         )
         assert "fill:" in self.converter.style_to_cscss(style)
 
-    def test_stroke_dash_pattern_writeback_raises(self):
-        """A dash pattern has no CartoSym-CSS grammar syntax yet — the
+    def test_stroke_pattern_writeback_raises(self):
+        """A stroke pattern graphic has no CartoSym-CSS writer yet — the
         writer must raise (naming the field) rather than drop it silently.
-        """
-        style = Style.from_dict(
-            {
-                "stylingRules": [
-                    {
-                        "symbolizer": {
-                            "stroke": {"color": [0, 0, 0], "dashPattern": [4, 2]}
-                        }
-                    }
-                ]
-            }
-        )
-        with pytest.raises(NotImplementedError, match="stroke.dashPattern"):
-            self.converter.style_to_cscss(style)
-
-    def test_stroke_center_line_writeback_raises(self):
-        """Same guard for centerLine — regression check that the alias
-        (Python attr ``center_line``, JSON key ``centerLine``) is actually
-        read, not silently always-None.
         """
         style = Style.from_dict(
             {
@@ -602,14 +583,14 @@ class TestMetadataParsing:
                         "symbolizer": {
                             "stroke": {
                                 "color": [0, 0, 0],
-                                "centerLine": {"color": [255, 255, 255]},
+                                "pattern": {"type": "Dot"},
                             }
                         }
                     }
                 ]
             }
         )
-        with pytest.raises(NotImplementedError, match="stroke.centerLine"):
+        with pytest.raises(NotImplementedError, match="stroke.pattern"):
             self.converter.style_to_cscss(style)
 
     def test_plain_stroke_still_writes_back(self):

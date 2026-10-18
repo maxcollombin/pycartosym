@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CartoSym-CSS: a stroke's `cap`, `join`, `dashPattern` (tuple `5 5` or array `[2, 1]`), `casing` and `center` (or `centerLine`) are read, also in the `stroke.casing: {...}` form, instead of being dropped without a trace; an unreadable `dashPattern` logs a warning. The writer writes them back instead of raising `NotImplementedError`. A stroke `pattern` graphic still raises.
 - CartoSym-CSS: a hexadecimal colour that is not 3, 6 or 8 digits (`#57510`) is a syntax error with its line and column, instead of passing through as an unreadable colour.
 - CQL2: an identifier on the right of a comparison (`a = b`) is a property reference, not the text `b`; a double-quoted token (`"my col" = 1`) is an identifier, not a string. A bare word against a system identifier (`dataLayer.type = vector`) stays an enumeration value.
 

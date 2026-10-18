@@ -86,6 +86,47 @@ def _opacity_value(text: str) -> float | dict | None:
     return expr
 
 
+# CartoSym-CSS stroke property -> Stroke model attribute.
+_STROKE_TEXT_PROPERTIES = {"cap": "cap", "join": "join"}
+# ``center`` is the UML name, ``centerLine`` the JSON schema's.
+_STROKE_STYLING_PROPERTIES = {
+    "casing": "casing",
+    "center": "center_line",
+    "centerLine": "center_line",
+}
+
+
+def _dash_pattern(text: str) -> list[int] | None:
+    """Parse a ``dashPattern`` value, a tuple (``5 5``) or an array (``[2, 1]``).
+
+    Returns ``None`` (with a warning) for anything that is not a list of
+    non-negative integers, so the pattern is not dropped without a trace.
+    """
+    items = text.strip().strip("[]()").replace(",", " ").split()
+    try:
+        values = [float(item) for item in items]
+    except ValueError:
+        values = []
+    if not values or any(v < 0 or v != int(v) for v in values):
+        logger.warning("stroke.dashPattern: cannot parse %r, ignored", text)
+        return None
+    return [int(v) for v in values]
+
+
+def _stroke_styling(inner: dict) -> dict:
+    """Coerce a ``casing`` / ``center`` block's text values (``StrokeStyling``)."""
+    ctx_map = inner.get("_expr_ctx", {})
+    out: dict = {}
+    for key, value in inner.items():
+        if key == "color":
+            out[key] = convert_literal_value(value)
+        elif key == "width":
+            out[key] = convert_numeric_expression_value(value, ctx_map.get(key))
+        elif key == "opacity":
+            out[key] = _opacity_value(value)
+    return out
+
+
 def _strip_inline_comment(s: str) -> str:
     """Strip a ``//`` line comment from *s*, outside quoted string literals.
 
@@ -465,6 +506,18 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     symbolizer.stroke.width = v
                 elif k == "opacity":
                     symbolizer.stroke.opacity = _opacity_value(v)
+                elif k in _STROKE_TEXT_PROPERTIES:
+                    setattr(symbolizer.stroke, _STROKE_TEXT_PROPERTIES[k], v)
+                elif k == "dashPattern":
+                    symbolizer.stroke.dash_pattern = _dash_pattern(v)
+                elif k in _STROKE_STYLING_PROPERTIES and expr_ctx is not None:
+                    inner = self._extract_top_level_dict_value(expr_ctx, k)
+                    if inner is not None:
+                        setattr(
+                            symbolizer.stroke,
+                            _STROKE_STYLING_PROPERTIES[k],
+                            _stroke_styling(inner),
+                        )
         elif prop_name_lower == "zorder" or prop_name_lower == "z_order":
             try:
                 symbolizer.z_order = int(
@@ -718,25 +771,33 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
             pa = pai.propertyAssignment()
             if pa is None or pa.lhValue().getText() != key:
                 continue
-            value_expr = pa.expression()
-            nested_ei = cls._find_exp_instance(value_expr) if value_expr else None
-            if nested_ei is None or nested_ei.IDENTIFIER() is not None:
-                return None
-            inner: dict = {}
-            inner_ctx_map: dict = {}
-            inner_list = nested_ei.propertyAssignmentInferredList()
-            if inner_list is not None:
-                for inner_pai in cls._collect_inferred_assignments(inner_list):
-                    inner_pa = inner_pai.propertyAssignment()
-                    if inner_pa:
-                        inner_key = inner_pa.lhValue().getText()
-                        inner_expr = inner_pa.expression()
-                        inner[inner_key] = cls._expression_source_text(inner_expr)
-                        inner_ctx_map[inner_key] = inner_expr
-            if inner_ctx_map:
-                inner["_expr_ctx"] = inner_ctx_map
-            return inner
+            return cls._extract_anonymous_dict(pa.expression())
         return None
+
+    @classmethod
+    def _extract_anonymous_dict(cls, value_expr) -> dict | None:
+        """Properties of an anonymous ``{...}`` value, or ``None`` if it isn't one.
+
+        Same shape as :meth:`_extract_top_level_dict_value`; *value_expr* is
+        the ``{...}`` expression itself (e.g. the value of ``stroke.casing:``).
+        """
+        nested_ei = cls._find_exp_instance(value_expr) if value_expr else None
+        if nested_ei is None or nested_ei.IDENTIFIER() is not None:
+            return None
+        inner: dict = {}
+        inner_ctx_map: dict = {}
+        inner_list = nested_ei.propertyAssignmentInferredList()
+        if inner_list is not None:
+            for inner_pai in cls._collect_inferred_assignments(inner_list):
+                inner_pa = inner_pai.propertyAssignment()
+                if inner_pa:
+                    inner_key = inner_pa.lhValue().getText()
+                    inner_expr = inner_pa.expression()
+                    inner[inner_key] = cls._expression_source_text(inner_expr)
+                    inner_ctx_map[inner_key] = inner_expr
+        if inner_ctx_map:
+            inner["_expr_ctx"] = inner_ctx_map
+        return inner
 
     @classmethod
     def _extract_top_level_named_instance(cls, expr_ctx, key: str) -> dict | None:
@@ -1180,6 +1241,22 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                         )
                     elif attr_name.lower() == "opacity":
                         symbolizer.stroke.opacity = _opacity_value(prop_value)
+                    elif attr_name in _STROKE_TEXT_PROPERTIES:
+                        setattr(
+                            symbolizer.stroke,
+                            _STROKE_TEXT_PROPERTIES[attr_name],
+                            prop_value,
+                        )
+                    elif attr_name == "dashPattern":
+                        symbolizer.stroke.dash_pattern = _dash_pattern(prop_value)
+                    elif attr_name in _STROKE_STYLING_PROPERTIES:
+                        inner = self._extract_anonymous_dict(expr_ctx)
+                        if inner is not None:
+                            setattr(
+                                symbolizer.stroke,
+                                _STROKE_STYLING_PROPERTIES[attr_name],
+                                _stroke_styling(inner),
+                            )
         else:
             # Handle direct properties
             prop_name_lower = prop_name.lower()

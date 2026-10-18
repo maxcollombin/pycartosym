@@ -902,6 +902,18 @@ class AstToPydanticConverter:
             if hasattr(ast_stroke, "opacity") and ast_stroke.opacity is not None:
                 stroke_data["opacity"] = _number_or_expression(ast_stroke.opacity)
 
+            # Already typed by the parser (plain values, or a StrokeStyling dict)
+            for attr, key in (
+                ("cap", "cap"),
+                ("join", "join"),
+                ("dash_pattern", "dashPattern"),
+                ("casing", "casing"),
+                ("center_line", "centerLine"),
+            ):
+                value = getattr(ast_stroke, attr, None)
+                if value is not None:
+                    stroke_data[key] = value
+
             return Stroke(**stroke_data) if stroke_data else None
 
         except Exception as e:
