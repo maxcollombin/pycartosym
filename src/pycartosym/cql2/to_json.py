@@ -25,6 +25,16 @@ __all__ = [
 _COMPARISON_OPERATORS = [">=", "<=", "<>", "!=", "=", ">", "<"]
 
 
+class _Identifier(str):
+    """A CQL2 identifier (``b``, ``"my col"``), as opposed to a character literal.
+
+    Marks a name that must become a property reference wherever it stands —
+    including the right of a comparison, where a bare ``str`` is a value.
+    """
+
+    __slots__ = ()
+
+
 class _StringLiteral(str):
     """A CQL2 character literal (``'sl'``), as opposed to an identifier.
 
@@ -98,6 +108,17 @@ def post_process_selector(selector: Any) -> Any:
                 # Convert string arguments to property references in comparisons
                 if isinstance(arg, _StringLiteral):
                     processed_args.append(str(arg))
+                elif isinstance(arg, _Identifier):
+                    # Against a system identifier a bare word is an enumeration
+                    # value (`dataLayer.type = vector`), not a property.
+                    if (
+                        i > 0
+                        and isinstance(processed_args[0], dict)
+                        and ("sysId" in processed_args[0])
+                    ):
+                        processed_args.append(str(arg))
+                    else:
+                        processed_args.append({"property": str(arg)})
                 elif isinstance(arg, str):
                     # In a comparison, right-hand args (index > 0) are VALUE
                     # literals (from CHARACTER_LITERALs like 'parking') – keep
@@ -628,8 +649,14 @@ def convert_identifier(name: str) -> Any:
         elif any(name.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]):
             mapped_prop = _map_system_property(name)
             return {"sysId": mapped_prop}
+        elif len(name) > 1 and name[0] == name[-1] == '"':
+            # A double-quoted token is an identifier in CQL2 (not a string).
+            return _Identifier(name[1:-1])
         else:
-            return convert_literal_value(name)
+            value = convert_literal_value(name)
+            if name.isidentifier() and value == name:
+                return _Identifier(name)
+            return value
 
 
 def _map_system_property(prop: str) -> str:

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CartoSym-CSS: a hexadecimal colour that is not 3, 6 or 8 digits (`#57510`) is a syntax error with its line and column, instead of passing through as an unreadable colour.
+- CQL2: an identifier on the right of a comparison (`a = b`) is a property reference, not the text `b`; a double-quoted token (`"my col" = 1`) is an identifier, not a string. A bare word against a system identifier (`dataLayer.type = vector`) stays an enumeration value.
+
 ## [0.5.0] - 2026-10-16
 
 ### Changed

@@ -517,10 +517,12 @@ class ExpressionParser:
             return ExpressionParser._parse_member_access_from_text(original_text)
 
         # Handle string literals
-        if (original_text.startswith('"') and original_text.endswith('"')) or (
-            original_text.startswith("'") and original_text.endswith("'")
-        ):
+        if original_text.startswith("'") and original_text.endswith("'"):
             return StringExpression(value=original_text[1:-1])
+        # A double-quoted token is a quoted identifier (CQL2), keep its quotes
+        # so the JSON writer can tell it from a character literal.
+        if len(original_text) > 1 and original_text[0] == original_text[-1] == '"':
+            return IdentifierExpression(name=original_text)
 
         # Handle 0x-prefixed hex literals: 0xFF, 0xAB12 etc. — not CQL2-Text
         # (absent from the OGC ABNF, CQL2Text.g4 deliberately omits them) and
@@ -869,10 +871,11 @@ class ExpressionParser:
                 return ExpressionParser._parse_relational_expression(text, op)
 
         # Handle string literals
-        if (text.startswith('"') and text.endswith('"')) or (
-            text.startswith("'") and text.endswith("'")
-        ):
+        if text.startswith("'") and text.endswith("'"):
             result: Any = StringExpression(value=text[1:-1])
+            return result
+        if len(text) > 1 and text[0] == text[-1] == '"':
+            result = IdentifierExpression(name=text)
             return result
 
         # Handle function calls — CQL2 functions first

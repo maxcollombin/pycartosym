@@ -289,6 +289,22 @@ class CartoSymParser:
                 None,
             )
 
+        # The lexer's HEX_LITERAL accepts any number of digits, so `#57510`
+        # would otherwise pass through as an unreadable colour.
+        for token in stream.tokens:
+            if token.type == CartoSymCSSLexer.HEX_LITERAL and (
+                len(token.text) - 1 not in (3, 6, 8)
+            ):
+                error_listener.syntaxError(
+                    parser,
+                    token,
+                    token.line,
+                    token.column,
+                    f"invalid hexadecimal colour {token.text!r}, expected #RGB, "
+                    "#RRGGBB or #RRGGBBAA",
+                    None,
+                )
+
         if error_listener.errors:
             raise CartoSymSyntaxError(
                 error_listener.errors, error_tuples=error_listener.error_tuples
