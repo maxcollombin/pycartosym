@@ -61,8 +61,21 @@ def _leading_positionals(argv: list[str]) -> list[str]:
     return positionals
 
 
+def _tolerate_console_encoding() -> None:
+    """Never fail on a character the console cannot encode (``→`` on cp1252).
+
+    A message that cannot be written must not turn a successful conversion
+    into a non-zero exit: unencodable characters print as ``?`` instead.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="replace")
+
+
 def main() -> int:
     """Run the CLI entry point."""
+    _tolerate_console_encoding()
     # Pre-detect whether a named subcommand is being used so that argparse
     # doesn't confuse a file path for a subcommand name (or vice-versa).
     positionals = _leading_positionals(sys.argv[1:])

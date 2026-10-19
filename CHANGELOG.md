@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CLI: a console that cannot encode a character of a message (`→` on a Windows cp1252 console) prints `?` instead of ending a successful conversion with exit code 1.
 - `import pycartosym` no longer needs `lxml` (the `sld` extra): the MapLibre writer imported a helper from the SLD codec. CartoSym-CSS, CS-JSON, MapLibre and the `cql2` API work with the core dependencies; SLD/SE is registered only when `lxml` is installed.
 - CartoSym-CSS: a pattern stroke (`pattern`, `patternGap`, `patternInitialGap`) is read and written back instead of being dropped; the gaps accept units (`20 px`) in CartoSym-CSS and CS-JSON, and the SLD writer takes them in pixels.
 - CartoSym-CSS: inches are `inch` as the specification writes them (`2 inch` is `{"in": 2}` in CS-JSON, and is written back as `inch`); `2 in` was written but could not be read back.
