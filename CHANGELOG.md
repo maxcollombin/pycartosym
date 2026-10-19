@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-19
+
 ### Fixed
 
 - CartoSym-CSS: a stroke's `cap`, `join`, `dashPattern` (tuple `5 5` or array `[2, 1]`), `casing` and `center` (or `centerLine`) are read, also in the `stroke.casing: {...}` form, instead of being dropped without a trace; an unreadable `dashPattern` logs a warning. The writer writes them back instead of raising `NotImplementedError`. A stroke `pattern` graphic still raises.
@@ -135,7 +137,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/maxcollombin/pycartosym/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/maxcollombin/pycartosym/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/maxcollombin/pycartosym/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/maxcollombin/pycartosym/compare/v0.3.9...v0.4.0
