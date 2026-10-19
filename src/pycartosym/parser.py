@@ -515,6 +515,14 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     setattr(symbolizer.stroke, _STROKE_TEXT_PROPERTIES[k], v)
                 elif k == "dashPattern":
                     symbolizer.stroke.dash_pattern = _dash_pattern(v)
+                elif k in ("patternGap", "patternInitialGap"):
+                    attr = "pattern_gap" if k == "patternGap" else "pattern_initial_gap"
+                    setattr(symbolizer.stroke, attr, _coerce_unit_scalar(v))
+                elif k == "pattern" and expr_ctx is not None:
+                    el = self._extract_top_level_named_instance(expr_ctx, "pattern")
+                    if el is not None:
+                        _normalize_graphic_element(el)
+                        symbolizer.stroke.pattern = el
                 elif k in _STROKE_STYLING_PROPERTIES and expr_ctx is not None:
                     inner = self._extract_top_level_dict_value(expr_ctx, k)
                     if inner is not None:

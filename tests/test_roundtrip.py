@@ -572,27 +572,6 @@ class TestMetadataParsing:
         )
         assert "fill:" in self.converter.style_to_cscss(style)
 
-    def test_stroke_pattern_writeback_raises(self):
-        """A stroke pattern graphic has no CartoSym-CSS writer yet — the
-        writer must raise (naming the field) rather than drop it silently.
-        """
-        style = Style.from_dict(
-            {
-                "stylingRules": [
-                    {
-                        "symbolizer": {
-                            "stroke": {
-                                "color": [0, 0, 0],
-                                "pattern": {"type": "Dot"},
-                            }
-                        }
-                    }
-                ]
-            }
-        )
-        with pytest.raises(NotImplementedError, match="stroke.pattern"):
-            self.converter.style_to_cscss(style)
-
     def test_plain_stroke_still_writes_back(self):
         """Regression guard for the extended-field check: a plain stroke
         (color/width/opacity only) is unaffected.

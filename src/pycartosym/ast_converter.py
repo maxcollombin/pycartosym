@@ -32,6 +32,7 @@ from .models import (
     SystemIdentifier,
     UnitValue,
 )
+from .models.types import json_unit
 
 logger = logging.getLogger(__name__)
 
@@ -259,7 +260,7 @@ def _coerce_unit_scalar(v: str, expr_ctx: Any = None):
             pass
         else:
             num = int(num) if num.is_integer() else num
-            return {parts[1]: num}
+            return {json_unit(parts[1]): num}
     if expr_ctx is not None:
         return convert_numeric_expression_value(v, expr_ctx)
     return v
@@ -321,6 +322,19 @@ def _coerce_axis_value(p: str):
     return None
 
 
+def _number(text: str) -> int | float:
+    """An int for ``4``, a float for ``4.5``; ``ValueError`` otherwise."""
+    return float(text) if "." in text else int(text)
+
+
+def _read_position_text(el: Any) -> None:
+    """``position: 3 px 4 px`` (text) -> ``{x: {px: 3}, y: {px: 4}}``, in place."""
+    if isinstance(el, dict) and isinstance(el.get("position"), str):
+        xy = _parse_xy(el["position"])
+        if xy is not None:
+            el["position"] = xy
+
+
 def _parse_xy(v: str):
     """``"10 -4"`` / ``"{ 10, -4 }"`` → ``{"x": 10, "y": -4}``; ``None`` otherwise."""
     if not isinstance(v, str):
@@ -329,6 +343,14 @@ def _parse_xy(v: str):
     if raw.startswith("{") and raw.endswith("}"):
         raw = raw[1:-1]
     parts = [p.strip() for p in raw.replace(",", " ").split() if p.strip()]
+    if len(parts) == 4:  # "N unit N unit"
+        try:
+            return {
+                "x": {json_unit(parts[1]): _number(parts[0])},
+                "y": {json_unit(parts[3]): _number(parts[2])},
+            }
+        except ValueError:
+            return None
     if len(parts) != 2:
         return None
     coords: list = []
@@ -909,6 +931,9 @@ class AstToPydanticConverter:
                 ("dash_pattern", "dashPattern"),
                 ("casing", "casing"),
                 ("center_line", "centerLine"),
+                ("pattern", "pattern"),
+                ("pattern_gap", "patternGap"),
+                ("pattern_initial_gap", "patternInitialGap"),
             ):
                 value = getattr(ast_stroke, attr, None)
                 if value is not None:
@@ -957,6 +982,7 @@ class AstToPydanticConverter:
                     # Marker.elements is typed Any (see models/symbolizers.py),
                     # so Pydantic never auto-validates `position` here — convert
                     # it to a real UnitPoint explicitly.
+                    _read_position_text(el_dict)
                     if isinstance(el_dict, dict) and isinstance(
                         el_dict.get("position"), (str, dict)
                     ):
@@ -987,6 +1013,7 @@ class AstToPydanticConverter:
                         # Marker.elements is typed Any (see models/symbolizers.py),
                         # so Pydantic never auto-validates `position` here —
                         # convert it to a real UnitPoint explicitly.
+                        _read_position_text(el_dict)
                         if isinstance(el_dict, dict) and isinstance(
                             el_dict.get("position"), (str, dict)
                         ):

@@ -989,6 +989,20 @@ def _raise_if_stroke_out_of_scope(stroke: Any) -> None:
         )
 
 
+def _gap_number(value: Any) -> float:
+    """A pattern gap as the plain number se:Gap carries (pixels)."""
+    if isinstance(value, (int, float)):
+        return value
+    unit = getattr(getattr(value, "unit", None), "value", getattr(value, "unit", None))
+    number = getattr(value, "value", None)
+    if unit == "px" and isinstance(number, (int, float)):
+        return number
+    raise NotImplementedError(
+        f"Stroke.patternGap/patternInitialGap {value!r}: "
+        "se:Gap is a number of pixels here"
+    )
+
+
 def _build_stroke_element(
     d: SldDialect, stroke: Any, base_opacity: float | None = None
 ) -> etree._Element:
@@ -1007,6 +1021,7 @@ def _build_stroke_element(
         )
         if (value := _g(stroke, field)) is not None
     ]
+    gaps = [(tag, _gap_number(value)) for tag, value in gaps]
     if gaps and (pattern is None or d.version == "1.0.0"):
         raise NotImplementedError(
             "Stroke.patternGap/patternInitialGap need a Stroke.pattern and "
@@ -1558,19 +1573,19 @@ def _percent_to_fraction(value: Any) -> float:
     """Read one ``hotSpot`` axis as a 0.0-1.0 fraction.
 
     ``hotSpot`` reuses the general ``unitValue`` shape's ``pc`` key
-    (``UnitType.PICAS`` everywhere else in this codec) to mean *percent*
+    (``UnitType.PERCENT`` everywhere else in this codec) to mean *percent*
     instead — a deliberate, narrowly-scoped convention (issue #35), not a
     naming mistake to "fix" by picking a different key. Accepts either
     the raw ``{"pc": N}`` dict a loosely-typed ``Marker.elements``/
     ``Label.elements`` entry keeps (never re-validated into a real
     ``UnitPoint``/``UnitValue``), or an actual ``UnitValue(value=N,
-    unit=PICAS)`` instance from a strictly-typed ``ImageGraphic``.
+    unit=PERCENT)`` instance from a strictly-typed ``ImageGraphic``.
     """
     if isinstance(value, dict) and set(value) == {"pc"}:
         return float(value["pc"]) / 100
     if (
         isinstance(value, UnitValue)
-        and value.unit == UnitType.PICAS
+        and value.unit == UnitType.PERCENT
         and not isinstance(value.value, dict)
     ):
         return float(value.value) / 100

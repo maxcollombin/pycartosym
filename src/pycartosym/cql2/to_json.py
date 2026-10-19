@@ -698,11 +698,14 @@ def convert_literal_value(value: str | int | float) -> Any:
     # UNIT token has no "%" member) - and UnitType has no PERCENT either, so
     # keeping it here only produced a silent UnitValue(unit="%") -> ValueError
     # -> bare-string fallback, never a real unit.
-    units = ["px", "mm", "cm", "in", "pt", "em", "pc", "ft", "m"]
+    from ..models.types import json_unit
+
+    units = ["px", "mm", "cm", "inch", "in", "pt", "em", "pc", "ft", "m"]
     if value.endswith(tuple(units)):
         for unit in units:
             if value.endswith(unit):
                 number_part = value[: -len(unit)]
+                unit = json_unit(unit)
                 try:
                     if "." in number_part:
                         # Return as CS.JSON UnitValue format for Pydantic compatibility

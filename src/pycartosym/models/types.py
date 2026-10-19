@@ -235,9 +235,24 @@ class UnitType(str, Enum):
     INCHES = "in"
     POINTS = "pt"
     EM = "em"
-    PICAS = "pc"
+    PERCENT = "pc"  # "pc" is percent in CartoSym-CSS, e.g. an Image's hotSpot
     METERS = "m"
     FEET = "ft"
+
+
+# CartoSym-CSS writes inches as ``inch``; CS-JSON (and ``UnitType``) as ``in``.
+_JSON_UNIT = {"inch": "in"}
+_CSCSS_UNIT = {"in": "inch"}
+
+
+def json_unit(unit: str) -> str:
+    """The CS-JSON spelling of a CartoSym-CSS unit abbreviation (``inch`` -> ``in``)."""
+    return _JSON_UNIT.get(unit, unit)
+
+
+def cscss_unit(unit: str) -> str:
+    """The CartoSym-CSS spelling of a CS-JSON unit abbreviation (``in`` -> ``inch``)."""
+    return _CSCSS_UNIT.get(unit, unit)
 
 
 class UnitValue(BaseModel):

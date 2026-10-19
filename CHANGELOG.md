@@ -6,8 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking** (Python API): `UnitType.PICAS` is now `UnitType.PERCENT`. `pc` is percent in CartoSym-CSS (an Image's `hotSpot`, `50 pc 50 pc`), never picas; the value `"pc"` is unchanged.
+
 ### Fixed
 
+- CartoSym-CSS: a pattern stroke (`pattern`, `patternGap`, `patternInitialGap`) is read and written back instead of being dropped; the gaps accept units (`20 px`) in CartoSym-CSS and CS-JSON, and the SLD writer takes them in pixels.
+- CartoSym-CSS: inches are `inch` as the specification writes them (`2 inch` is `{"in": 2}` in CS-JSON, and is written back as `inch`); `2 in` was written but could not be read back.
+- CartoSym-CSS: a graphic's `position` with units (`3 px 4 px`) is read, instead of dropping the whole marker.
 - Dot pattern `distance`: the `{horizontal, vertical}` object and the `[h, v]` array are read, kept in CS-JSON and written back to CartoSym-CSS, instead of becoming text (CartoSym-CSS) or a validation error (CS-JSON).
 
 ## [0.5.1] - 2026-10-19

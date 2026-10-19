@@ -11,10 +11,13 @@ from typing import Any
 
 from .cql2.to_json import split_on_comparison_operator
 from .models import Style
-from .models.types import UnitType
+from .models.types import UnitType, cscss_unit, json_unit
 from .parser import CartoSymParser
 
 _UNIT_KEYS = {u.value for u in UnitType}
+
+
+_UNIT_ABBREVIATIONS = {unit.value for unit in UnitType}
 
 
 class Converter:
@@ -956,6 +959,10 @@ class Converter:
             return str(v["property"])
         if hasattr(v, "property"):
             return str(v.property)
+        if hasattr(v, "unit") or (
+            isinstance(v, dict) and len(v) == 1 and next(iter(v)) in _UNIT_ABBREVIATIONS
+        ):
+            return self._format_unit_value(v)
         return str(v)
 
     def _format_unit_value(self, uv) -> str:
@@ -971,10 +978,10 @@ class Converter:
             unit_str = uv.unit.value if hasattr(uv.unit, "value") else str(uv.unit)
             if isinstance(uv.value, dict):  # unit around an expression
                 return self._format_selector_expr({unit_str: uv.value})
-            return f"{uv.value} {unit_str}"
+            return f"{uv.value} {cscss_unit(unit_str)}"
         if isinstance(uv, dict) and len(uv) == 1:
             unit, val = next(iter(uv.items()))
-            return f"{val} {unit}"
+            return f"{val} {cscss_unit(unit)}"
         return str(uv)
 
     def _format_angle_value(self, v) -> str:
@@ -1118,23 +1125,13 @@ class Converter:
         """Convert Stroke model to CSS lines.
 
         Raises:
-            NotImplementedError: If the stroke carries a pattern graphic,
-                which is not yet written back to CartoSym-CSS (only
-                CS-JSON/SLD input can populate it); dropping it silently
-                would break the lossless guarantee (same reasoning as
-                :meth:`_fill_to_css`'s pattern-graphic guard).
+            NotImplementedError: If the dash pattern is not an array of numbers.
         """
 
         def _get(o, attr, alias):
             if isinstance(o, dict):
                 return o.get(alias, o.get(attr))
             return getattr(o, attr, None)
-
-        if _get(stroke, "pattern", "pattern") is not None:
-            raise NotImplementedError(
-                "stroke.pattern: not yet written back to CartoSym-CSS "
-                "(no grammar syntax for it)"
-            )
 
         color = getattr(stroke, "color", None)
         width = getattr(stroke, "width", None)
@@ -1160,6 +1157,16 @@ class Converter:
                     "back to CartoSym-CSS"
                 )
             props.append(("dashPattern", "[" + ", ".join(str(d) for d in dash) + "]"))
+        pattern = _get(stroke, "pattern", "pattern")
+        if pattern is not None:
+            props.append(("pattern", self._graphic_element_to_css_block(pattern)))
+        for attr, alias in (
+            ("pattern_gap", "patternGap"),
+            ("pattern_initial_gap", "patternInitialGap"),
+        ):
+            gap = _get(stroke, attr, alias)
+            if gap is not None:
+                props.append((alias, self._format_unit_value(gap)))
         for attr, alias, css_name in (
             ("casing", "casing", "casing"),
             ("center_line", "centerLine", "center"),
@@ -1247,7 +1254,7 @@ class Converter:
             try:
                 # Parse the numeric value
                 num_value = float(parts[0]) if "." in parts[0] else int(parts[0])
-                unit = parts[1]
+                unit = json_unit(parts[1])
                 # Valid units according to JSON schema
                 valid_units = ["px", "mm", "cm", "in", "pt", "em", "pc", "m", "ft"]
                 if unit in valid_units:

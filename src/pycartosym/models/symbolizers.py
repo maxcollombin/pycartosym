@@ -216,12 +216,12 @@ class Stroke(BaseCartoSymModel, AlterMixin):
         ),
     )
     pattern: Graphic | None = Field(None, description="Stroke pattern graphic")
-    pattern_gap: float | None = Field(
+    pattern_gap: FlexibleSize | None = Field(
         None,
         alias="patternGap",
         description="Gap between instances of the pattern graphic",
     )
-    pattern_initial_gap: float | None = Field(
+    pattern_initial_gap: FlexibleSize | None = Field(
         None,
         alias="patternInitialGap",
         description="Initial gap before the first pattern graphic",
@@ -233,6 +233,9 @@ class Stroke(BaseCartoSymModel, AlterMixin):
     join: str | None = Field(None, description="Stroke line join")
 
     validate_width = field_validator("width", mode="before")(_validate_flexible_unit)
+    validate_gaps = field_validator(
+        "pattern_gap", "pattern_initial_gap", mode="before"
+    )(_validate_flexible_unit)
 
 
 class Marker(BaseCartoSymModel):

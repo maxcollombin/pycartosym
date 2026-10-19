@@ -95,9 +95,11 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     if len(expr) == 1:
         ((unit, inner),) = expr.items()
         if unit in _UNITS:
+            from ..models.types import cscss_unit
+
             pushed = _push_unit(unit, inner)
             if isinstance(pushed, dict) and len(pushed) == 1:
-                return f"{pushed[unit]} {unit}"
+                return f"{pushed[unit]} {cscss_unit(unit)}"
             return expression_to_text(pushed)
     # Reference to a style variable: {"$ref": "#/$variables/w"} -> `@w`
     if len(expr) == 1 and str(expr.get("$ref", "")).startswith("#/$variables/"):

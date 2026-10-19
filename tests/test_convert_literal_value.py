@@ -17,7 +17,7 @@ from pycartosym.models.types import UnitType, UnitValue
         ("2.0in", UnitValue(value=2.0, unit=UnitType.INCHES)),
         ("2.0pt", UnitValue(value=2.0, unit=UnitType.POINTS)),
         ("2.0em", UnitValue(value=2.0, unit=UnitType.EM)),
-        ("2.0pc", UnitValue(value=2.0, unit=UnitType.PICAS)),
+        ("2.0pc", UnitValue(value=2.0, unit=UnitType.PERCENT)),
         ("2.0ft", UnitValue(value=2.0, unit=UnitType.FEET)),
         ("2.0m", UnitValue(value=2.0, unit=UnitType.METERS)),
     ],
