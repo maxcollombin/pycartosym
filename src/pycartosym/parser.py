@@ -487,9 +487,14 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     if inner is not None:
                         ctx_map = inner.pop("_expr_ctx", {})
                         for field, field_v in inner.items():
-                            inner[field] = _coerce_unit_scalar(
-                                field_v, ctx_map.get(field)
-                            )
+                            if k == "dotpattern" and field == "distance":
+                                inner[field] = self._dot_distance(
+                                    field_v, ctx_map.get(field)
+                                )
+                            else:
+                                inner[field] = _coerce_unit_scalar(
+                                    field_v, ctx_map.get(field)
+                                )
                         setattr(symbolizer.fill, k, inner)
                 elif k == "pattern" and expr_ctx is not None:
                     el = self._extract_top_level_named_instance(expr_ctx, "pattern")
@@ -773,6 +778,21 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 continue
             return cls._extract_anonymous_dict(pa.expression())
         return None
+
+    @classmethod
+    def _dot_distance(cls, text: str, expr_ctx):
+        """A dot pattern ``distance``: a value, an object or an array."""
+        nested = cls._extract_anonymous_dict(expr_ctx)
+        if nested is not None:
+            ctx_map = nested.pop("_expr_ctx", {})
+            return {
+                key: _coerce_unit_scalar(value, ctx_map.get(key))
+                for key, value in nested.items()
+            }
+        stripped = text.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            return [_coerce_unit_scalar(i.strip()) for i in stripped[1:-1].split(",")]
+        return _coerce_unit_scalar(text, expr_ctx)
 
     @classmethod
     def _extract_anonymous_dict(cls, value_expr) -> dict | None:

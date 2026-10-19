@@ -6,7 +6,7 @@ Based on the JSON Schema definitions for symbolizer, fill, stroke, marker, label
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
@@ -128,13 +128,40 @@ class Hatch(BaseCartoSymModel, AlterMixin):
     )
 
 
-class DotPattern(BaseCartoSymModel, AlterMixin):
-    """Dot pattern for fills."""
+class DotDistance(BaseCartoSymModel):
+    """Horizontal and vertical distance between the dots of a dot pattern."""
 
-    distance: FlexibleSize | None = Field(None, description="Distance between dots")
+    horizontal: FlexibleSize | None = Field(None, description="Horizontal distance")
+    vertical: FlexibleSize | None = Field(None, description="Vertical distance")
+
+    validate_distances = field_validator("horizontal", "vertical", mode="before")(
+        _validate_flexible_unit
+    )
+
+
+def _validate_dot_distance(cls, v):
+    """Coerce ``{unit: value}`` on a distance, or on each item of an array."""
+    if isinstance(v, list):
+        return [parse_flexible_unit_value(item) for item in v]
+    return parse_flexible_unit_value(v)
+
+
+class DotPattern(BaseCartoSymModel, AlterMixin):
+    """Dot pattern for fills.
+
+    ``distance`` is one value (both directions), a ``{horizontal, vertical}``
+    object or an ``[horizontal, vertical]`` array, as the JSON schema allows.
+    """
+
+    distance: (
+        FlexibleSize
+        | DotDistance
+        | Annotated[list[FlexibleSize], Field(min_length=2, max_length=2)]
+        | None
+    ) = Field(None, description="Distance between dots")
 
     validate_distance = field_validator("distance", mode="before")(
-        _validate_flexible_unit
+        _validate_dot_distance
     )
 
 

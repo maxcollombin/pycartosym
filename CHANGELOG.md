@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Dot pattern `distance`: the `{horizontal, vertical}` object and the `[h, v]` array are read, kept in CS-JSON and written back to CartoSym-CSS, instead of becoming text (CartoSym-CSS) or a validation error (CS-JSON).
+
 ## [0.5.1] - 2026-10-19
 
 ### Fixed

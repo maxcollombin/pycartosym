@@ -1002,6 +1002,29 @@ class Converter:
             return str(v.value)
         return str(v)
 
+    def _format_dot_distance(self, distance) -> str:
+        """Format a dot pattern distance (a value, an object or an array)."""
+        if isinstance(distance, list):
+            return "[" + ", ".join(self._format_unit_value(d) for d in distance) + "]"
+        horizontal = (
+            distance.get("horizontal")
+            if isinstance(distance, dict)
+            else getattr(distance, "horizontal", None)
+        )
+        if horizontal is not None or hasattr(distance, "vertical"):
+            vertical = (
+                distance.get("vertical")
+                if isinstance(distance, dict)
+                else getattr(distance, "vertical", None)
+            )
+            parts = [
+                f"{name}: {self._format_unit_value(v)}"
+                for name, v in (("horizontal", horizontal), ("vertical", vertical))
+                if v is not None
+            ]
+            return "{" + "; ".join(parts) + "}"
+        return self._format_unit_value(distance)
+
     def _fill_pattern_block(self, obj, field_formatters: dict) -> str:
         """Render a Hatch/DotPattern/Stipple sub-object as a ``{...}`` block."""
 
@@ -1076,7 +1099,7 @@ class Converter:
             parts.append(f"hatch: {block}")
         if dotpattern is not None:
             block = self._fill_pattern_block(
-                dotpattern, {"distance": self._format_unit_value}
+                dotpattern, {"distance": self._format_dot_distance}
             )
             parts.append(f"dotpattern: {block}")
         if stipple is not None:
