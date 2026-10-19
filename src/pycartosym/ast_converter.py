@@ -452,7 +452,11 @@ def _normalize_graphic_element(el: dict) -> None:
         # text: 'literal' (quoted)         → strip quotes, keep as plain string
         if "text" in el and isinstance(el["text"], str):
             t = el["text"].strip()
-            if (t.startswith("'") and t.endswith("'")) or (
+            text_ctx = ctx_map.get("text")
+            if text_ctx is not None and text_ctx.getText().startswith("'"):
+                # the parser stripped the quotes: a quoted literal, not a property
+                el["text"] = el["text"]
+            elif (t.startswith("'") and t.endswith("'")) or (
                 t.startswith('"') and t.endswith('"')
             ):
                 el["text"] = t[1:-1]  # strip quotes → literal string

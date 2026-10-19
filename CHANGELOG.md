@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - CartoSym-CSS: inches are `inch` as the specification writes them (`2 inch` is `{"in": 2}` in CS-JSON, and is written back as `inch`); `2 in` was written but could not be read back.
 - CartoSym-CSS: a graphic's `position` with units (`3 px 4 px`) is read, instead of dropping the whole marker.
 - Dot pattern `distance`: the `{horizontal, vertical}` object and the `[h, v]` array are read, kept in CS-JSON and written back to CartoSym-CSS, instead of becoming text (CartoSym-CSS) or a validation error (CS-JSON).
+- CQL2: an expression that is only a string literal (`'abc'`) is the string `"abc"`, not a property reference; a label's `Text { text: 'Oslo' }` is the text Oslo, not the value of a property named Oslo.
 
 ## [0.5.1] - 2026-10-19
 

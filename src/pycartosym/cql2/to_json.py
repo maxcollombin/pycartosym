@@ -81,6 +81,8 @@ def post_process_selector(selector: Any) -> Any:
     """
     left_arg: Any
     right_arg: Any
+    if isinstance(selector, _StringLiteral):
+        return str(selector)  # an expression that is just 'abc' is the text abc
     if isinstance(selector, dict):
         unit = _unit_of(selector)
         if unit is not None and isinstance(unit[1], dict):
