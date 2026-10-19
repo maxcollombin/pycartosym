@@ -97,8 +97,8 @@ from ...models.value_expressions import (
     SystemIdentifier,
 )
 from .._cascade import flatten_cascade_rules
+from .._selector import extract_feature_type_name
 from ..base import CodecWriter
-from ..sld._filter import extract_feature_type_name
 from . import _raster
 from ._expressions import (
     coerce_numeric_expr,
