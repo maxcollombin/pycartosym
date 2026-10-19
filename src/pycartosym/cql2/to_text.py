@@ -76,6 +76,9 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     single-quoted.  Set to False when the right-hand side of a sysId
     comparison is an unquoted identifier/enum (e.g. ``dataLayer.type = vector``).
     """
+    if isinstance(expr, list):  # an array literal, e.g. an argument of a_equals
+        items = ", ".join(expression_to_text(item, quote_bare_strings) for item in expr)
+        return f"[{items}]"
     if not isinstance(expr, dict):
         s = str(expr)
         if not quote_bare_strings:

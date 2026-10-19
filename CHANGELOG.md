@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CQL2: an array that is a function argument is written as an array (`A_EQUALS([1, 2, 3], [1, 2])`), not as quoted text, and a bracketed array is read as an array; CQL2-JSON → CQL2-Text → CQL2-JSON no longer turns it into a string.
+
 ## [0.6.0] - 2026-10-20
 
 ### Changed

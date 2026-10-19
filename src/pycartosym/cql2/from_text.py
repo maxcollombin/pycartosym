@@ -843,6 +843,15 @@ class ExpressionParser:
         """Parse a single expression without logical operators."""
         text = text.strip()
 
+        # An array literal: [1, 2, 3] / ['a', 'b'] (the ANTLR path reads the
+        # parenthesised form; this scan sees the bracketed one in arguments)
+        if text.startswith("[") and text.endswith("]"):
+            inner = text[1:-1].strip()
+            items = ExpressionParser._split_args(inner) if inner else []
+            return ArrayExpression(
+                elements=[ExpressionParser._parse_single_expression(i) for i in items]
+            )
+
         # Handle parentheses - remove the outer pair if it wraps the
         # entire expression
         if text.startswith("(") and text.endswith(")"):
@@ -1393,7 +1402,7 @@ class ExpressionParser:
 
     @staticmethod
     def _split_args(text: str) -> list:
-        """Split comma-separated arguments respecting parentheses, braces and quotes."""
+        """Split comma-separated arguments respecting brackets, braces and quotes."""
         args = []
         depth = 0
         in_single = False
@@ -1407,10 +1416,10 @@ class ExpressionParser:
                 in_double = not in_double
                 current.append(ch)
             elif not in_single and not in_double:
-                if ch in ("(", "{"):
+                if ch in ("(", "{", "["):
                     depth += 1
                     current.append(ch)
-                elif ch in (")", "}"):
+                elif ch in (")", "}", "]"):
                     depth -= 1
                     current.append(ch)
                 elif ch == "," and depth == 0:
