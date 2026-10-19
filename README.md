@@ -28,6 +28,9 @@ raises rather than silently dropping data).
 pip install pycartosym
 ```
 
+CartoSym-CSS, CS-JSON, MapLibre and the CQL2 API work with the core dependencies. SLD/SE needs
+the `sld` extra (`pip install "pycartosym[sld]"`, or `[all]`).
+
 ### From Source
 
 ```bash
