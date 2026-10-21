@@ -6,11 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-21
+
 ### Fixed
 
+- CartoSym-CSS: a coverage's colour channels set one at a time (`colorChannels.r: B04 / 2500;`, as in the specification's Sentinel-2 example) are read as the `{alter, r, g, b}` colour object instead of being dropped, and written back one line per channel instead of a Python dict.
 - CQL2: an array that is a function argument is written as an array (`A_EQUALS([1, 2, 3], [1, 2])`), not as quoted text, and a bracketed array is read as an array; CQL2-JSON → CQL2-Text → CQL2-JSON no longer turns it into a string.
 
-## [0.6.0] - 2026-10-20
+## [0.6.0] - 2026-10-19
 
 ### Changed
 
@@ -26,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Dot pattern `distance`: the `{horizontal, vertical}` object and the `[h, v]` array are read, kept in CS-JSON and written back to CartoSym-CSS, instead of becoming text (CartoSym-CSS) or a validation error (CS-JSON).
 - CQL2: an expression that is only a string literal (`'abc'`) is the string `"abc"`, not a property reference; a label's `Text { text: 'Oslo' }` is the text Oslo, not the value of a property named Oslo.
 
-## [0.5.1] - 2026-10-19
+## 0.5.1 - 2026-10-19 (never tagged or published; included in 0.6.0)
 
 ### Fixed
 
@@ -157,9 +160,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/maxcollombin/pycartosym/compare/v0.5.1...v0.6.0
-[0.5.1]: https://github.com/maxcollombin/pycartosym/compare/v0.5.0...v0.5.1
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/maxcollombin/pycartosym/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/maxcollombin/pycartosym/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/maxcollombin/pycartosym/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/maxcollombin/pycartosym/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/maxcollombin/pycartosym/compare/v0.3.9...v0.4.0
