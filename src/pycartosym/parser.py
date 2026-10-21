@@ -88,6 +88,7 @@ def _opacity_value(text: str) -> float | dict | None:
 
 # CartoSym-CSS stroke property -> Stroke model attribute.
 _STROKE_TEXT_PROPERTIES = {"cap": "cap", "join": "join"}
+_COLOR_CHANNEL_KEYS = ("r", "g", "b")
 # ``center`` is the UML name, ``centerLine`` the JSON schema's.
 _STROKE_STYLING_PROPERTIES = {
     "casing": "casing",
@@ -1248,6 +1249,16 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                         symbolizer.fill.color = prop_value
                     elif attr_name.lower() == "opacity":
                         symbolizer.fill.opacity = _opacity_value(prop_value)
+                elif (
+                    obj_name.lower() == "colorchannels"
+                    and attr_name.lower() in _COLOR_CHANNEL_KEYS
+                ):
+                    # Per-channel form (colorChannels.r: B04 / 2500) — collected
+                    # as the Color object form; each value is converted to an
+                    # expression in ast_converter.
+                    if not isinstance(symbolizer.color_channels, dict):
+                        symbolizer.color_channels = {"alter": True}
+                    symbolizer.color_channels[attr_name.lower()] = prop_value.strip()
                 elif obj_name.lower() == "stroke":
                     if not symbolizer.stroke:
                         symbolizer.stroke = ModelStroke()

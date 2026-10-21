@@ -1107,6 +1107,12 @@ class AstToPydanticConverter:
             # Numeric value - return as-is
             return value
         elif isinstance(value, dict):
+            if any(k in value for k in ("r", "g", "b")):
+                # Per-channel Color object (colorChannels.r: B04 / 2500)
+                return {
+                    k: self._convert_channel_value(v) if k in "rgb" else v
+                    for k, v in value.items()
+                }
             # Already an expression object
             return value
         else:

@@ -419,7 +419,13 @@ class Converter:
         cc = getattr(symbolizer, "color_channels", None)
         if cc is None:
             cc = getattr(symbolizer, "colorChannels", None)
-        if cc is not None:
+        if isinstance(cc, dict) and any(k in cc for k in ("r", "g", "b")):
+            lines.extend(
+                f"  colorChannels.{k}: {self._channel_expr_to_css(cc[k])};"
+                for k in ("r", "g", "b")
+                if k in cc
+            )
+        elif cc is not None:
             lines.append(f"  colorChannels: {self._channels_to_css(cc)};")
         ac = getattr(symbolizer, "alpha_channel", None)
         if ac is None:
