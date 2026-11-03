@@ -370,6 +370,12 @@ class Converter:
         # Fallback
         return str(selector)
 
+    def _expr_text(self, expr) -> str:
+        """An expression as a CSS value; a property is the bare identifier."""
+        if isinstance(expr, dict) and set(expr) == {"property"}:
+            return str(expr["property"])
+        return self._format_selector_expr(expr)
+
     def _format_selector_expr(self, expr, _quote_bare_strings: bool = True) -> str:
         """Format a CQL2-JSON selector dict as a CSCSS filter string.
 
@@ -791,12 +797,46 @@ class Converter:
         # alignment
         alignment = _get(el, "alignment")
         if alignment is not None:
-            if isinstance(alignment, list) and len(alignment) == 2:
+            if (
+                isinstance(alignment, list)
+                and len(alignment) == 2
+                and any(isinstance(a, dict) for a in alignment)
+            ):
+                # alignment by expressions: block form, one expression per entry
+                parts = [
+                    a if isinstance(a, str) else self._expr_text(a) for a in alignment
+                ]
+                prop_lines.append(f"alignment: {{{parts[0]}, {parts[1]}}}")
+            elif isinstance(alignment, list) and len(alignment) == 2:
                 prop_lines.append(f"alignment: {alignment[0]} {alignment[1]}")
             elif isinstance(alignment, dict) and alignment:
                 vals = list(alignment.values())
                 prop_lines.append(f"alignment: {' '.join(str(v) for v in vals)}")
             # empty dict — emit nothing (no information to preserve)
+
+        # transform (Part 2 Transform2D): only orientation has a CSS form
+        transform = _get(el, "transform")
+        if transform is not None:
+            orientation = _get(transform, "orientation")
+            if hasattr(orientation, "model_dump"):
+                orientation = orientation.model_dump(by_alias=True, exclude_none=True)
+            if orientation is not None:
+                if (
+                    isinstance(orientation, dict)
+                    and len(orientation) == 1
+                    and next(iter(orientation)) in ("deg", "rad")
+                ):
+                    unit, val = next(iter(orientation.items()))
+                    text = f"{val:g} {unit}"
+                elif isinstance(orientation, dict):
+                    text = self._expr_text(orientation)
+                else:
+                    text = (
+                        f"{orientation:g}"
+                        if isinstance(orientation, (int, float))
+                        else str(orientation)
+                    )
+                prop_lines.append(f"transform: {{orientation: {text}}}")
 
         # position2D
         pos2d = _get(el, "position2D") or _get(el, "position_2d")

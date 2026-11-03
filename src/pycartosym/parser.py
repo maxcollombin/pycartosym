@@ -22,6 +22,7 @@ from pycartosym.models.symbolizers import Symbolizer as ModelSymbolizer
 from .ast import Metadata, StyleSheet, StylingRule, StylingRuleList
 from .ast import PropertyAssignment as AstPropertyAssignment
 from .ast_converter import (
+    _coerce_transform,
     _coerce_unit_scalar,
     _normalize_graphic_element,
     convert_ast_to_pydantic,
@@ -1211,6 +1212,9 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                         placement[numeric_key] = convert_numeric_expression_value(
                             placement[numeric_key], ctx_map.get(numeric_key)
                         )
+            for el in elements:  # Transform2D forbids the private _expr_ctx
+                if isinstance(el, dict):
+                    _coerce_transform(el)
             # Use the Pydantic Label model so it passes Symbolizer validation.
             symbolizer.label = ModelLabel(
                 elements=elements if elements else None, placement=placement

@@ -6,6 +6,7 @@ This module converts ANTLR-generated AST nodes to Pydantic models.
 from __future__ import annotations
 
 import logging
+import math
 import re
 from typing import Any
 
@@ -390,6 +391,69 @@ def _coerce_shape_style_dict(d: dict) -> None:
             d[k] = v
 
 
+def _split_top_level(text: str, sep: str = ",") -> list[str]:
+    """Split on *sep* outside brackets, parentheses and quotes."""
+    parts, depth, quote, cur = [], 0, None, []
+    for ch in text:
+        if quote:
+            cur.append(ch)
+            quote = None if ch == quote else quote
+        elif ch in "'\"":
+            cur.append(ch)
+            quote = ch
+        elif ch in "([{":
+            depth += 1
+            cur.append(ch)
+        elif ch in ")]}":
+            depth -= 1
+            cur.append(ch)
+        elif ch == sep and depth == 0:
+            parts.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(ch)
+    if "".join(cur).strip():
+        parts.append("".join(cur).strip())
+    return parts
+
+
+def _coerce_angle(v: Any, expr_ctx: Any = None):
+    """An angle: a number (``45``, ``45 deg``), a property or a CQL2 expression."""
+    if not isinstance(v, str):
+        return v
+    parts = v.strip().split()
+    if len(parts) == 1:
+        try:
+            return int(parts[0])
+        except ValueError:
+            try:
+                return float(parts[0])
+            except ValueError:
+                pass
+    elif len(parts) == 2 and parts[1] in ("deg", "rad"):
+        try:  # degrees by default: `45 deg` is 45, `1 rad` is converted
+            n = float(parts[0])
+            return n if parts[1] == "deg" else math.degrees(n)
+        except ValueError:
+            pass
+    if re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_.]*", v.strip()
+    ):  # a bare identifier is a property
+        return {"property": v.strip()}
+    return convert_numeric_expression_value(v, expr_ctx)
+
+
+def _coerce_transform(el: dict) -> None:
+    """``transform: {orientation: ...}``: drop ``_expr_ctx``, read an angle."""
+    inner = el.get("transform")
+    if not isinstance(inner, dict):
+        return
+    ctx_map = inner.pop("_expr_ctx", {})
+    for key, value in list(inner.items()):
+        if key == "orientation":
+            inner[key] = _coerce_angle(value, ctx_map.get(key))
+
+
 def _normalize_graphic_element(el: dict) -> None:
     """Normalise a graphic-element dict in-place to match the CartoSym JSON schema.
 
@@ -403,6 +467,8 @@ def _normalize_graphic_element(el: dict) -> None:
         return
 
     ctx_map = el.pop("_expr_ctx", {})
+
+    _coerce_transform(el)
 
     # Convert opacity string to float for any element type
     if "opacity" in el and isinstance(el["opacity"], str):
@@ -472,11 +538,19 @@ def _normalize_graphic_element(el: dict) -> None:
             a = el["alignment"].strip()
             if a.startswith("{") and a.endswith("}"):
                 # { left, middle } block syntax
-                parts = [p.strip() for p in a[1:-1].split(",") if p.strip()]
+                parts = _split_top_level(a[1:-1])
             else:
                 parts = a.split()
             if len(parts) == 2:
-                el["alignment"] = parts
+                # a non-keyword entry is an expression, e.g. lowerCase(h)
+                el["alignment"] = [
+                    (
+                        p
+                        if re.fullmatch(r"[A-Za-z]+", p)
+                        else (convert_property_expression(p) or p)
+                    )
+                    for p in parts
+                ]
 
         # font: "{ face: 'Arial'; ... }" → proper dict
         if "font" in el and isinstance(el["font"], str):

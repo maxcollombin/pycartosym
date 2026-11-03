@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CartoSym-CSS: a graphic's `transform: {orientation: ...}` is read on a label's `Text` (it failed with a validation error) and on a marker (the value stayed text) as an angle or a CQL2 expression, and is written back instead of being dropped.
+- CartoSym-CSS: a text alignment given by expressions is written as `alignment: {expr, expr}` instead of a Python dict, and read back.
+- SLD/SE: a label whose text is a `concatenate` of properties and text is written as the mixed content of `se:Label`.
+
 ## [0.6.2] - 2026-11-03
 
 ### Fixed
