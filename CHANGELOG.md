@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CQL2: a double-quoted word compared with a system identifier (`dataLayer.type = "coverage"`) is read as a property reference, not an enumeration value or a string, and is written back with its double quotes.
+
 ## [0.6.1] - 2026-10-21
 
 ### Fixed

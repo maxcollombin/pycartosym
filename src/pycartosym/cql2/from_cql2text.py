@@ -343,9 +343,7 @@ class Cql2TextTreeWalker:
         if ctx.booleanLiteral() is not None:
             return ConstantExpression(value=ctx.booleanLiteral().TRUE() is not None)
         if ctx.propertyName() is not None:
-            return IdentifierExpression(
-                name=Cql2TextTreeWalker._property_name(ctx.propertyName())
-            )
+            return Cql2TextTreeWalker._identifier(ctx.propertyName())
         if ctx.functionCall() is not None:
             return Cql2TextTreeWalker.function_call(ctx.functionCall())
         if ctx.arrayExpr() is not None:
@@ -357,6 +355,14 @@ class Cql2TextTreeWalker:
         is_float = "." in text or "e" in text.lower()
         value: int | float = float(text) if is_float else int(text)
         return ConstantExpression(value=value)
+
+    @staticmethod
+    def _identifier(ctx) -> IdentifierExpression:
+        """Property reference; `quoted` marks a double-quoted one (never an enum)."""
+        return IdentifierExpression(
+            name=Cql2TextTreeWalker._property_name(ctx),
+            quoted=True if ctx.QUOTED_IDENTIFIER() is not None else None,
+        )
 
     @staticmethod
     def _property_name(ctx) -> str:
@@ -400,9 +406,7 @@ class Cql2TextTreeWalker:
         if ctx.characterClause() is not None:
             return Cql2TextTreeWalker.character_clause(ctx.characterClause())
         if ctx.propertyName() is not None:
-            return IdentifierExpression(
-                name=Cql2TextTreeWalker._property_name(ctx.propertyName())
-            )
+            return Cql2TextTreeWalker._identifier(ctx.propertyName())
         return Cql2TextTreeWalker.function_call(ctx.functionCall())
 
     # -- WKT geometry literals + BBOX -----------------------------------------
@@ -515,9 +519,7 @@ class Cql2TextTreeWalker:
         if ctx.STRING() is not None:
             return Cql2TextTreeWalker._unescape_string(ctx.STRING().getText())
         if ctx.propertyName() is not None:
-            return IdentifierExpression(
-                name=Cql2TextTreeWalker._property_name(ctx.propertyName())
-            )
+            return Cql2TextTreeWalker._identifier(ctx.propertyName())
         return cast(Expression, Cql2TextTreeWalker.function_call(ctx.functionCall()))
 
     # -- function calls: S_RELATE, geometry manipulation, character/text ----

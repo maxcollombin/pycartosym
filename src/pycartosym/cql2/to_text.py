@@ -325,6 +325,10 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             right_quote = not (isinstance(left_arg, dict) and "sysId" in left_arg)
             if isinstance(right_arg, dict) and right_quote:
                 right = _infix_operand(right_arg, op)
+            elif isinstance(right_arg, dict) and set(right_arg) == {"property"}:
+                # Against a sysId a bare word is an enumeration value, so a
+                # property must be double-quoted to stay one on the way back.
+                right = f'"{right_arg["property"]}"'
             else:
                 right = expression_to_text(right_arg, quote_bare_strings=right_quote)
             return f"{left} {op} {right}"

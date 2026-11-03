@@ -17,6 +17,9 @@ class IdentifierExpression(Expression):
 
     type: ExpressionType = ExpressionType.IDENTIFIER
     name: str
+    # Set for a double-quoted identifier (`"coverage"`): a property reference,
+    # never an enumeration value.
+    quoted: bool | None = None
 
 
 class ConstantExpression(Expression):
