@@ -376,6 +376,22 @@ def _expr_to_filter_xml(expr: Any) -> etree._Element:
         el.append(ogc_el("Literal", text=_TEXT_OP_PATTERNS[op_lower](pattern)))
         return el
 
+    if op_lower == "in" and len(args) == 2 and isinstance(args[1], list) and args[1]:
+        # Filter Encoding 1.1 has no IN: an OR of equalities on the same
+        # operand is equivalent (a single value is just the equality).
+        equalities = []
+        for value in args[1]:
+            eq = ogc_el("PropertyIsEqualTo")
+            eq.append(_operand_to_xml(args[0]))
+            eq.append(_operand_to_xml(value))
+            equalities.append(eq)
+        if len(equalities) == 1:
+            return equalities[0]
+        or_el = ogc_el("Or")
+        for eq in equalities:
+            or_el.append(eq)
+        return or_el
+
     if op_lower in _SPATIAL_OPS and len(args) == 2:
         el = ogc_el(_SPATIAL_OPS[op_lower])
         el.append(_operand_to_xml(args[0]))
