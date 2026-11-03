@@ -1008,17 +1008,31 @@ class TestWriteImage:
                 )
             )
 
-    def test_image_without_uri_raises(self):
-        with pytest.raises(NotImplementedError):
-            _write(
-                _rule_style(
-                    {
-                        "marker": {
-                            "elements": [{"type": "Image", "image": {"path": "x.png"}}]
-                        }
-                    }
-                )
-            )
+    @staticmethod
+    def _image_marker(image):
+        return {"marker": {"elements": [{"type": "Image", "image": image}]}}
+
+    def test_image_path_is_written_as_relative_href_with_format(self):
+        root = _write(_rule_style(self._image_marker({"path": "img/tile.svg"})))
+        ext = root.find(".//se:PointSymbolizer/se:Graphic/se:ExternalGraphic", NS)
+        assert ext is not None
+        online = ext.find("se:OnlineResource", NS)
+        assert online.get(f"{{{NS['xlink']}}}href") == "img/tile.svg"
+        assert ext.find("se:Format", NS).text == "image/svg+xml"
+
+    def test_image_explicit_type_wins_over_extension(self):
+        root = _write(
+            _rule_style(self._image_marker({"path": "a.png", "type": "image/gif"}))
+        )
+        assert root.find(".//se:Format", NS).text == "image/gif"
+
+    def test_image_without_derivable_media_type_raises(self):
+        with pytest.raises(NotImplementedError, match="se:Format"):
+            _write(_rule_style(self._image_marker({"path": "tile"})))
+
+    def test_image_with_only_id_raises(self):
+        with pytest.raises(NotImplementedError, match="uri or path"):
+            _write(_rule_style(self._image_marker({"id": "42", "ext": ".png"})))
 
     def test_image_tint_always_raises(self):
         with pytest.raises(NotImplementedError):

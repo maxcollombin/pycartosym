@@ -997,3 +997,27 @@ class TestReadPathVsStringHeuristic:
         from_path = SldReader().read(path)
         from_string = SldReader().read(path.read_text(encoding="utf-8"))
         assert from_path == from_string
+
+
+class TestExternalGraphicHref:
+    """A scheme-less ``xlink:href`` is a local path, one with a scheme a URI."""
+
+    @staticmethod
+    def _image(href):
+        from pycartosym.codecs.sld._symbolizer import _resource_from_href
+
+        return _resource_from_href(href)
+
+    def test_relative_href_is_a_path(self):
+        assert self._image("./img/tile.svg") == {"path": "./img/tile.svg"}
+
+    def test_url_href_is_a_uri(self):
+        assert self._image("https://example.com/x.png") == {
+            "uri": "https://example.com/x.png"
+        }
+
+    def test_file_scheme_is_a_uri(self):
+        assert self._image("file:///tmp/x.png") == {"uri": "file:///tmp/x.png"}
+
+    def test_windows_drive_letter_is_a_path(self):
+        assert self._image("C:/img/x.png") == {"path": "C:/img/x.png"}

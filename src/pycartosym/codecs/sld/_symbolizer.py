@@ -176,8 +176,10 @@ concept and still raises.
 from __future__ import annotations
 
 import math
+import mimetypes
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import urlparse
 
 from lxml import etree
 
@@ -1397,20 +1399,28 @@ def _build_graphic_content(
         resource = _g(element, "image")
         if resource is None:
             raise NotImplementedError("ImageGraphic.image (Resource) is required")
-        uri = _g(resource, "uri")
-        if uri is None:
+        # Resource.uri and Resource.path both map to xlink:href (a relative
+        # path is a valid href, as in the Annex B example); id/ext/sprite
+        # address a database table or sprite sheet and have no SE equivalent.
+        href = _g(resource, "uri") or _g(resource, "path")
+        if href is None:
             raise NotImplementedError(
-                "Resource.path-only images (no uri) have no SLD/SE mapping "
-                "in this codec — no local-file resolution"
+                "Resource without uri or path (id/ext/sprite only) has no "
+                "SLD/SE mapping — se:OnlineResource needs an xlink:href"
             )
-        mime_type = _g(resource, "type")
+        mime_type = _g(resource, "type") or mimetypes.guess_type(href)[0]
+        if mime_type is None:
+            raise NotImplementedError(
+                f"Cannot write se:Format for image {href!r}: Resource.type is "
+                "unset and the media type cannot be derived from the file "
+                "extension (se:Format is required with se:OnlineResource)"
+            )
 
         ext_graphic = d.el("ExternalGraphic", parent=graphic)
         online_resource = d.el("OnlineResource", parent=ext_graphic)
         online_resource.set(f"{XLINK}type", "simple")
-        online_resource.set(f"{XLINK}href", uri)
-        if mime_type is not None:
-            d.el("Format", parent=ext_graphic, text=mime_type)
+        online_resource.set(f"{XLINK}href", href)
+        d.el("Format", parent=ext_graphic, text=mime_type)
 
         # se:GraphicType order: (Mark|ExternalGraphic)*, Opacity?, Size?,
         # Rotation?, AnchorPoint?, Displacement?
@@ -2752,6 +2762,14 @@ def _graphic_displacement(d: SldDialect, graphic_el: etree._Element) -> dict:
     }
 
 
+def _resource_from_href(href: str) -> dict:
+    """Map an ``xlink:href`` to a Resource: a URL (scheme) or a local path."""
+    # A one-letter "scheme" is a Windows drive letter, not a URL scheme.
+    if len(urlparse(href).scheme) > 1:
+        return {"uri": href}
+    return {"path": href}
+
+
 def _parse_external_graphic(
     d: SldDialect, ext_el: etree._Element, graphic_el: etree._Element
 ) -> dict:
@@ -2766,7 +2784,7 @@ def _parse_external_graphic(
 
     result: dict = {
         "type": "Image",
-        "image": {"uri": href},
+        "image": _resource_from_href(href),
         "position": _graphic_displacement(d, graphic_el),
     }
     format_text = element_text(d.find(ext_el, "Format"))
