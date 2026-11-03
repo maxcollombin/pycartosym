@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - SLD/SE: a selector with `in` is written as an `ogc:Or` of `ogc:PropertyIsEqualTo` (Filter Encoding 1.1 has no `IN`).
 - SLD/SE: an image given by `path` is written as a relative `xlink:href` (as in the Annex B example) instead of failing; `se:Format` is taken from `type` or the file extension, and a scheme-less `xlink:href` is read back as `path` (#158).
 - SLD/SE: sizes keep their unit. `mm`, `cm`, `in` and `pt` are converted to pixels at 0.28 mm per pixel (the CartoSym default) and `uom` is written as `pixel`; `m` and `ft` are written with `uom` `metre` / `foot`; a symbolizer that mixes ground and pixel sizes, or an `em` / `pc` size, raises a clear error. A symbolizer's `uom` is read back (#160).
+- SLD/SE: a conditional expression (`cond ? a : b`) in a symbolizer is written as one rule per branch, filtered by the condition and its negation (SE has no conditional in a parameter value); a condition used twice splits once, a chain gives one rule more than its conditions, and a condition on the scale becomes a scale range. More than 16 rules raises an error (#159).
 
 ## [0.6.2] - 2026-11-03
 
