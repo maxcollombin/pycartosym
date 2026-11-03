@@ -35,6 +35,16 @@ class _Identifier(str):
     __slots__ = ()
 
 
+class _QuotedIdentifier(_Identifier):
+    """A double-quoted identifier (``"coverage"``): always a property reference.
+
+    Unlike a bare word, it is never an enumeration value, even against a
+    system identifier (``dataLayer.type = "coverage"`` names a field).
+    """
+
+    __slots__ = ()
+
+
 class _StringLiteral(str):
     """A CQL2 character literal (``'sl'``), as opposed to an identifier.
 
@@ -115,6 +125,7 @@ def post_process_selector(selector: Any) -> Any:
                     # value (`dataLayer.type = vector`), not a property.
                     if (
                         i > 0
+                        and not isinstance(arg, _QuotedIdentifier)
                         and isinstance(processed_args[0], dict)
                         and ("sysId" in processed_args[0])
                     ):
@@ -467,6 +478,8 @@ def expression_to_json(expression: Any) -> Any:
 
     # Handle IdentifierExpression (simple properties)
     if hasattr(expression, "name"):
+        if getattr(expression, "quoted", None):
+            return _QuotedIdentifier(expression.name)
         return convert_identifier(expression.name)
 
     # A constant with a unit (`6 px`) is the schema's unitValue: {"px": 6}.
@@ -653,7 +666,7 @@ def convert_identifier(name: str) -> Any:
             return {"sysId": mapped_prop}
         elif len(name) > 1 and name[0] == name[-1] == '"':
             # A double-quoted token is an identifier in CQL2 (not a string).
-            return _Identifier(name[1:-1])
+            return _QuotedIdentifier(name[1:-1])
         else:
             value = convert_literal_value(name)
             if name.isidentifier() and value == name:
