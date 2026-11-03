@@ -204,6 +204,11 @@ from ._types import (
     parse_number,
     parse_opacity,
     parse_unit_value,
+    read_in_unit,
+    require_pixel_unit,
+    track_units,
+    unit_dict,
+    unit_magnitude,
 )
 from ._xml_helpers import OGC, XLINK, element_text, local_name
 
@@ -249,10 +254,13 @@ def _g(obj: Any, key: str, default: Any = None) -> Any:
 def _number_of(value: Any) -> float | None:
     if value is None:
         return None
+    if hasattr(value, "value") and hasattr(value, "unit"):
+        return float(unit_magnitude(value.unit, value.value))
     if hasattr(value, "value"):
         return float(value.value)
     if isinstance(value, dict) and len(value) == 1:
-        return float(next(iter(value.values())))
+        ((unit, number),) = value.items()
+        return float(unit_magnitude(unit, number))
     if isinstance(value, (int, float)):
         return float(value)
     try:
@@ -413,6 +421,32 @@ def _combine_opacity(base: float | None, own: Any) -> str | None:
     return format_opacity(factor)
 
 
+def _with_uom(
+    d: SldDialect, build: Callable[..., etree._Element], *args: Any
+) -> etree._Element:
+    """Build one SE symbolizer element and give it the ``uom`` its sizes need.
+
+    CartoSym qualifies each size with its own unit, SE has one ``uom`` per
+    symbolizer: screen units are converted to pixels, ground units set
+    ``uom``, and a mix that ``uom`` cannot express raises.
+    """
+    with track_units() as tracker:
+        element = build(d, *args)
+    uom = tracker.uom()
+    if uom is None:
+        return element
+    if d.uom_attribute:
+        element.set("uom", uom)
+    elif tracker.ground_units:
+        raise NotImplementedError(
+            f"sizes in {sorted(tracker.ground_units)} need the uom attribute, "
+            "which plain SLD 1.0.0 does not have (use SE 1.1.0 or the "
+            "sld:geoserver dialect)"
+        )
+    # plain SLD 1.0.0: converted screen sizes are pixels, the default
+    return element
+
+
 def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
     """Convert one CartoSym ``Symbolizer`` into 0..N sibling SLD/SE elements."""
     elements: list[etree._Element] = []
@@ -425,12 +459,12 @@ def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
     s_op = _opacity_float(_g(sym, "opacity"))
 
     if fill is not None:
-        elements.append(_build_polygon_symbolizer(d, fill, stroke, s_op))
+        elements.append(_with_uom(d, _build_polygon_symbolizer, fill, stroke, s_op))
     elif stroke is not None:
-        elements.append(_build_line_symbolizer(d, stroke, s_op))
+        elements.append(_with_uom(d, _build_line_symbolizer, stroke, s_op))
 
     if has_raster_fields(sym):
-        elements.append(_build_raster_symbolizer(d, sym, s_op))
+        elements.append(_with_uom(d, _build_raster_symbolizer, sym, s_op))
 
     if marker is not None:
         elements.extend(
@@ -482,20 +516,20 @@ def _graphic_elements_to_symbolizers(
     for el in elements:
         el_type = _g(el, "type")
         if el_type == "Dot":
-            result.append(_build_point_symbolizer(d, el, base_opacity))
+            result.append(_with_uom(d, _build_point_symbolizer, el, base_opacity))
         elif el_type == "Circle":
-            result.append(_build_circle_symbolizer(d, el, base_opacity))
+            result.append(_with_uom(d, _build_circle_symbolizer, el, base_opacity))
         elif el_type == "Rectangle":
-            result.append(_build_rectangle_symbolizer(d, el, base_opacity))
+            result.append(_with_uom(d, _build_rectangle_symbolizer, el, base_opacity))
         elif el_type == "ClosedPath":
-            result.append(_build_closed_path_symbolizer(d, el, base_opacity))
+            result.append(_with_uom(d, _build_closed_path_symbolizer, el, base_opacity))
         elif el_type == "Image":
-            result.append(_build_image_symbolizer(d, el, base_opacity))
+            result.append(_with_uom(d, _build_image_symbolizer, el, base_opacity))
         elif el_type == "Text":
             if context == "marker" and _is_font_glyph_candidate(d, el):
-                result.append(_build_font_glyph_mark(d, el, base_opacity))
+                result.append(_with_uom(d, _build_font_glyph_mark, el, base_opacity))
             else:
-                result.append(_build_text_symbolizer(d, el, base_opacity))
+                result.append(_with_uom(d, _build_text_symbolizer, el, base_opacity))
         else:
             raise NotImplementedError(
                 f"Graphic element type {el_type!r} has no SLD/SE mapping in "
@@ -1887,54 +1921,55 @@ def elements_to_symbolizer(d: SldDialect, sym_elements: list[etree._Element]) ->
     label_elements: list[dict] = []
 
     for el in sym_elements:
-        tag = local_name(el)
-        if d.vendor_options:
-            for name, value in _read_vendor_options(d, el):
-                result[f"vendor.geoserver.{name}"] = value
-        if d.find(el, "Geometry") is not None:
-            # SE 1.1.0 "symbolizer geometry" — an optional <se:Geometry>
-            # <ogc:PropertyName> selecting which geometry property to
-            # render. CartoSym's 3-geometry "Symbolizer Geometry"
-            # requirements class is not yet defined in the conceptual
-            # model (empty rc-symbolizer-geometry.adoc, no `geometry`
-            # field on the CS-JSON `symbolizer`), so there is nothing to
-            # map it to — raise rather than silently drop it, per the
-            # lossless-transcoding requirement.
-            raise NotImplementedError(
-                f"se:{tag}/se:Geometry (symbolizer geometry) has no CartoSym "
-                "conceptual-model representation yet"
-            )
-        if tag == "PolygonSymbolizer":
-            fill_el = d.find(el, "Fill")
-            stroke_el = d.find(el, "Stroke")
-            if fill_el is not None:
-                result["fill"] = _parse_fill_element(d, fill_el)
-            if stroke_el is not None:
+        with read_in_unit(el.get("uom")):
+            tag = local_name(el)
+            if d.vendor_options:
+                for name, value in _read_vendor_options(d, el):
+                    result[f"vendor.geoserver.{name}"] = value
+            if d.find(el, "Geometry") is not None:
+                # SE 1.1.0 "symbolizer geometry" — an optional <se:Geometry>
+                # <ogc:PropertyName> selecting which geometry property to
+                # render. CartoSym's 3-geometry "Symbolizer Geometry"
+                # requirements class is not yet defined in the conceptual
+                # model (empty rc-symbolizer-geometry.adoc, no `geometry`
+                # field on the CS-JSON `symbolizer`), so there is nothing to
+                # map it to — raise rather than silently drop it, per the
+                # lossless-transcoding requirement.
+                raise NotImplementedError(
+                    f"se:{tag}/se:Geometry (symbolizer geometry) has no CartoSym "
+                    "conceptual-model representation yet"
+                )
+            if tag == "PolygonSymbolizer":
+                fill_el = d.find(el, "Fill")
+                stroke_el = d.find(el, "Stroke")
+                if fill_el is not None:
+                    result["fill"] = _parse_fill_element(d, fill_el)
+                if stroke_el is not None:
+                    result["stroke"] = _parse_stroke_element(d, stroke_el)
+            elif tag == "LineSymbolizer":
+                offset_el = d.find(el, "PerpendicularOffset")
+                if offset_el is not None and float(offset_el.text or 0) != 0:
+                    # A zero offset is a portrayal no-op (same as the element
+                    # being absent) and passes silently; any other value has
+                    # no CartoSym Stroke field to hold it.
+                    raise NotImplementedError(
+                        "se:LineSymbolizer/se:PerpendicularOffset has no CartoSym "
+                        "mapping in this codec"
+                    )
+                stroke_el = d.find(el, "Stroke")
+                if stroke_el is None:
+                    raise NotImplementedError(
+                        "se:LineSymbolizer without se:Stroke is not supported"
+                    )
                 result["stroke"] = _parse_stroke_element(d, stroke_el)
-        elif tag == "LineSymbolizer":
-            offset_el = d.find(el, "PerpendicularOffset")
-            if offset_el is not None and float(offset_el.text or 0) != 0:
-                # A zero offset is a portrayal no-op (same as the element
-                # being absent) and passes silently; any other value has
-                # no CartoSym Stroke field to hold it.
-                raise NotImplementedError(
-                    "se:LineSymbolizer/se:PerpendicularOffset has no CartoSym "
-                    "mapping in this codec"
-                )
-            stroke_el = d.find(el, "Stroke")
-            if stroke_el is None:
-                raise NotImplementedError(
-                    "se:LineSymbolizer without se:Stroke is not supported"
-                )
-            result["stroke"] = _parse_stroke_element(d, stroke_el)
-        elif tag == "PointSymbolizer":
-            marker_elements.append(_parse_point_symbolizer(d, el))
-        elif tag == "TextSymbolizer":
-            label_elements.append(_parse_text_symbolizer(d, el))
-        elif tag == "RasterSymbolizer":
-            result.update(_parse_raster_symbolizer(d, el))
-        else:
-            raise NotImplementedError(f"Unsupported symbolizer element <{tag}>")
+            elif tag == "PointSymbolizer":
+                marker_elements.append(_parse_point_symbolizer(d, el))
+            elif tag == "TextSymbolizer":
+                label_elements.append(_parse_text_symbolizer(d, el))
+            elif tag == "RasterSymbolizer":
+                result.update(_parse_raster_symbolizer(d, el))
+            else:
+                raise NotImplementedError(f"Unsupported symbolizer element <{tag}>")
 
     if marker_elements:
         result["marker"] = {"elements": marker_elements}
@@ -2211,6 +2246,7 @@ def _parse_stroke_element(d: SldDialect, stroke_el: etree._Element) -> dict:
         for tag, key in (("InitialGap", "patternInitialGap"), ("Gap", "patternGap")):
             gap = parse_number(element_text(d.find(graphic_stroke_el, tag)))
             if gap is not None:
+                require_pixel_unit(f"se:{tag}")
                 result[key] = gap
     _reject_unknown_params(
         d,
@@ -2479,9 +2515,7 @@ def _px(value: float) -> dict:
     only exists on ``int`` from Python 3.12 onward (this codebase
     supports 3.10+).
     """
-    if isinstance(value, int):
-        return {"px": value}
-    return {"px": int(value) if value.is_integer() else value}
+    return unit_dict(value)
 
 
 def _unit_star_nodes() -> list[tuple[float, float]]:
@@ -2809,7 +2843,7 @@ def _parsed_px_or_zero(el: etree._Element | None) -> float:
     if text is None:
         return 0
     parsed = parse_unit_value(text)
-    return parsed["px"] if parsed is not None else 0
+    return next(iter(parsed.values())) if parsed is not None else 0
 
 
 def _parsed_axis_or_zero(el: etree._Element | None) -> Any:
@@ -2851,6 +2885,7 @@ def _parse_halo(d: SldDialect, halo_el: etree._Element | None) -> dict:
     outline: dict = {}
     radius_text = element_text(d.find(halo_el, "Radius"))
     if radius_text and radius_text.strip():
+        require_pixel_unit("se:Halo/se:Radius")
         outline["size"] = parse_number(radius_text)
     fill_el = d.find(halo_el, "Fill")
     if fill_el is not None:
@@ -2904,6 +2939,7 @@ def _parse_text_symbolizer(d: SldDialect, ts_el: etree._Element) -> dict:
             # A bare number, per the schema's font.size (numericExpression,
             # not unitValue) — same as its outline["size"] sibling below,
             # not parse_unit_value's {"px": N} dict.
+            require_pixel_unit("font-size")
             font["size"] = parse_number(size)
         if weight is not None:
             font["bold"] = weight == "bold"

@@ -2,15 +2,20 @@
 
 SLD/SE ``se:SvgParameter`` values and XML attributes are bare numeric/hex
 strings — unlike CartoSym's ``{unit: value}`` dict convention for
-:class:`~pycartosym.models.types.UnitValue`, SE 1.1.0 core has no
-unit-of-measure attribute on these parameters, so unit information is lost
-on write (a known, confirmed gap).
+:class:`~pycartosym.models.types.UnitValue`, the unit of measure is not on the
+parameter but on the whole symbolizer (the ``uom`` attribute). On write the
+unit of each size is therefore reported to a :class:`UnitTracker` and the
+symbolizer element gets the matching ``uom``.
 """
 
 from __future__ import annotations
 
+import logging
 import math
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from ...models.types import RGBColor, RGBColorNormalized, WebColorName
@@ -207,19 +212,116 @@ def parse_number(text: str | None) -> float | None:
     return int(num) if num.is_integer() else num
 
 
+_logger = logging.getLogger(__name__)
+
+# CartoSym Part 1: a pixel is 0.28 mm x 0.28 mm unless the client says
+# otherwise, and screen units (mm, cm, inch) are defined against that size.
+MM_PER_PIXEL = 0.28
+_MM_PER_UNIT = {"mm": 1.0, "cm": 10.0, "in": 25.4, "inch": 25.4, "pt": 25.4 / 72}
+# CartoSym ground units -> the SE ``uom`` code (its URI suffix).
+_GROUND_UOM = {"m": "metre", "ft": "foot"}
+UOM_BASE = "http://www.opengeospatial.org/se/units/"
+
+
+class UnitTracker:
+    """The units one SLD/SE symbolizer element's sizes were written in."""
+
+    def __init__(self) -> None:
+        self.screen_units: set[str] = set()
+        self.ground_units: set[str] = set()
+        self.has_pixels = False
+
+    def uom(self) -> str | None:
+        """The ``uom`` URI the symbolizer needs, ``None`` for the pixel default.
+
+        Raises:
+            NotImplementedError: Ground and portrayal sizes are mixed, or two
+                different ground units are used — ``uom`` is one value per
+                symbolizer.
+        """
+        if self.ground_units:
+            if len(self.ground_units) > 1 or self.has_pixels or self.screen_units:
+                units = sorted(self.ground_units | self.screen_units)
+                if self.has_pixels:
+                    units.append("px")
+                raise NotImplementedError(
+                    f"A symbolizer mixes units {units}: SE has one uom per "
+                    "symbolizer, so ground (m, ft) and portrayal (px, mm, ...) "
+                    "sizes cannot be written together"
+                )
+            return UOM_BASE + _GROUND_UOM[next(iter(self.ground_units))]
+        if self.screen_units:
+            return UOM_BASE + "pixel"
+        return None
+
+
+_tracker: ContextVar[UnitTracker | None] = ContextVar("sld_unit_tracker", default=None)
+
+
+@contextmanager
+def track_units() -> Iterator[UnitTracker]:
+    """Record the units of every size written while the block runs."""
+    tracker = UnitTracker()
+    token = _tracker.set(tracker)
+    try:
+        yield tracker
+    finally:
+        _tracker.reset(token)
+
+
+def unit_magnitude(unit: Any, magnitude: Any) -> Any:
+    """The number to write for *magnitude* given in *unit*, recording the unit.
+
+    Screen units (``mm``, ``cm``, ``in``, ``pt``) are converted to pixels at
+    :data:`MM_PER_PIXEL`; pixels and ground units (``m``, ``ft``) keep their
+    magnitude, the unit being reported to the active :class:`UnitTracker` so
+    the symbolizer can carry the matching ``uom``.
+
+    Raises:
+        NotImplementedError: ``em`` and ``pc`` depend on context (font size,
+            image size) and cannot be converted.
+    """
+    unit = getattr(unit, "value", unit)
+    tracker = _tracker.get()
+    if unit in _MM_PER_UNIT:
+        px = round(float(magnitude) * _MM_PER_UNIT[unit] / MM_PER_PIXEL, 4)
+        _logger.info(
+            "converted %s %s to %s px (%s mm per pixel)",
+            magnitude,
+            unit,
+            px,
+            MM_PER_PIXEL,
+        )
+        if tracker is not None:
+            tracker.screen_units.add(unit)
+        return int(px) if px.is_integer() else px
+    if unit in _GROUND_UOM:
+        if tracker is not None:
+            tracker.ground_units.add(unit)
+        return magnitude
+    if unit in ("em", "pc"):
+        raise NotImplementedError(
+            f"unit {unit!r} depends on its context and cannot be written as "
+            "an SLD/SE size"
+        )
+    if tracker is not None:
+        tracker.has_pixels = True
+    return magnitude
+
+
 _UNIT_STRING_RE = re.compile(
     r"^\s*(-?\d+(?:\.\d+)?)\s*(px|mm|cm|in|pt|em|pc|m|ft)?\s*$"
 )
 
 
-def _format_unit_magnitude(magnitude: Any) -> str:
+def _format_unit_magnitude(magnitude: Any, unit: Any = "px") -> str:
     """Format the number inside a unit value; an expression has no SLD form."""
     if isinstance(magnitude, dict):
         raise NotImplementedError(
             f"unit value computed by an expression {magnitude!r} has no "
             "SLD/SE equivalent in this codec"
         )
-    return _format_number(magnitude)
+    return _format_number(unit_magnitude(unit, magnitude))
 
 
 def format_unit_value(value: Any) -> str:
@@ -234,8 +336,9 @@ def format_unit_value(value: Any) -> str:
     post-processing (which only runs on the CS-JSON codec path) — some
     ``Stroke.width``/etc. values are therefore still a raw "N unit" string
     rather than a coerced ``UnitValue``/dict at this point. Non-pixel units
-    are silently stripped and only the numeric magnitude is kept — a known,
-    documented lossy conversion.
+    are converted to pixels (screen units) or reported to the active
+    :class:`UnitTracker` so the symbolizer gets the matching ``uom`` (ground
+    units).
 
     Raises:
     ------
@@ -244,16 +347,16 @@ def format_unit_value(value: Any) -> str:
         sizing has no SLD/SE equivalent in this codec's scope).
     """
     if hasattr(value, "value") and hasattr(value, "unit"):
-        return _format_unit_magnitude(value.value)
+        return _format_unit_magnitude(value.value, value.unit)
     if isinstance(value, dict) and len(value) == 1:
-        ((_, v),) = value.items()
-        return _format_unit_magnitude(v)
+        ((unit, v),) = value.items()
+        return _format_unit_magnitude(v, unit)
     if isinstance(value, (int, float)):
-        return _format_number(value)
+        return _format_number(unit_magnitude("px", value))
     if isinstance(value, str):
         match = _UNIT_STRING_RE.match(value)
         if match:
-            return _format_number(float(match.group(1)))
+            return _format_unit_magnitude(float(match.group(1)), match.group(2) or "px")
         raise NotImplementedError(
             f"Property-driven / expression unit value {value!r} has no "
             "SLD/SE mapping in this codec"
@@ -261,17 +364,63 @@ def format_unit_value(value: Any) -> str:
     raise NotImplementedError(f"Unsupported unit value shape: {value!r}")
 
 
-def parse_unit_value(text: str | None) -> dict | None:
-    """Parse a bare SLD numeric string back into a CartoSym ``{"px": v}`` dict.
+_UOM_UNIT = {"metre": "m", "meter": "m", "foot": "ft", "pixel": "px"}
+_read_unit: ContextVar[str] = ContextVar("sld_read_unit", default="px")
 
-    SLD's implicit unit convention is pixels.
+
+def uom_unit(uom: str | None) -> str:
+    """The CartoSym unit (``px``, ``m``, ``ft``) of an SE ``uom`` attribute.
+
+    Raises:
+        NotImplementedError: The ``uom`` is not one of SE's pixel/metre/foot.
+    """
+    if uom is None:
+        return "px"
+    code = uom.rsplit("/", 1)[-1].lower()
+    if code not in _UOM_UNIT:
+        raise NotImplementedError(f"unsupported uom {uom!r} (pixel, metre or foot)")
+    return _UOM_UNIT[code]
+
+
+@contextmanager
+def read_in_unit(uom: str | None) -> Iterator[str]:
+    """Read the sizes of one symbolizer in the unit of its ``uom`` attribute."""
+    unit = uom_unit(uom)
+    token = _read_unit.set(unit)
+    try:
+        yield unit
+    finally:
+        _read_unit.reset(token)
+
+
+def require_pixel_unit(what: str) -> None:
+    """Raise if the symbolizer being read is not in pixels.
+
+    For sizes the conceptual model holds as a bare number (no unit).
+    """
+    if _read_unit.get() != "px":
+        raise NotImplementedError(
+            f"{what} in a symbolizer with a ground-unit uom cannot be read: "
+            "the CartoSym value is a bare number without a unit"
+        )
+
+
+def unit_dict(num: float) -> dict:
+    """A size as CartoSym's ``{unit: v}`` dict, in the unit being read."""
+    if num == int(num):
+        num = int(num)
+    return {_read_unit.get(): num}
+
+
+def parse_unit_value(text: str | None) -> dict | None:
+    """Parse a bare SLD numeric string back into a CartoSym ``{unit: v}`` dict.
+
+    The unit is pixels unless the symbolizer carries a ``uom``
+    (see :func:`read_in_unit`).
     """
     if text is None:
         return None
-    num = float(text)
-    if num.is_integer():
-        num = int(num)
-    return {"px": num}
+    return unit_dict(float(text))
 
 
 def format_angle(value: Any) -> str:
