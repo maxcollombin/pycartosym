@@ -1752,6 +1752,24 @@ def _build_font_glyph_mark(
     return ps
 
 
+def _write_label_concatenation(label_el: etree._Element, args: list[Any]) -> None:
+    """A concatenation of properties and text as the mixed content of ``se:Label``."""
+    last: etree._Element | None = None
+    for arg in args:
+        if isinstance(arg, dict) and "property" in arg:
+            last = etree.SubElement(label_el, f"{OGC}PropertyName")
+            last.text = arg["property"]
+        elif isinstance(arg, (str, int, float)) and not isinstance(arg, bool):
+            if last is None:
+                label_el.text = (label_el.text or "") + str(arg)
+            else:
+                last.tail = (last.tail or "") + str(arg)
+        else:
+            raise NotImplementedError(
+                f"Unsupported Text.text concatenation argument: {arg!r}"
+            )
+
+
 def _build_text_symbolizer(
     d: SldDialect, text_graphic: Any, base_opacity: float | None = None
 ) -> etree._Element:
@@ -1772,6 +1790,8 @@ def _build_text_symbolizer(
         etree.SubElement(label_el, f"{OGC}PropertyName").text = text["property"]
     elif isinstance(text, str):
         label_el.text = text
+    elif isinstance(text, dict) and text.get("op") == "concatenate":
+        _write_label_concatenation(label_el, text["args"])
     else:
         raise NotImplementedError(f"Unsupported Text.text shape: {text!r}")
 
