@@ -863,14 +863,17 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         """Handle entering metadata."""
         if ctx.IDENTIFIER() and ctx.CHARACTER_LITERAL():
             key = ctx.IDENTIFIER().getText()
-            # Remove outer quotes from character literal
-            value = ctx.CHARACTER_LITERAL().getText().strip("\"'")
+            # Remove the outer quotes of the character literal
+            value = ctx.CHARACTER_LITERAL().getText()[1:-1]
             # Handle multiline string continuation: '...\n'\n          '...' pattern
             # ANTLR captures adjacent string literals as one token; remove the
             # internal closing/opening quote pair (apostrophe + whitespace + apostrophe)
             import re as _re_meta
 
-            value = _re_meta.sub(r"'\s*'", " ", value)
+            # Adjacent literals ('a' 'b') are separated by whitespace; a quote
+            # with nothing between them is an escaped quote ('it''s', 'it\'s').
+            value = _re_meta.sub(r"'\s+'", " ", value)
+            value = value.replace("''", "'").replace("\\'", "'")
             # Decode \n and \t escape sequences into real newline/tab chars
             value = value.replace("\\n", "\n").replace("\\t", "\t")
             # Collapse multiple spaces (but not the newlines/tabs above) and strip

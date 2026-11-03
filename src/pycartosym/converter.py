@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .cql2.to_json import split_on_comparison_operator
+from .cql2.to_text import quote_string
 from .models import Style
 from .models.types import UnitType, cscss_unit, json_unit
 from .parser import CartoSymParser
@@ -192,30 +193,34 @@ class Converter:
                 header_lines.extend(self._comment_lines(comment))
         if style.metadata:
             if getattr(style.metadata, "title", None):
-                header_lines.append(f".title '{style.metadata.title}'")
+                header_lines.append(f".title {quote_string(style.metadata.title)}")
             if getattr(style.metadata, "abstract", None):
-                header_lines.append(f".abstract '{style.metadata.abstract}'")
+                header_lines.append(
+                    f".abstract {quote_string(style.metadata.abstract)}"
+                )
             if getattr(style.metadata, "description", None):
-                header_lines.append(f".description '{style.metadata.description}'")
+                header_lines.append(
+                    f".description {quote_string(style.metadata.description)}"
+                )
             if style.metadata.authors:
                 for author in style.metadata.authors:
                     header_lines.append(f'.author "{author}"')
             if style.metadata.keywords:
                 kw = style.metadata.keywords
                 kw_str = ", ".join(kw) if isinstance(kw, list) else kw
-                header_lines.append(f".keywords '{kw_str}'")
+                header_lines.append(f".keywords {quote_string(kw_str)}")
             # Model field is ``geo_data_classes`` (alias ``geoDataClasses``);
             # the CSCSS directive keeps the camelCase spelling.
             if style.metadata.geo_data_classes:
                 gc = style.metadata.geo_data_classes
                 gc_str = ", ".join(gc) if isinstance(gc, list) else gc
-                header_lines.append(f".geoDataClasses '{gc_str}'")
+                header_lines.append(f".geoDataClasses {quote_string(gc_str)}")
         if style.include:
             includes = (
                 style.include if isinstance(style.include, list) else [style.include]
             )
             for path in includes:
-                header_lines.append(f".include '{path}'")
+                header_lines.append(f".include {quote_string(path)}")
         if header_lines:
             lines.extend(header_lines)
             lines.append("")  # Empty line after metadata/include
@@ -251,7 +256,7 @@ class Converter:
             return self._format_selector_expr(value)
         if isinstance(value, list):  # a colour: [r, g, b]
             return self._format_color(value)
-        return f"'{value}'"
+        return quote_string(value)
 
     @staticmethod
     def _comment_lines(text: str) -> list[str]:
@@ -278,7 +283,7 @@ class Converter:
         # Add symbolizer
         lines.append(f"{pad}{{")
         if rule.name:
-            lines.append(f"{pad}    .name '{rule.name}'")
+            lines.append(f"{pad}    .name {quote_string(rule.name)}")
         if rule.symbolizer:
             if getattr(rule.symbolizer, "comment", None):
                 lines.extend(
@@ -788,7 +793,7 @@ class Converter:
             if isinstance(text, dict) and "property" in text:
                 prop_lines.append(f"text: {text['property']}")
             elif isinstance(text, str):
-                prop_lines.append(f"text: '{text}'")
+                prop_lines.append(f"text: {quote_string(text)}")
             elif isinstance(text, dict) and "op" in text:
                 prop_lines.append(f"text: {self._format_selector_expr(text)}")
             else:
@@ -855,7 +860,7 @@ class Converter:
                 fp = []
                 for k, v in font.items():
                     if k == "face" and isinstance(v, str):
-                        fv = f"'{v}'"
+                        fv = quote_string(v)
                     elif k == "color":
                         fv = self._format_color(v)
                     elif k == "size":
@@ -893,7 +898,7 @@ class Converter:
             for k in ("uri", "path", "id", "type", "ext", "sprite"):
                 v = _get(image, k)
                 if v is not None:
-                    res_parts.append(f"{k}: '{v}'")
+                    res_parts.append(f"{k}: {quote_string(v)}")
             if res_parts:
                 prop_lines.append(f"image: {{{'; '.join(res_parts)}}}")
 

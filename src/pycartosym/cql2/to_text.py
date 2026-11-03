@@ -69,6 +69,11 @@ def _infix_operand(arg, parent_op: str) -> str:
     return text
 
 
+def quote_string(value: object) -> str:
+    """Single-quote a string, doubling an embedded quote (CQL2 and CartoSym-CSS)."""
+    return "'" + str(value).replace("'", "''") + "'"
+
+
 def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     """Recursively format a selector expression dict as a CSCSS filter string.
 
@@ -79,6 +84,8 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     if isinstance(expr, list):  # an array literal, e.g. an argument of a_equals
         items = ", ".join(expression_to_text(item, quote_bare_strings) for item in expr)
         return f"[{items}]"
+    if isinstance(expr, bool):  # CQL2 literals are lower case
+        return "true" if expr else "false"
     if not isinstance(expr, dict):
         s = str(expr)
         if not quote_bare_strings:
@@ -93,7 +100,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         if s.lower() in ("true", "false", "null"):
             return s
         # Plain string value → single-quote it
-        return f"'{s}'"
+        return quote_string(s)
     # Unit around an expression: {"px": 6} -> `6 px`, {"px": w * 2} -> `w * 2 px`
     if len(expr) == 1:
         ((unit, inner),) = expr.items()
@@ -123,7 +130,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     # Handle interval literal
     if "interval" in expr and len(expr) == 1:
         parts = expr["interval"]
-        args = ", ".join(f"'{p}'" for p in parts)
+        args = ", ".join(quote_string(p) for p in parts)
         return f"INTERVAL({args})"
     # Handle BBOX literal
     if "bbox" in expr and len(expr) == 1:
@@ -148,7 +155,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
                     float(a)
                     return a
                 except Exception:
-                    return f"'{a}'"
+                    return quote_string(a)
             return expression_to_text(a)
 
         args_str = ", ".join(format_arg(a) for a in args)
@@ -312,7 +319,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
                         float(a)
                         return a
                     except Exception:
-                        return f"'{a}'"
+                        return quote_string(a)
                 return expression_to_text(a)
 
             args_str = ", ".join(format_func_arg(a) for a in args)
