@@ -92,6 +92,10 @@ class SldDialect:
             alternative to ``WellKnownName`` (SE 1.1.0's own
             ``MarkType``); ``False`` for SLD 1.0.0, whose ``Mark`` is
             only ``{WellKnownName?, Fill?, Stroke?}``.
+        uom_attribute: ``True`` if a symbolizer may carry the ``uom``
+            attribute (SE 1.1.0 ``SymbolizerType``, also read by GeoServer
+            on SLD 1.0.0); ``False`` for plain SLD 1.0.0, where every size
+            is in pixels.
         nsmap: Namespace map for the document root element.
     """
 
@@ -106,6 +110,7 @@ class SldDialect:
     recode_function: bool
     interpolate_function: bool
     mark_font_glyph: bool
+    uom_attribute: bool
     nsmap: dict[str | None, str]
 
     # -- element factories -------------------------------------------------
@@ -217,6 +222,7 @@ SE_1_1_0 = SldDialect(
     recode_function=True,
     interpolate_function=True,
     mark_font_glyph=True,
+    uom_attribute=True,
     nsmap=_SE_NSMAP,
 )
 
@@ -232,6 +238,7 @@ SLD_1_0_0 = SldDialect(
     recode_function=False,
     interpolate_function=False,
     mark_font_glyph=False,
+    uom_attribute=False,
     nsmap=_SLD10_NSMAP,
 )
 
@@ -250,6 +257,7 @@ SLD_1_0_0_GEOSERVER = SldDialect(
     recode_function=False,
     interpolate_function=False,
     mark_font_glyph=False,
+    uom_attribute=True,
     nsmap=_SLD10_NSMAP,
 )
 
