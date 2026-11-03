@@ -22,6 +22,7 @@ from lxml import etree
 from ...models.styles import Style, StylingRule
 from .._cascade import flatten_cascade_rules
 from ..base import CodecWriter
+from ._conditional import split_conditionals
 from ._dialect import SE_1_1_0, SldDialect
 from ._filter import (
     extract_feature_type_name,
@@ -39,6 +40,17 @@ def _scale_text(value: int | float) -> str:
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
     return str(value)
+
+
+def _and_selector(selector: dict | None, conditions: list) -> dict | None:
+    """*selector* AND-ed with *conditions* (``None`` when there is neither)."""
+    conjuncts = ([selector] if selector is not None else []) + list(conditions)
+    if not conjuncts:
+        return None
+    if len(conjuncts) == 1:
+        only: dict = conjuncts[0]
+        return only
+    return {"op": "and", "args": conjuncts}
 
 
 class SldWriter(CodecWriter):
@@ -178,7 +190,10 @@ class SldWriter(CodecWriter):
             rule.nested_rules
             or (
                 rule.symbolizer is not None
-                and symbolizer_to_elements(self.d, rule.symbolizer)
+                # the first variant stands for all: they differ by values only
+                and symbolizer_to_elements(
+                    self.d, split_conditionals(rule.symbolizer)[0][1]
+                )
             )
             for rule, _ in members
         )
@@ -204,10 +219,19 @@ class SldWriter(CodecWriter):
                 self.d.el("FeatureTypeName", parent=fts, text=str(feature_type_name))
         n_rules = 0
         for rule, remaining_selector in rules_and_selectors:
-            rule_el = self._build_rule(rule, remaining_selector)
-            if rule_el is not None:
-                fts.append(rule_el)
-                n_rules += 1
+            # a conditional expression in the symbolizer becomes one rule
+            # per branch, each filtered by the branch's condition
+            for conditions, symbolizer in split_conditionals(rule.symbolizer):
+                variant = (
+                    rule
+                    if not conditions
+                    else rule.model_copy(update={"symbolizer": symbolizer})
+                )
+                selector = _and_selector(remaining_selector, conditions)
+                rule_el = self._build_rule(variant, selector)
+                if rule_el is not None:
+                    fts.append(rule_el)
+                    n_rules += 1
             for else_rule in self._flatten_nested_rules(rule):
                 fts.append(else_rule)
                 n_rules += 1
