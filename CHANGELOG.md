@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-03
+
 ### Fixed
 
 - CartoSym-CSS: a graphic's `transform: {orientation: ...}` is read on a label's `Text` (it failed with a validation error) and on a marker (the value stayed text) as an angle or a CQL2 expression, and is written back instead of being dropped.
@@ -178,7 +180,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/maxcollombin/pycartosym/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/maxcollombin/pycartosym/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/maxcollombin/pycartosym/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/maxcollombin/pycartosym/compare/v0.5.0...v0.6.0
