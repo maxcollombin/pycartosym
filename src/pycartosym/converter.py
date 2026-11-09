@@ -301,6 +301,39 @@ class Converter:
         lines.append(f"{pad}}}")
         return lines
 
+    @staticmethod
+    def _data_layer_names(expr) -> list | None:
+        """Layer names of ``dataLayer.id = x`` (or an OR of them), else None."""
+
+        def one(e):
+            if (
+                isinstance(e, dict)
+                and e.get("op") == "="
+                and isinstance(e.get("args"), list)
+                and len(e["args"]) == 2
+                and isinstance(e["args"][0], dict)
+                and e["args"][0].get("sysId") == "dataLayer.id"
+            ):
+                val = e["args"][1]
+                return (
+                    val["property"]
+                    if isinstance(val, dict) and "property" in val
+                    else val
+                )
+            return None
+
+        if isinstance(expr, dict) and expr.get("op") == "or":
+            parts = [one(e) for e in expr.get("args") or []]
+            return parts if parts and None not in parts else None
+        name = one(expr)
+        return None if name is None else [name]
+
+    @staticmethod
+    def _layer_name_token(name) -> str:
+        """A layer name as a selector token, quoted if not a plain identifier."""
+        text = str(name)
+        return text if text.replace("_", "").replace(".", "").isalnum() else f'"{text}"'
+
     def _selector_to_cscss(self, selector) -> str:
         """Convert a selector (dict, list, or str) to a CSCSS selector string.
 
@@ -319,57 +352,24 @@ class Converter:
             return " ".join(self._selector_to_cscss(s) for s in selector)
         # Dict selector (expression)
         if isinstance(selector, dict):
-            # Special case: simple dataLayer.id = value → emit bare identifier
-            if (
-                selector.get("op") == "="
-                and isinstance(selector.get("args"), list)
-                and len(selector["args"]) == 2
-                and isinstance(selector["args"][0], dict)
-                and selector["args"][0].get("sysId") == "dataLayer.id"
-            ):
-                id_val = selector["args"][1]
-                if isinstance(id_val, dict) and "property" in id_val:
-                    id_val = id_val["property"]
-                id_str = str(id_val)
-                if not id_str.replace("_", "").replace(".", "").isalnum():
-                    id_str = f'"{id_str}"'
-                return id_str
-            # Special case: Landuse[filter] form (and-combined with dataLayer.id)
-            if selector.get("op") == "and" and isinstance(selector.get("args"), list):
-                args = selector["args"]
-                id_arg = None
-                other_args = []
-                for arg in args:
-                    if (
-                        isinstance(arg, dict)
-                        and arg.get("op") == "="
-                        and isinstance(arg.get("args"), list)
-                        and len(arg["args"]) == 2
-                        and isinstance(arg["args"][0], dict)
-                        and arg["args"][0].get("sysId") == "dataLayer.id"
-                    ):
-                        landuse_val = arg["args"][1]
-                        if isinstance(landuse_val, dict) and "property" in landuse_val:
-                            landuse_val = landuse_val["property"]
-                        id_arg = landuse_val
-                    else:
-                        other_args.append(arg)
-                if id_arg is not None:
-                    # Quote the id if it contains special characters (e.g. hyphens)
-                    id_str = str(id_arg)
-                    if not id_str.replace("_", "").replace(".", "").isalnum():
-                        id_str = f'"{id_str}"'
-                    if other_args:
-                        filter_str = (
-                            self._format_selector_expr(other_args[0])
-                            if len(other_args) == 1
-                            else self._format_selector_expr(
-                                {"op": "and", "args": other_args}
-                            )
-                        )
-                        return f"{id_str}[{filter_str}]"
-                    else:
+            # Special cases: bare layer name(s) — `Roads`, `Roads Railways` —
+            # optionally followed by a filter: `Roads[filter]`. Several names
+            # are an OR among themselves, ANDed with the rest (clause 17).
+            args = selector.get("args") if selector.get("op") == "and" else None
+            args = args if isinstance(args, list) else [selector]
+            for i, arg in enumerate(args):
+                names = self._data_layer_names(arg)
+                if names:
+                    id_str = " ".join(self._layer_name_token(n) for n in names)
+                    other_args = args[:i] + args[i + 1 :]
+                    if not other_args:
                         return id_str
+                    filter_expr = (
+                        other_args[0]
+                        if len(other_args) == 1
+                        else {"op": "and", "args": other_args}
+                    )
+                    return f"{id_str}[{self._format_selector_expr(filter_expr)}]"
             # Otherwise, always reconstruct as a filter expression
             return f"[{self._format_selector_expr(selector)}]"
         # Fallback

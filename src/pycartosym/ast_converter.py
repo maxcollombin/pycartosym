@@ -709,9 +709,10 @@ class AstToPydanticConverter:
             if hasattr(ast_rule, "selectors") and ast_rule.selectors:
                 if len(ast_rule.selectors) > 1:
                     selector_args = []
+                    layer_ids: list[dict[str, Any]] = []
                     for sel in ast_rule.selectors:
                         if hasattr(sel, "name") and sel.name:
-                            selector_args.append(
+                            layer_ids.append(
                                 {
                                     "op": "=",
                                     "args": [{"sysId": "dataLayer.id"}, sel.name],
@@ -726,6 +727,12 @@ class AstToPydanticConverter:
                             json_expr = expression_to_json(sel.expression)
                             if isinstance(json_expr, dict):
                                 selector_args.append(json_expr)
+                    # Data layer names are alternatives (OR) among themselves
+                    # but are ANDed with the other selectors (clause 17).
+                    if len(layer_ids) > 1:
+                        selector_args.insert(0, {"op": "or", "args": layer_ids})
+                    else:
+                        selector_args[:0] = layer_ids
                     if len(selector_args) > 1:
                         selector = {"op": "and", "args": selector_args}
                     elif len(selector_args) == 1:
@@ -1123,6 +1130,11 @@ class AstToPydanticConverter:
         Otherwise return as-is for numeric values or complex expressions.
         """
         if isinstance(value, str):
+            # An operation (function call, ``^``, arithmetic…) goes through the
+            # same expression parser as every other property.
+            parsed = convert_property_expression(value)
+            if isinstance(parsed, dict):
+                return parsed
             # Check if it contains arithmetic operators - if so, parse as expression
             if any(op in value for op in ["+", "-", "*", "/", "(", ")"]):
                 try:
