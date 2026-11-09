@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-09
+
+### Fixed
+
+- CartoSym-CSS: `a ? b : c ? d : e` is read right to left, as `a ? b : (c ? d : e)` (#167).
+- CartoSym-CSS: a function call or `^` in `colorChannels` / `singleChannel` is kept as an operation instead of becoming a property named after the text (#168).
+- CartoSym-CSS: data layer names in a selector are combined with OR, and with the other selectors with AND (`Roads Railways[level < 4]`); the writer emits that form back (#169).
+
 ## [0.6.3] - 2026-11-03
 
 ### Fixed
@@ -180,7 +188,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/maxcollombin/pycartosym/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/maxcollombin/pycartosym/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/maxcollombin/pycartosym/compare/v0.6.0...v0.6.1
