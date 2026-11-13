@@ -95,15 +95,15 @@ class TestTextOpPredicates:
 
     def test_writeback_contains(self):
         d = {"op": "contains", "args": [{"property": "name"}, "park"]}
-        assert writeback(d) == "CONTAINS(name, 'park')"
+        assert writeback(d) == "contains(name, 'park')"
 
     def test_writeback_startswith(self):
         d = {"op": "startsWith", "args": [{"property": "name"}, "pre"]}
-        assert writeback(d) == "STARTSWITH(name, 'pre')"
+        assert writeback(d) == "startsWith(name, 'pre')"
 
     def test_writeback_endswith(self):
         d = {"op": "endsWith", "args": [{"property": "name"}, "suf"]}
-        assert writeback(d) == "ENDSWITH(name, 'suf')"
+        assert writeback(d) == "endsWith(name, 'suf')"
 
 
 # ── CASEI / ACCENTI ──────────────────────────────────────────────────────
@@ -419,7 +419,7 @@ class TestRoundTrip:
             "op": result.op,
             "args": [{"property": result.args[0].name}, result.args[1].value],
         }
-        assert writeback(d) == "CONTAINS(name, 'park')"
+        assert writeback(d) == "contains(name, 'park')"
 
     def test_casei_roundtrip(self):
         result = parse("CASEI(name)")
