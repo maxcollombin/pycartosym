@@ -63,3 +63,32 @@ def test_single_channel_accepts_calls():
         "singleChannel"
     ]
     assert single["op"] == "pow"
+
+
+def _roundtrip_channels(cscss: str) -> tuple[dict, str]:
+    """CSCSS → JSON → CSCSS, returning the JSON and the rewritten CSCSS."""
+    converter = Converter()
+    data = converter.cscss_to_csjson(cscss)
+    return data, converter.csjson_to_cscss(data)
+
+
+def test_channels_write_conditional_calls_and_power_back_as_infix():
+    source = (
+        "L { colorChannels.r: B04 < 10 ? 1 : 0;"
+        " colorChannels.g: pow(B04 / 2500, 0.5);"
+        " colorChannels.b: (B04 / 2500) ^ 0.5; singleChannel: B04 / 2500; }\n"
+    )
+    data, written = _roundtrip_channels(source)
+    assert "colorChannels.r: B04 < 10 ? 1 : 0;" in written
+    assert "colorChannels.g: pow(B04 / 2500, 0.5);" in written
+    assert "colorChannels.b: (B04 / 2500) ^ 0.5;" in written
+    assert "singleChannel: B04 / 2500;" in written
+    assert Converter().cscss_to_csjson(written) == data
+
+
+def test_channels_keep_parentheses_around_a_conditional_in_arithmetic():
+    data, written = _roundtrip_channels(
+        "L { colorChannels.r: (B04 < 10 ? 1 : 0) / 2; }\n"
+    )
+    assert "colorChannels.r: (B04 < 10 ? 1 : 0) / 2;" in written
+    assert Converter().cscss_to_csjson(written) == data

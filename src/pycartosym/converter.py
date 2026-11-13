@@ -463,30 +463,15 @@ class Converter:
     def _channel_expr_to_css(self, expr) -> str:
         """Format a channel expression to CSCSS.
 
-        The expression is a property-ref, an arithmetic expr, or a string.
+        The expression is a property-ref, an operation or function call
+        (arithmetic, ``?:``, ``pow(...)``...), or a literal; operations go
+        through the same CQL2 writer as selectors and ``opacity``.
         """
         if isinstance(expr, dict):
             if "property" in expr:
                 return str(expr["property"])
             if "op" in expr:
-                return self._arith_expr_to_css(expr)
-        return str(expr)
-
-    def _arith_expr_to_css(self, expr) -> str:
-        """Recursively convert an arithmetic expression dict back to CSCSS string."""
-        if isinstance(expr, dict):
-            if "property" in expr:
-                return str(expr["property"])
-            if "op" in expr and "args" in expr:
-                op = expr["op"]
-                args = [self._arith_expr_to_css(a) for a in expr["args"]]
-                if op in ("*", "/", "+", "-"):
-                    left, right = args[0], args[1]
-                    # Wrap sub-expressions in parens when needed to preserve precedence
-                    return f"({left} {op} {right})"
-                return " ".join([op] + args)
-        if isinstance(expr, (int, float)):
-            return str(expr)
+                return self._format_selector_expr(expr)
         return str(expr)
 
     def _channels_to_css(self, channels) -> str:
