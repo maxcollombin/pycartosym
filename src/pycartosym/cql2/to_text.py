@@ -206,10 +206,11 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
 
         # --- Text operation predicates: contains, startsWith, endsWith ---
         if op_lower in ("contains", "startswith", "endswith"):
+            # Written as in the Text Relation requirements (`contains(a, b)`).
             _text_op_to_cql = {
-                "contains": "CONTAINS",
-                "startswith": "STARTSWITH",
-                "endswith": "ENDSWITH",
+                "contains": "contains",
+                "startswith": "startsWith",
+                "endswith": "endsWith",
             }
             cql_name = _text_op_to_cql[op_lower]
             args_str = ", ".join(expression_to_text(a) for a in args)
