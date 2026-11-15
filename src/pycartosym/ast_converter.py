@@ -830,15 +830,30 @@ class AstToPydanticConverter:
                 if stroke:
                     symbolizer_data["stroke"] = stroke
 
+            # ``marker`` / ``label`` can also be an explicit ``null`` or an
+            # empty object: neither is the same as an absent property.
+            explicit: set[str] = getattr(ast_symbolizer, "model_fields_set", set())
             if hasattr(ast_symbolizer, "marker") and ast_symbolizer.marker:
                 marker = self._convert_marker(ast_symbolizer.marker)
                 if marker:
                     symbolizer_data["marker"] = marker
+                elif getattr(ast_symbolizer.marker, "_explicit_empty", False):
+                    from .models.symbolizers import Marker as PydanticMarker
+
+                    symbolizer_data["marker"] = PydanticMarker()
+            elif "marker" in explicit:
+                symbolizer_data["marker"] = None
 
             if hasattr(ast_symbolizer, "label") and ast_symbolizer.label:
                 label = self._convert_label(ast_symbolizer.label)
                 if label:
                     symbolizer_data["label"] = label
+                elif getattr(ast_symbolizer.label, "_explicit_empty", False):
+                    from .models.symbolizers import Label as PydanticLabel
+
+                    symbolizer_data["label"] = PydanticLabel()
+            elif "label" in explicit:
+                symbolizer_data["label"] = None
 
             # Coverage/Raster properties
             if (

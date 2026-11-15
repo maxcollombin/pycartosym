@@ -416,10 +416,17 @@ class Converter:
             lines.extend(self._fill_to_css(symbolizer.fill))
         if getattr(symbolizer, "stroke", None):
             lines.extend(self._stroke_to_css(symbolizer.stroke))
+        # An explicit ``null`` unsets the default Marker / Label: writing nothing
+        # would leave the default in place.
+        explicit: set[str] = getattr(symbolizer, "model_fields_set", set())
         if getattr(symbolizer, "marker", None):
             lines.extend(self._marker_to_css(symbolizer.marker))
+        elif "marker" in explicit:
+            lines.append("  marker: null;")
         if getattr(symbolizer, "label", None):
             lines.extend(self._label_to_css(symbolizer.label))
+        elif "label" in explicit:
+            lines.append("  label: null;")
         # Coverage / raster symbolizer properties
         # Use explicit None-check (not `or`) to correctly handle 0 / 0.0 / False
         sc = getattr(symbolizer, "single_channel", None)
@@ -569,6 +576,15 @@ class Converter:
                 )
         elements = getattr(marker, "elements", None)
         if not elements:
+            if getattr(marker, "alter", None):
+                return lines  # an alteration with no element changes nothing
+            if elements is None:
+                # A Marker with nothing in it is the explicit ``{ }`` (the
+                # default again); an absent marker is ``None`` and never gets here.
+                if not marker.model_dump(exclude_none=True):
+                    lines.append("  marker: { };")
+            else:
+                lines.append("  marker: {elements: []};")
             return lines
 
         # ── Indexed override: marker.elements[N]: Type { ... } ────────────────
@@ -612,6 +628,8 @@ class Converter:
         elements = getattr(label, "elements", None)
         placement = getattr(label, "placement", None)
         parts = []
+        if elements is not None and not elements and not getattr(label, "alter", None):
+            parts.append("elements: []")
         if elements:
             element_strs = [
                 self._graphic_element_to_css_block(el, indent=15)
@@ -628,6 +646,8 @@ class Converter:
             if placement_block is not None:
                 parts.append(f"placement: {placement_block}")
         if not parts:
+            if not label.model_dump(exclude_none=True):
+                lines.append("  label: { };")
             return lines
         lines.append(f"  label: {{{'; '.join(parts)}}};")
         return lines

@@ -52,6 +52,27 @@ from .models import Style
 
 logger = logging.getLogger(__name__)
 
+_NULL_VALUE_RE = re.compile(r"null", re.IGNORECASE)
+_EMPTY_OBJECT_RE = re.compile(r"\{\s*\}")
+_EMPTY_ELEMENTS_RE = re.compile(r"\{\s*elements\s*:\s*\[\s*\]\s*;?\s*\}")
+
+
+def _empty_form(value: str | None) -> str | None:
+    """Classify a ``marker`` / ``label`` value that carries no graphic.
+
+    Returns ``"null"`` for ``null`` (unsets the default), ``"empty"`` for ``{ }``
+    (the default again, replacing an inherited value), ``"no-elements"`` for
+    ``{ elements: [] }`` (no graphic), and ``None`` for anything else.
+    """
+    text = (value or "").strip().rstrip(";").strip()
+    if _NULL_VALUE_RE.fullmatch(text):
+        return "null"
+    if _EMPTY_OBJECT_RE.fullmatch(text):
+        return "empty"
+    if _EMPTY_ELEMENTS_RE.fullmatch(text):
+        return "no-elements"
+    return None
+
 
 class _CollectingErrorListener(ErrorListener):
     """ANTLR error listener that accumulates syntax errors.
@@ -1194,6 +1215,18 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
 
         # Special handler for marker property (must be first, not nested)
         if prop_name == "marker":
+            form = _empty_form(prop_value)
+            if form == "null":
+                symbolizer.marker = None  # recorded in model_fields_set
+                return
+            if form == "empty":
+                marker = ModelMarker()
+                marker._explicit_empty = True
+                symbolizer.marker = marker
+                return
+            if form == "no-elements":
+                symbolizer.marker = ModelMarker(elements=[])
+                return
             elements = []
             if expr_ctx is not None:
                 elements = self._extract_elements_from_antlr(expr_ctx)
@@ -1203,6 +1236,18 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
             return
 
         if prop_name == "label":
+            form = _empty_form(prop_value)
+            if form == "null":
+                symbolizer.label = None  # recorded in model_fields_set
+                return
+            if form == "empty":
+                label = ModelLabel()
+                label._explicit_empty = True
+                symbolizer.label = label
+                return
+            if form == "no-elements":
+                symbolizer.label = ModelLabel(elements=[])
+                return
             elements = []
             placement = None
             if expr_ctx is not None:

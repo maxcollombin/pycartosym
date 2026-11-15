@@ -8,7 +8,14 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any
 
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from ..cql2.model import BoolExpression, NumericExpression
 from .base import AlterMixin, BaseCartoSymModel, CommentMixin
@@ -271,6 +278,11 @@ class Marker(BaseCartoSymModel):
             return [v]
         return v
 
+    # Set by the CartoSym-CSS reader for an explicit ``marker: { }``: the empty
+    # object is not the same as no marker (it replaces an inherited one with
+    # the default), and it carries no field that could record the difference.
+    _explicit_empty: bool = PrivateAttr(default=False)
+
 
 class Label(BaseCartoSymModel):
     """Label symbolizer for text labels.
@@ -300,6 +312,9 @@ class Label(BaseCartoSymModel):
         if not isinstance(v, list) and v is not None:
             return [v]
         return v
+
+    # Same purpose as ``Marker._explicit_empty``, for ``label: { }``.
+    _explicit_empty: bool = PrivateAttr(default=False)
 
 
 # Graphic system classes
@@ -737,6 +752,34 @@ class Symbolizer(BaseCartoSymModel, CommentMixin):
                     "are accepted as extra keys"
                 )
         return self
+
+    @model_serializer(mode="wrap")
+    def _keep_explicit_null(self, handler: Any) -> dict[str, Any]:
+        """Keep ``marker: null`` / ``label: null``, which unset the default.
+
+        ``exclude_none=True`` drops every ``None``, but for these two
+        properties an explicit ``null`` differs from an absent one: it removes
+        the default Marker (or Label) instead of leaving it. ``model_fields_set``
+        tells the two apart; the key goes back at its declared position.
+        """
+        data: dict[str, Any] = handler(self)
+        explicit = [
+            name
+            for name in ("marker", "label")
+            if name in self.model_fields_set and getattr(self, name) is None
+        ]
+        if not explicit:
+            return data
+        ordered: dict[str, Any] = {}
+        for name, info in type(self).model_fields.items():
+            key = info.alias or name
+            if key in data:
+                ordered[key] = data[key]
+            elif name in explicit:
+                ordered[key] = None
+        for key, value in data.items():
+            ordered.setdefault(key, value)
+        return ordered
 
 
 # Enable forward references for nested types
