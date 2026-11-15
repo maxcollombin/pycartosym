@@ -1,0 +1,423 @@
+/* DGIWG Portrayal Registry - colour register (valid colours) */
+/* Source: https://portal.dgiwg.org/public_dgiwg/registry/api/collections/colour, read on 2026-11-15 */
+
+/* Black | CMYK 0 0 0 100 | CIELAB 31.9 1.6 1.5 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2101 */
+@CC_2101 = #4b4b4b;
+/* Black-7 | CMYK 0 0 0 7 | CIELAB 87.8 1.5 -4.3 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2102 */
+@CC_2102 = #e0e0e0;
+/* Black-12 | CMYK 0 0 0 12 | CIELAB 83.8 1.4 -4.2 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2103 */
+@CC_2103 = #d3d3d3;
+/* Black-21 | CMYK 0 0 0 21 | CIELAB 77.5 1.2 -3.7 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2104 */
+@CC_2104 = #c2c2c2;
+/* Black-31 | CMYK 0 0 0 31 | CIELAB 70.7 1.1 -2.9 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2105 */
+@CC_2105 = #aeaeae;
+/* Black-42 | CMYK 0 0 0 42 | CIELAB 64.6 1.1 -2.2 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2106 */
+@CC_2106 = #9e9e9e;
+/* Black-54 | CMYK 0 0 0 54 | CIELAB 57.7 1.1 -1.7 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2107 */
+@CC_2107 = #8b8b8b;
+/* Black-67 | CMYK 0 0 0 67 | CIELAB 50.8 1.1 -1.2 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_2108 */
+@CC_2108 = #797979;
+/* Aero-Blue072 | CMYK 92 70 0 0 | CIELAB 33.4 22.5 -48.7 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_2109 */
+@CC_2109 = #38469d;
+/* Aero-Blue072-12 | CMYK 11 8 0 0 | CIELAB 80.8 4.4 -17.3 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_2110 */
+@CC_2110 = #c0c7e9;
+/* Aero-Blue072-31 | CMYK 29 22 0 0 | CIELAB 64.1 8.8 -30.2 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_2111 */
+@CC_2111 = #8c99d1;
+/* Aero-Blue072-42 | CMYK 39 29 0 0 | CIELAB 57.5 11.2 -35.3 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_2112 */
+@CC_2112 = #7987c8;
+/* Aero-Blue072-54 | CMYK 50 38 0 0 | CIELAB 49.5 14.3 -40.8 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_2113 */
+@CC_2113 = #6171bb;
+/* Cyan | CMYK 100 0 0 0 | CIELAB 59.5 -26 -45.6 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_2114 */
+@CC_2114 = #00a0df;
+/* Cyan-7 | CMYK 7 0 0 0 | CIELAB 91.3 -1.9 -8.9 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_2115 */
+@CC_2115 = #d9e8f7;
+/* Cyan-31 | CMYK 31 0 0 0 | CIELAB 81.7 -9.3 -20.6 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_2116 */
+@CC_2116 = #9ed2f1;
+/* Blue-Light-Readable-Blue7462 | CMYK 78 32 10 11 | CIELAB 48.1 -3.3 -22.7 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_2117 */
+@CC_2117 = #507698;
+/* Blue-Light-Readable-Blue7462-7 | CMYK 5 2 1 1 | CIELAB 89.2 0.2 -10.1 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_2118 */
+@CC_2118 = #d7e1f3;
+/* Blue-Light-Readable-Blue7462-31 | CMYK 24 10 3 3 | CIELAB 71.8 -3.2 -19.1 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_2119 */
+@CC_2119 = #95b3d2;
+/* Red-Brown202 | CMYK 12 88 67 34 | CIELAB 42.4 29.9 7.8 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_2120 */
+@CC_2120 = #955058;
+/* Red-Brown202-7 | CMYK 1 6 5 2 | CIELAB 88 6.1 -4.8 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_2121 */
+@CC_2121 = #e5d9e6;
+/* Red-Brown202-12 | CMYK 1 11 8 4 | CIELAB 84.4 7.9 -4.4 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_2122 */
+@CC_2122 = #decedb;
+/* Red-Brown202-21 | CMYK 3 18 14 7 | CIELAB 78.4 11.3 -3.5 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_2123 */
+@CC_2123 = #d4bbc9;
+/* Red-Brown202-42 | CMYK 5 37 28 14 | CIELAB 66.8 17.9 -1 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_2124 */
+@CC_2124 = #c297a5;
+/* Red-Brown202-54 | CMYK 6 48 36 18 | CIELAB 58.7 22.7 1.3 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_2125 */
+@CC_2125 = #b47f8c;
+/* Topo-Green346 | CMYK 55 0 51 0 | CIELAB 57.8 -46.5 17.6 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_2126 */
+@CC_2126 = #179e6a;
+/* Topo-Green346-7 | CMYK 4 0 4 0 | CIELAB 89.6 -5.8 -0.9 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_2127 */
+@CC_2127 = #d4e5e3;
+/* Topo-Green346-12 | CMYK 7 0 6 0 | CIELAB 87.2 -9.2 0.4 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_2128 */
+@CC_2128 = #c8e0d9;
+/* Topo-Green346-31 | CMYK 17 0 16 0 | CIELAB 78.3 -21.2 6.3 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_2129 */
+@CC_2129 = #9acdb5;
+/* Topo-Green346-42 | CMYK 23 0 21 0 | CIELAB 73.7 -27 8.9 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_2130 */
+@CC_2130 = #83c2a4;
+/* Topo-Green346-54 | CMYK 30 0 28 0 | CIELAB 68.6 -34.2 12.1 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_2131 */
+@CC_2131 = #65b790;
+/* Green-Light-Readable-Green355 | CMYK 82 0 92 0 | CIELAB 55.2 -49 23.6 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_2132 */
+@CC_2132 = #039859;
+/* Green-Light-Readable-Green355-7 | CMYK 6 0 6 0 | CIELAB 88.8 -10 1.2 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_2133 */
+@CC_2133 = #cbe5dc;
+/* Green-Light-Readable-Green355-12 | CMYK 10 0 11 0 | CIELAB 86.1 -13.8 3.3 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_2134 */
+@CC_2134 = #bddfd1;
+/* Green-Light-Readable-Green355-31 | CMYK 25 0 29 0 | CIELAB 75.8 -29.4 12.4 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_2135 */
+@CC_2135 = #86c9a3;
+/* Green-Light-Readable-Green355-42 | CMYK 34 0 39 0 | CIELAB 70.5 -37 16.8 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_2136 */
+@CC_2136 = #68bd8d;
+/* Green-Light-Readable-Green355-54 | CMYK 44 0 50 0 | CIELAB 65.6 -42.6 20.1 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_2137 */
+@CC_2137 = #4db27a;
+/* Red032 | CMYK 0 79 60 0 | CIELAB 60 66 35 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_2140 */
+@CC_2140 = #f65058;
+/* Red032-12 | CMYK 0 11 4 0 | CIELAB 94 8 2 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_2141 */
+@CC_2141 = #ffeaeb;
+/* Yellow | CMYK 0 0 100 0 | CIELAB 88.9 -2.9 86.6 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_2156 */
+@CC_2156 = #ffdd16;
+/* Yellow-42 | CMYK 0 0 42 0 | CIELAB 91.4 -3.4 44.1 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_2157 */
+@CC_2157 = #fde691;
+/* Yellow-54 | CMYK 0 0 54 0 | CIELAB 90.7 -3.7 54.6 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_2158 */
+@CC_2158 = #ffe47a;
+/* Yellow-67 | CMYK 0 0 67 0 | CIELAB 90 -3.8 67.5 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_2159 */
+@CC_2159 = #ffe15b;
+/* Aero-Blue072-91 | CMYK 84 64 0 0 | CIELAB 33.9 22.6 -50.1 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_3001 */
+@CC_3001 = #3648a0;
+/* Aero-Blue072-79 | CMYK 73 55 0 0 | CIELAB 38.2 20.1 -47.3 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_3002 */
+@CC_3002 = #4353a7;
+/* Aero-Blue072-67 | CMYK 62 47 0 0 | CIELAB 42.1 18.2 -46.8 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_3003 */
+@CC_3003 = #4a5eb1;
+/* Aero-Blue072-21 | CMYK 19 15 0 0 | CIELAB 72 6.4 -24.1 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_3004 */
+@CC_3004 = #a5afdc;
+/* Aero-Blue072-7 | CMYK 6 5 0 0 | CIELAB 85.6 3.4 -13.7 | Pantone Blue 072 U - https://def.dgiwg.org/portrayal/colour/CC_3005 */
+@CC_3005 = #d0d5f0;
+/* Blue-Light-Readable-Blue7462-91 | CMYK 71 29 9 10 | CIELAB 50.3 -3.4 -22.7 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3006 */
+@CC_3006 = #567b9e;
+/* Blue-Light-Readable-Blue7462-79 | CMYK 62 25 8 9 | CIELAB 53.7 -3.8 -22.7 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3007 */
+@CC_3007 = #5e84a7;
+/* Blue-Light-Readable-Blue7462-67 | CMYK 52 21 7 7 | CIELAB 56.9 -3.9 -22.6 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3008 */
+@CC_3008 = #668caf;
+/* Blue-Light-Readable-Blue7462-54 | CMYK 42 17 5 6 | CIELAB 61.1 -4 -21.8 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3009 */
+@CC_3009 = #7297b9;
+/* Blue-Light-Readable-Blue7462-42 | CMYK 32 13 4 5 | CIELAB 66.2 -3.8 -20.7 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3010 */
+@CC_3010 = #82a5c6;
+/* Blue-Light-Readable-Blue7462-21 | CMYK 16 7 2 2 | CIELAB 78.8 -2.1 -16.1 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3011 */
+@CC_3011 = #aec6e1;
+/* Blue-Light-Readable-Blue7462-12 | CMYK 9 4 1 1 | CIELAB 85.8 -0.8 -12 | Pantone 7462 U - https://def.dgiwg.org/portrayal/colour/CC_3012 */
+@CC_3012 = #c9d8ed;
+/* Legacy-Blue285 | CMYK 70 30 0 0 | CIELAB 60.3 -4.8 -42.3 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3013 */
+@CC_3013 = #3c98dc;
+/* Legacy-Blue285-91 | CMYK 64 27 0 0 | CIELAB 61.5 -4.9 -41.2 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3014 */
+@CC_3014 = #449bdd;
+/* Legacy-Blue285-79 | CMYK 55 24 0 0 | CIELAB 64.5 -5.1 -38.3 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3015 */
+@CC_3015 = #56a3e0;
+/* Legacy-Blue285-67 | CMYK 47 20 0 0 | CIELAB 67.1 -4.9 -35.5 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3016 */
+@CC_3016 = #66a9e3;
+/* Legacy-Blue285-54 | CMYK 38 16 0 0 | CIELAB 71.4 -4.4 -31.3 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3017 */
+@CC_3017 = #7db4e7;
+/* Legacy-Blue285-42 | CMYK 29 13 0 0 | CIELAB 76.2 -4 -26.4 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3018 */
+@CC_3018 = #94c0ec;
+/* Legacy-Blue285-31 | CMYK 22 9 0 0 | CIELAB 80.2 -3 -21.9 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3019 */
+@CC_3019 = #a8caef;
+/* Legacy-Blue285-21 | CMYK 15 6 0 0 | CIELAB 84.2 -2.1 -17 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3020 */
+@CC_3020 = #bcd5f2;
+/* Legacy-Blue285-12 | CMYK 8 4 0 0 | CIELAB 88.4 -0.9 -12.4 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3021 */
+@CC_3021 = #d0dff5;
+/* Legacy-Blue285-7 | CMYK 5 2 0 0 | CIELAB 90.9 -0.1 -10 | Pantone 285 U - https://def.dgiwg.org/portrayal/colour/CC_3022 */
+@CC_3022 = #dbe6f8;
+/* Cyan-91 | CMYK 91 0 0 0 | CIELAB 61.1 -25.3 -43.5 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3023 */
+@CC_3023 = #00a3e0;
+/* Cyan-79 | CMYK 79 0 0 0 | CIELAB 65.8 -21.4 -38.5 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3024 */
+@CC_3024 = #00aee4;
+/* Cyan-67 | CMYK 67 0 0 0 | CIELAB 68.7 -19.5 -35.4 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3025 */
+@CC_3025 = #1eb4e7;
+/* Cyan-54 | CMYK 54 0 0 0 | CIELAB 72.9 -16.7 -30.4 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3026 */
+@CC_3026 = #59beea;
+/* Cyan-42 | CMYK 42 0 0 0 | CIELAB 78 -12.4 -24.9 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3027 */
+@CC_3027 = #84caee;
+/* Cyan-21 | CMYK 21 0 0 0 | CIELAB 86.3 -6 -15.1 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3028 */
+@CC_3028 = #bbddf4;
+/* Cyan-12 | CMYK 12 0 0 0 | CIELAB 89.4 -3.4 -11.5 | Pantone Process Cyan U - https://def.dgiwg.org/portrayal/colour/CC_3029 */
+@CC_3029 = #cee4f6;
+/* Hydro-Green3258 | CMYK 55 0 33 0 | CIELAB 69.8 -36 -2.6 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3030 */
+@CC_3030 = #47bcae;
+/* Hydro-Green3258-91 | CMYK 50 0 30 0 | CIELAB 71 -34.6 -2.9 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3031 */
+@CC_3031 = #50bfb2;
+/* Hydro-Green3258-79 | CMYK 43 0 26 0 | CIELAB 72.5 -32.2 -3.1 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3032 */
+@CC_3032 = #5dc2b6;
+/* Hydro-Green3258-67 | CMYK 37 0 22 0 | CIELAB 74.8 -30.2 -3.6 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3033 */
+@CC_3033 = #6ac8be;
+/* Hydro-Green3258-54 | CMYK 30 0 18 0 | CIELAB 77.8 -25.5 -4.2 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3034 */
+@CC_3034 = #80cec7;
+/* Hydro-Green3258-42 | CMYK 23 0 14 0 | CIELAB 80.3 -22.2 -4.5 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3035 */
+@CC_3035 = #90d3cf;
+/* Hydro-Green3258-31 | CMYK 17 0 10 0 | CIELAB 83.7 -16.7 -4.7 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3036 */
+@CC_3036 = #a7dad9;
+/* Hydro-Green3258-21 | CMYK 12 0 7 0 | CIELAB 86.8 -11.6 -4.7 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3037 */
+@CC_3037 = #bce0e2;
+/* Hydro-Green3258-12 | CMYK 7 0 4 0 | CIELAB 89.8 -6.8 -5 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3038 */
+@CC_3038 = #cfe6eb;
+/* Hydro-Green3258-7 | CMYK 4 0 2 0 | CIELAB 91.9 -3.6 -5.1 | Pantone 3258 U - https://def.dgiwg.org/portrayal/colour/CC_3039 */
+@CC_3039 = #dbeaf1;
+/* Green-Light-Readable-Green355-91 | CMYK 75 0 84 0 | CIELAB 56.6 -46.1 22 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_3040 */
+@CC_3040 = #239b60;
+/* Green-Light-Readable-Green355-79 | CMYK 65 0 73 0 | CIELAB 58.2 -46.1 22 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_3041 */
+@CC_3041 = #299f64;
+/* Green-Light-Readable-Green355-67 | CMYK 55 0 62 0 | CIELAB 60.6 -45.5 21.7 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_3042 */
+@CC_3042 = #34a56a;
+/* Green-Light-Readable-Green355-21 | CMYK 17 0 19 0 | CIELAB 80.6 -21.8 7.9 | Pantone 355 U - https://def.dgiwg.org/portrayal/colour/CC_3043 */
+@CC_3043 = #a1d3b9;
+/* Topo-Green346-91 | CMYK 50 0 46 0 | CIELAB 58.9 -47.2 17.9 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_3044 */
+@CC_3044 = #17a16d;
+/* Topo-Green346-79 | CMYK 43 0 40 0 | CIELAB 61.5 -43.6 16.4 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_3045 */
+@CC_3045 = #35a776;
+/* Topo-Green346-67 | CMYK 37 0 34 0 | CIELAB 65.5 -40.6 14.9 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_3046 */
+@CC_3046 = #4cb183;
+/* Topo-Green346-21 | CMYK 12 0 11 0 | CIELAB 82.5 -15.2 3.2 | Pantone 346 U - https://def.dgiwg.org/portrayal/colour/CC_3047 */
+@CC_3047 = #b0d6c7;
+/* Yellow-91 | CMYK 0 0 91 0 | CIELAB 88.6 -2.8 81.1 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_3048 */
+@CC_3048 = #ffdc30;
+/* Yellow-79 | CMYK 0 0 79 0 | CIELAB 89.8 -3.5 74 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_3049 */
+@CC_3049 = #ffe04a;
+/* Yellow-31 | CMYK 0 0 31 0 | CIELAB 91.5 -2.8 32.8 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_3050 */
+@CC_3050 = #f8e6a8;
+/* Yellow-21 | CMYK 0 0 21 0 | CIELAB 92.9 -1.9 21.3 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_3051 */
+@CC_3051 = #f7eac2;
+/* Yellow-12 | CMYK 0 0 12 0 | CIELAB 93.6 -0.8 11.6 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_3052 */
+@CC_3052 = #f5ecd6;
+/* Yellow-7 | CMYK 0 0 7 0 | CIELAB 94 -0.1 6 | Pantone Process Yellow U - https://def.dgiwg.org/portrayal/colour/CC_3053 */
+@CC_3053 = #f3ede2;
+/* Brown7504 | CMYK 15 27 46 37 | CIELAB 58.5 6.3 10.4 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3054 */
+@CC_3054 = #9f887b;
+/* Brown7504-91 | CMYK 14 25 42 34 | CIELAB 60.3 6.2 10.3 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3055 */
+@CC_3055 = #a38d80;
+/* Brown7504-79 | CMYK 12 21 36 29 | CIELAB 60 5.8 9.2 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3056 */
+@CC_3056 = #a18d81;
+/* Brown7504-67 | CMYK 10 18 31 25 | CIELAB 63.9 5.6 8.6 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3057 */
+@CC_3057 = #ab978c;
+/* Brown7504-54 | CMYK 8 15 25 20 | CIELAB 68.1 5 6.7 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3058 */
+@CC_3058 = #b4a39a;
+/* Brown7504-42 | CMYK 6 11 19 16 | CIELAB 73.2 4.3 4.6 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3059 */
+@CC_3059 = #bfb1ab;
+/* Brown7504-31 | CMYK 5 8 14 11 | CIELAB 77.7 3.7 2.9 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3060 */
+@CC_3060 = #c9bebb;
+/* Brown7504-12 | CMYK 2 3 6 4 | CIELAB 86.3 2.6 -0.7 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3061 */
+@CC_3061 = #dcd6d9;
+/* Brown7504-7 | CMYK 1 2 3 3 | CIELAB 89 2.2 -1.5 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3062 */
+@CC_3062 = #e3dee2;
+/* Black-91 | CMYK 0 0 0 91 | CIELAB 39.1 1.4 0.5 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_3063 */
+@CC_3063 = #5c5c5c;
+/* Black-79 | CMYK 0 0 0 79 | CIELAB 42.5 1.2 -0.2 | Pantone Process Black U - https://def.dgiwg.org/portrayal/colour/CC_3064 */
+@CC_3064 = #646464;
+/* Yellow-Brown7413 | CMYK 0 44 81 2 | CIELAB 69.6 21.2 37.7 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3065 */
+@CC_3065 = #e19a66;
+/* Yellow-Brown7413-91 | CMYK 0 40 74 2 | CIELAB 70.5 20.4 36.6 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3066 */
+@CC_3066 = #e39d6b;
+/* Yellow-Brown7413-79 | CMYK 0 35 64 2 | CIELAB 72.6 18.3 32.8 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3067 */
+@CC_3067 = #e4a477;
+/* Yellow-Brown7413-67 | CMYK 0 29 54 1 | CIELAB 74.4 16.4 29.7 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3068 */
+@CC_3068 = #e5ab81;
+/* Yellow-Brown7413-54 | CMYK 0 24 44 1 | CIELAB 76.8 14.4 26.4 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3069 */
+@CC_3069 = #e7b38e;
+/* Yellow-Brown7413-42 | CMYK 0 18 34 1 | CIELAB 79.6 12 22 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3070 */
+@CC_3070 = #eabc9d;
+/* Yellow-Brown7413-21 | CMYK 0 9 17 0 | CIELAB 85.5 7.1 12.1 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3071 */
+@CC_3071 = #ecd0bf;
+/* Yellow-Brown7413-12 | CMYK 0 5 10 0 | CIELAB 88.6 4.8 6.6 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3072 */
+@CC_3072 = #eddbd2;
+/* Yellow-Brown7413-7 | CMYK 0 3 6 0 | CIELAB 90.8 3.1 3.5 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3073 */
+@CC_3073 = #eee2de;
+/* Red032-91 | CMYK 0 72 51 0 | CIELAB 63 60 30 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3074 */
+@CC_3074 = #fc6167;
+/* Red032-79 | CMYK 0 63 40 0 | CIELAB 67 53 24 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3075 */
+@CC_3075 = #fd767b;
+/* Red032-67 | CMYK 0 55 31 0 | CIELAB 71 45 18 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3076 */
+@CC_3076 = #fd8a8f;
+/* Red032-54 | CMYK 0 44 23 0 | CIELAB 76 35 13 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3077 */
+@CC_3077 = #fda1a5;
+/* Red032-42 | CMYK 0 35 17 0 | CIELAB 81 27 0 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3078 */
+@CC_3078 = #feb6b9;
+/* Red032-31 | CMYK 0 26 12 0 | CIELAB 86 20 7 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3079 */
+@CC_3079 = #fec9cb;
+/* Red032-21 | CMYK 0 18 8 0 | CIELAB 90 13 4 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3080 */
+@CC_3080 = #fedadc;
+/* Red032-7 | CMYK 0 7 3 0 | CIELAB 97 4 2 | Pantone Red 032 U - https://def.dgiwg.org/portrayal/colour/CC_3081 */
+@CC_3081 = #fff3f3;
+/* Red-Brown202-91 | CMYK 11 80 61 31 | CIELAB 44 30.6 7 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_3082 */
+@CC_3082 = #9a535e;
+/* Red-Brown202-79 | CMYK 9 70 53 27 | CIELAB 47.8 28.5 5.5 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_3083 */
+@CC_3083 = #a15e69;
+/* Red-Brown202-67 | CMYK 8 59 45 23 | CIELAB 52.7 26.3 3.3 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_3084 */
+@CC_3084 = #aa6c79;
+/* Red-Brown202-31 | CMYK 4 27 21 11 | CIELAB 72.6 14.4 -2.4 | Pantone 202 U - https://def.dgiwg.org/portrayal/colour/CC_3085 */
+@CC_3085 = #cba9b7;
+/* Magenta | CMYK 0 100 0 0 | CIELAB 58.7 64.1 0 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3086 */
+@CC_3086 = #ef5490;
+/* Magenta-91 | CMYK 0 91 0 0 | CIELAB 57 59.1 -2.6 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3087 */
+@CC_3087 = #e2578f;
+/* Magenta-79 | CMYK 0 79 0 0 | CIELAB 60.8 52.1 -3.9 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3088 */
+@CC_3088 = #e36a9b;
+/* Magenta-67 | CMYK 0 67 0 0 | CIELAB 65.2 44.9 -5.3 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3089 */
+@CC_3089 = #e57ea9;
+/* Magenta-54 | CMYK 0 54 0 0 | CIELAB 68.9 38.7 -6 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3090 */
+@CC_3090 = #e68db4;
+/* Magenta-42 | CMYK 0 42 0 0 | CIELAB 73 32.3 -6.2 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3091 */
+@CC_3091 = #e79ebf;
+/* Magenta-31 | CMYK 0 31 0 0 | CIELAB 77.5 25.5 -6.5 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3092 */
+@CC_3092 = #e9afcc;
+/* Magenta-21 | CMYK 0 21 0 0 | CIELAB 82.6 18.5 -6.6 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3093 */
+@CC_3093 = #ebc2da;
+/* Magenta-12 | CMYK 0 12 0 0 | CIELAB 87 12.3 -6.1 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3094 */
+@CC_3094 = #edd3e6;
+/* Magenta-7 | CMYK 0 7 0 0 | CIELAB 89.7 8.4 -5.8 | Pantone Process Magenta U - https://def.dgiwg.org/portrayal/colour/CC_3095 */
+@CC_3095 = #eddded;
+/* Purple-Brown688 | CMYK 34 64 19 1 | CIELAB 56.6 26.3 -7 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3096 */
+@CC_3096 = #af7795;
+/* Purple-Brown688-91 | CMYK 31 58 17 1 | CIELAB 57.5 25.8 -6.9 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3097 */
+@CC_3097 = #b17a97;
+/* Purple-Brown688-79 | CMYK 27 51 15 1 | CIELAB 59.9 25.7 -7.1 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3098 */
+@CC_3098 = #b7809d;
+/* Purple-Brown688-67 | CMYK 23 43 13 1 | CIELAB 63.6 23 -7.1 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3099 */
+@CC_3099 = #bd8ca7;
+/* Purple-Brown688-54 | CMYK 18 35 10 1 | CIELAB 67.5 20.6 -6.8 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3100 */
+@CC_3100 = #c498b1;
+/* Purple-Brown688-42 | CMYK 14 27 8 0 | CIELAB 72.8 18.1 -6.8 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3101 */
+@CC_3101 = #cea8c0;
+/* Purple-Brown688-21 | CMYK 7 13 4 0 | CIELAB 81.7 11.8 -6.2 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3102 */
+@CC_3102 = #ddc4d7;
+/* Purple-Brown688-12 | CMYK 4 8 2 0 | CIELAB 86.5 8.3 -5.9 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3103 */
+@CC_3103 = #e4d4e4;
+/* Purple-Brown688-7 | CMYK 2 4 1 0 | CIELAB 89.5 6.4 -5.5 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3104 */
+@CC_3104 = #e9ddec;
+/* Hydro-Purple2577 | CMYK 32 43 0 0 | CIELAB 56.4 24.6 -31.7 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3105 */
+@CC_3105 = #967bbf;
+/* Hydro-Purple2577-91 | CMYK 29 39 0 0 | CIELAB 57.3 24.1 -31.3 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3106 */
+@CC_3106 = #987dc0;
+/* Hydro-Purple2577-79 | CMYK 25 34 0 0 | CIELAB 59.2 23.9 -31 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3107 */
+@CC_3107 = #9d82c5;
+/* Hydro-Purple2577-67 | CMYK 21 29 0 0 | CIELAB 61 23.5 -30.7 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3108 */
+@CC_3108 = #a287ca;
+/* Hydro-Purple2577-54 | CMYK 17 23 0 0 | CIELAB 64.8 22.3 -29.5 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3109 */
+@CC_3109 = #ab92d2;
+/* Hydro-Purple2577-42 | CMYK 13 18 0 0 | CIELAB 69.2 20.1 -27 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3110 */
+@CC_3110 = #b69fda;
+/* Hydro-Purple2577-31 | CMYK 10 13 0 0 | CIELAB 73.3 17.3 -23.9 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3111 */
+@CC_3111 = #bfabe0;
+/* Hydro-Purple2577-21 | CMYK 7 9 0 0 | CIELAB 78.3 13.6 -19.8 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3112 */
+@CC_3112 = #cabbe6;
+/* Hydro-Purple2577-12 | CMYK 4 5 0 0 | CIELAB 84.2 9.9 -15.3 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3113 */
+@CC_3113 = #d7cdef;
+/* Hydro-Purple2577-7 | CMYK 2 3 0 0 | CIELAB 87.5 7.5 -12.4 | Pantone 2577 U - https://def.dgiwg.org/portrayal/colour/CC_3114 */
+@CC_3114 = #dfd8f3;
+/* Brown7504-21 | CMYK 3 6 10 8 | CIELAB 82.6 3.1 0.8 | Pantone 7504 U - https://def.dgiwg.org/portrayal/colour/CC_3117 */
+@CC_3117 = #d4cccc;
+/* Yellow-Brown7413-31 | CMYK 0 14 25 1 | CIELAB 82.7 9.3 16.5 | Pantone 7413 U - https://def.dgiwg.org/portrayal/colour/CC_3118 */
+@CC_3118 = #ebc7b0;
+/* Purple-Brown688-31 | CMYK 11 20 6 0 | CIELAB 75.9 15.7 -6.8 | Pantone 688 U - https://def.dgiwg.org/portrayal/colour/CC_3119 */
+@CC_3119 = #d3b2c8;
+/* Reflex-Blue | CMYK 100 74 5 5 | CIELAB 34 14 -48 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3200 */
+@CC_3200 = #374a9c;
+/* Reflex-Blue-91 | CMYK 100 71 2 1 | CIELAB 40 11 -43 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3201 */
+@CC_3201 = #495aa5;
+/* Reflex-Blue-79 | CMYK 84 58 1 0 | CIELAB 48 8 -37 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3202 */
+@CC_3202 = #6170b1;
+/* Reflex-Blue-67 | CMYK 66 46 3 0 | CIELAB 57 5 -31 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3203 */
+@CC_3203 = #7986bd;
+/* Reflex-Blue-54 | CMYK 49 35 4 0 | CIELAB 65 4 -24 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3204 */
+@CC_3204 = #939dc9;
+/* Reflex-Blue-42 | CMYK 37 26 5 0 | CIELAB 73 2 -18 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3205 */
+@CC_3205 = #abb3d5;
+/* Reflex-Blue-31 | CMYK 26 19 4 0 | CIELAB 80 2 -13 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3206 */
+@CC_3206 = #c1c7e0;
+/* Reflex-Blue-21 | CMYK 17 13 3 0 | CIELAB 87 1 -9 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3207 */
+@CC_3207 = #d5d9ea;
+/* Reflex-Blue-12 | CMYK 10 7 2 0 | CIELAB 92 1 -5 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3208 */
+@CC_3208 = #e7e9f3;
+/* Reflex-Blue-7 | CMYK 6 4 1 0 | CIELAB 96 0 -3 | Pantone Reflex
+Blue U - https://def.dgiwg.org/portrayal/colour/CC_3209 */
+@CC_3209 = #f1f2f8;
+/* Enroute-Chart-Green354 | CMYK 82 5 88 0 | CIELAB 59 -60 26 | Pantone 354 U - https://def.dgiwg.org/portrayal/colour/CC_3210 */
+@CC_3210 = #308167;
+/* Enroute-Chart-Green354-67 | CMYK 54.9 3.4 59 0 | CIELAB 69 -37 12 | Pantone 354 U - https://def.dgiwg.org/portrayal/colour/CC_3211 */
+@CC_3211 = #50b990;
+/* Enroute-Chart-Green354-42 | CMYK 34.4 2.1 37 0 | CIELAB 79 -22 6 | Pantone 354 U - https://def.dgiwg.org/portrayal/colour/CC_3212 */
+@CC_3212 = #8ccdb8;
+/* Enroute-Chart-Green354-21 | CMYK 17.2 1.1 18.5 0 | CIELAB 87 -10 1 | Pantone 354 U - https://def.dgiwg.org/portrayal/colour/CC_3213 */
+@CC_3213 = #bfdfda;
+/* Aero-Green3415 | CMYK 81 29 67 11 | CIELAB 46 -31 5 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3214 */
+@CC_3214 = #308167;
+/* Aero-Green3415-91 | CMYK 74 26 61 10 | CIELAB 48 -25 0 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3215 */
+@CC_3215 = #357e6f;
+/* Aero-Green3415-79 | CMYK 64 22 53 9 | CIELAB 55 -22 -1 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3216 */
+@CC_3216 = #4e8d82;
+/* Aero-Green3415-67 | CMYK 54 19 45 7 | CIELAB 60 -18 -2 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3217 */
+@CC_3217 = #679c94;
+/* Aero-Green3415-54 | CMYK 44 16 36 6 | CIELAB 67 -14 -2 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3218 */
+@CC_3218 = #81aca8;
+/* Aero-Green3415-42 | CMYK 34 12 28 5 | CIELAB 74 -11 -3 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3219 */
+@CC_3219 = #9bbcba;
+/* Aero-Green3415-31 | CMYK 25 9 21 3 | CIELAB 79 -7 -3 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3220 */
+@CC_3220 = #b2cacd;
+/* Aero-Green3415-21 | CMYK 17 6 14 2 | CIELAB 84 -4 -4 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3221 */
+@CC_3221 = #c6d6da;
+/* Aero-Green3415-12 | CMYK 10 3 8 1.3 | CIELAB 89 -2 -4 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3222 */
+@CC_3222 = #d9e1e8;
+/* Aero-Green3415-7 | CMYK 6 2 5 1 | CIELAB 92 0 -5 | Pantone 3415 U - https://def.dgiwg.org/portrayal/colour/CC_3223 */
+@CC_3223 = #e3e7f0;
+/* Orange1655 | CMYK 0 63 73 0 | CIELAB 67 58 51 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3224 */
+@CC_3224 = #ff704b;
+/* Orange1655-91 | CMYK 0 57 78 0 | CIELAB 68 48 51 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3225 */
+@CC_3225 = #ff7d4b;
+/* Orange1655-79 | CMYK 0 51 53 0 | CIELAB 71 42 35 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3226 */
+@CC_3226 = #ff8e71;
+/* Orange1655-67 | CMYK 0 44 43 0 | CIELAB 75 35 29 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3227 */
+@CC_3227 = #ff9f86;
+/* Orange1655-54 | CMYK 0 36 32 0 | CIELAB 80 27 22 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3228 */
+@CC_3228 = #ffb29e;
+/* Orange1655-42 | CMYK 0 28 24 0 | CIELAB 84 20 17 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3229 */
+@CC_3229 = #ffc3b2;
+/* Orange1655-31 | CMYK 0 21 17 0 | CIELAB 88 15 12 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3230 */
+@CC_3230 = #ffd3c7;
+/* Orange1655-21 | CMYK 0 15 11 0 | CIELAB 92 10 8 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3231 */
+@CC_3231 = #ffe1d9;
+/* Orange1655-12 | CMYK 0 9 6 0 | CIELAB 95 5 5 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3232 */
+@CC_3232 = #ffeee9;
+/* Orange1655-7 | CMYK 0 5 4 0 | CIELAB 97 3 3 | Pantone 1655 U - https://def.dgiwg.org/portrayal/colour/CC_3233 */
+@CC_3233 = #fff5f2;
+/* Purple | CMYK 29 76 0 0 | CIELAB 53 55 -30 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3234 */
+@CC_3234 = #c553b5;
+/* Purple-91 | CMYK 26 70 0 0 | CIELAB 57 50 -28 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3235 */
+@CC_3235 = #ca63bc;
+/* Purple-79 | CMYK 20 60 0 0 | CIELAB 63 43 -24 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3236 */
+@CC_3236 = #d279c5;
+/* Purple-67 | CMYK 16 51 0 0 | CIELAB 68 37 -21 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3237 */
+@CC_3237 = #d88ccd;
+/* Purple-54 | CMYK 12 42 0 0 | CIELAB 74 30 -10 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3238 */
+@CC_3238 = #e0a2d7;
+/* Purple-42 | CMYK 8 32 0 0 | CIELAB 80 23 -14 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3239 */
+@CC_3239 = #e7b7e0;
+/* Purple-31 | CMYK 6 24 0 0 | CIELAB 85 16 -10 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3240 */
+@CC_3240 = #edcae8;
+/* Purple-21 | CMYK 4 17 0 0 | CIELAB 90 11 -7 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3241 */
+@CC_3241 = #f3dbef;
+/* Purple-12 | CMYK 2 10 0 0 | CIELAB 94 6 -4 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3242 */
+@CC_3242 = #f8eaf6;
+/* Purple-7 | CMYK 2 6 0 0 | CIELAB 97 4 -2 | Pantone Purple U - https://def.dgiwg.org/portrayal/colour/CC_3243 */
+@CC_3243 = #fbf3fa;
+/* Blue-Light-Readable-Blue 2665-91 | CMYK 3 4 0 0 | CIELAB 87.2 6.1 -13.5 | Pantone 2665 U - https://def.dgiwg.org/portrayal/colour/CC_3300 */
+@CC_3300 = #dad8f5;

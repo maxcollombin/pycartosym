@@ -5,12 +5,13 @@ interface and writes one style variable per valid colour, as CartoSym-CSS and
 as CS-JSON. CMYK, CIELAB and Pantone values have no counterpart in the model;
 they are kept in a comment next to each variable.
 
-Usage: ``uv run python scripts/dgiwg_colours.py [--out-dir examples]``.
+Usage: ``uv run python scripts/dgiwg_colours.py [--out-dir examples/dgiwg]``.
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import urllib.request
@@ -20,15 +21,26 @@ from typing import Any
 from pycartosym.converter import Converter
 
 API = "https://portal.dgiwg.org/public_dgiwg/registry/api"
+_PAGE = 500
 _NAME_RE = re.compile(r"[^A-Za-z0-9_]")
 
 
 def fetch_colours(api: str = API) -> list[dict[str, Any]]:
-    """Return the valid colours of the register, in register order."""
-    url = f"{api}/collections/colour/items?limit=1000"
-    with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310
-        data = json.load(response)
-    return [f for f in data["features"] if f["properties"]["status"] == "valid"]
+    """Return the valid colours of the register, in register order.
+
+    The API returns at most 500 items per page, so the pages are followed.
+    """
+    features: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        url = f"{api}/collections/colour/items?limit={_PAGE}&offset={offset}"
+        with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310
+            page = json.load(response)["features"]
+        features += page
+        if len(page) < _PAGE:
+            break
+        offset += _PAGE
+    return [f for f in features if f["properties"]["status"] == "valid"]
 
 
 def variable_name(feature: dict[str, Any]) -> str:
@@ -46,10 +58,12 @@ def _comment(props: dict[str, Any]) -> str:
     return " | ".join(parts).replace("*/", "* /")
 
 
-def to_cscss(features: list[dict[str, Any]]) -> str:
+def to_cscss(features: list[dict[str, Any]], date: str = "") -> str:
     """Write the colours as CartoSym-CSS variables."""
+    source = f"{API}/collections/colour" + (f", read on {date}" if date else "")
     lines = [
         "/* DGIWG Portrayal Registry - colour register (valid colours) */",
+        f"/* Source: {source} */",
         "",
     ]
     for feature in features:
@@ -62,9 +76,9 @@ def to_cscss(features: list[dict[str, Any]]) -> str:
 def main() -> None:
     """Write ``dgiwg-colours.cscss`` and ``dgiwg-colours.cs.json``."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out-dir", type=Path, default=Path("examples"))
+    parser.add_argument("--out-dir", type=Path, default=Path("examples/dgiwg"))
     args = parser.parse_args()
-    cscss = to_cscss(fetch_colours())
+    cscss = to_cscss(fetch_colours(), datetime.date.today().isoformat())
     csjson = Converter().cscss_to_csjson(cscss)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "dgiwg-colours.cscss").write_text(cscss, encoding="utf-8")
