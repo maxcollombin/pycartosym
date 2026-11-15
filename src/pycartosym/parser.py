@@ -11,6 +11,7 @@ from pathlib import Path
 
 from antlr4 import CommonTokenStream, InputStream, ParseTreeWalker, Token
 from antlr4.error.ErrorListener import ErrorListener
+from antlr4.tree.Tree import ErrorNode, TerminalNode
 
 from pycartosym.exceptions import CartoSymSyntaxError
 from pycartosym.models.symbolizers import Fill as ModelFill
@@ -72,6 +73,31 @@ def _empty_form(value: str | None) -> str | None:
     if _EMPTY_ELEMENTS_RE.fullmatch(text):
         return "no-elements"
     return None
+
+
+class _IterativeParseTreeWalker(ParseTreeWalker):
+    """Walk a parse tree without recursion.
+
+    The stock walker recurses once per tree level. The grammar nests the
+    styling rule list one level per rule, so a style of about a thousand rules
+    would exceed the recursion limit.
+    """
+
+    def walk(self, listener, t):
+        """Send the enter, visit and exit events of ``t`` and its descendants."""
+        stack = [(t, False)]
+        while stack:
+            node, done = stack.pop()
+            if isinstance(node, ErrorNode):
+                listener.visitErrorNode(node)
+            elif isinstance(node, TerminalNode):
+                listener.visitTerminal(node)
+            elif done:
+                self.exitRule(listener, node)
+            else:
+                self.enterRule(listener, node)
+                stack.append((node, True))
+                stack.extend((c, False) for c in reversed(list(node.getChildren())))
 
 
 class _CollectingErrorListener(ErrorListener):
@@ -376,8 +402,7 @@ class CartoSymParser:
 
         # Create listener and walk the tree
         listener = CartoSymStyleSheetListener()
-        walker = ParseTreeWalker()
-        walker.walk(listener, tree)
+        _IterativeParseTreeWalker().walk(listener, tree)
         # enterStyleSheet always assigns listener.stylesheet during the walk.
         assert listener.stylesheet is not None
         # Post-process AST to merge orphaned marker.elements[N] assignments
