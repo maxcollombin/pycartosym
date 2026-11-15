@@ -25,15 +25,15 @@ _PAGE = 500
 _NAME_RE = re.compile(r"[^A-Za-z0-9_]")
 
 
-def fetch_colours(api: str = API) -> list[dict[str, Any]]:
-    """Return the valid colours of the register, in register order.
+def fetch_items(collection: str, api: str = API) -> list[dict[str, Any]]:
+    """Return the valid items of a register, in register order.
 
     The API returns at most 500 items per page, so the pages are followed.
     """
     features: list[dict[str, Any]] = []
     offset = 0
     while True:
-        url = f"{api}/collections/colour/items?limit={_PAGE}&offset={offset}"
+        url = f"{api}/collections/{collection}/items?limit={_PAGE}&offset={offset}"
         with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310
             page = json.load(response)["features"]
         features += page
@@ -41,6 +41,11 @@ def fetch_colours(api: str = API) -> list[dict[str, Any]]:
             break
         offset += _PAGE
     return [f for f in features if f["properties"]["status"] == "valid"]
+
+
+def fetch_colours(api: str = API) -> list[dict[str, Any]]:
+    """Return the valid colours of the register, in register order."""
+    return fetch_items("colour", api)
 
 
 def variable_name(feature: dict[str, Any]) -> str:
