@@ -15,8 +15,6 @@ import datetime
 import json
 import re
 import sys
-import threading
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -118,19 +116,6 @@ def split_valid(
     return kept, skipped
 
 
-def _with_deep_stack(function: Callable[[], None]) -> None:
-    """Run ``function`` with a deep recursion limit and a large thread stack.
-
-    The grammar lists styling rules recursively, so a style sheet of about
-    three thousand rules needs a deeper stack than the default.
-    """
-    sys.setrecursionlimit(1_000_000)
-    threading.stack_size(512 * 1024 * 1024)
-    thread = threading.Thread(target=function)
-    thread.start()
-    thread.join()
-
-
 def _write(out_dir: Path) -> None:
     """Write ``dgiwg-rules.cscss`` and ``dgiwg-rules.cs.json``."""
     features, skipped = split_valid(fetch_items("rule"))
@@ -149,7 +134,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, default=Path("examples/dgiwg"))
     args = parser.parse_args()
-    _with_deep_stack(lambda: _write(args.out_dir))
+    _write(args.out_dir)
 
 
 if __name__ == "__main__":
