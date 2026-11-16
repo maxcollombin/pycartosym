@@ -513,6 +513,12 @@ def _normalize_graphic_element(el: dict) -> None:
     if "size" in el and isinstance(el["size"], str):
         el["size"] = _coerce_unit_scalar(el["size"], ctx_map.get("size"))
 
+    # A hex colour is [r, g, b] everywhere else (fill, stroke, font): a Dot's
+    # colour and an Image's tint / blackTint likewise.
+    for color_key in ("color", "tint", "blackTint"):
+        if isinstance(el.get(color_key), str):
+            el[color_key] = _parse_color_value(el[color_key])
+
     # position2D / position_2d (CSCSS syntax) → the schema's `position`
     # field (a UnitPoint): "{ 10, -4 }" → {x: 10, y: -4}
     for pos_key in ("position2D", "position_2d"):
@@ -1050,6 +1056,7 @@ class AstToPydanticConverter:
                 ("cap", "cap"),
                 ("join", "join"),
                 ("dash_pattern", "dashPattern"),
+                ("dash_offset", "dashOffset"),
                 ("casing", "casing"),
                 ("center_line", "centerLine"),
                 ("pattern", "pattern"),

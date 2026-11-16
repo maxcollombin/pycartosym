@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 from antlr4 import CommonTokenStream, InputStream, ParseTreeWalker, Token
 from antlr4.error.ErrorListener import ErrorListener
@@ -19,10 +20,12 @@ from pycartosym.models.symbolizers import Label as ModelLabel
 from pycartosym.models.symbolizers import Marker as ModelMarker
 from pycartosym.models.symbolizers import Stroke as ModelStroke
 from pycartosym.models.symbolizers import Symbolizer as ModelSymbolizer
+from pycartosym.models.types import json_unit
 
 from .ast import Metadata, StyleSheet, StylingRule, StylingRuleList
 from .ast import PropertyAssignment as AstPropertyAssignment
 from .ast_converter import (
+    _IDENTIFIER_RE,
     _coerce_transform,
     _coerce_unit_scalar,
     _normalize_graphic_element,
@@ -146,21 +149,33 @@ _STROKE_STYLING_PROPERTIES = {
 }
 
 
-def _dash_pattern(text: str) -> list[int] | None:
+def _dash_pattern(text: str) -> list[Any] | None:
     """Parse a ``dashPattern`` value, a tuple (``5 5``) or an array (``[2, 1]``).
 
-    Returns ``None`` (with a warning) for anything that is not a list of
-    non-negative integers, so the pattern is not dropped without a trace.
+    A length is a non-negative number in pixels, or a ``{unit: value}`` dict
+    when it carries a unit (``8 px``, ``1 mm``). Returns ``None`` (with a
+    warning) for anything else, so the pattern is not dropped without a trace.
     """
-    items = text.strip().strip("[]()").replace(",", " ").split()
-    try:
-        values = [float(item) for item in items]
-    except ValueError:
-        values = []
-    if not values or any(v < 0 or v != int(v) for v in values):
+    tokens = text.strip().strip("[]()").replace(",", " ").split()
+    values: list[Any] = []
+    for token in tokens:
+        try:
+            number = float(token)
+        except ValueError:
+            if not values or isinstance(values[-1], dict):
+                values = []
+                break
+            values[-1] = {json_unit(token): values[-1]}  # a unit follows its number
+            continue
+        if number < 0:
+            values = []
+            break
+        values.append(int(number) if number.is_integer() else number)
+    if not values or any(isinstance(v, float) for v in values):
+        # a bare length is a whole number of pixels
         logger.warning("stroke.dashPattern: cannot parse %r, ignored", text)
         return None
-    return [int(v) for v in values]
+    return values
 
 
 def _stroke_styling(inner: dict) -> dict:
@@ -543,6 +558,8 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     setattr(symbolizer.stroke, _STROKE_TEXT_PROPERTIES[k], v)
                 elif k == "dashPattern":
                     symbolizer.stroke.dash_pattern = _dash_pattern(v)
+                elif k == "dashOffset":
+                    symbolizer.stroke.dash_offset = _coerce_unit_scalar(v, expr_ctx)
                 elif k in ("patternGap", "patternInitialGap"):
                     attr = "pattern_gap" if k == "patternGap" else "pattern_initial_gap"
                     setattr(symbolizer.stroke, attr, _coerce_unit_scalar(v))
@@ -949,8 +966,12 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         exists.
         """
         if ctx.CHARACTER_LITERAL() and self.current_rule:
+            # [1:-1] drops only the outer quotes; ``''`` / ``\'`` is an escaped one
             self.current_rule.styling_rule_name = (
-                ctx.CHARACTER_LITERAL().getText().strip("'\"")
+                ctx.CHARACTER_LITERAL()
+                .getText()[1:-1]
+                .replace("''", "'")
+                .replace("\\'", "'")
             )
 
     def enterStylingRule(self, ctx):
@@ -1262,9 +1283,12 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 ctx_map = placement.pop("_expr_ctx", {})
                 for numeric_key in ("minSpacing", "maxSpacing", "priority"):
                     if numeric_key in placement:
-                        placement[numeric_key] = convert_numeric_expression_value(
+                        value = convert_numeric_expression_value(
                             placement[numeric_key], ctx_map.get(numeric_key)
                         )
+                        if isinstance(value, str) and _IDENTIFIER_RE.match(value):
+                            value = {"property": value}  # a bare name is a property
+                        placement[numeric_key] = value
             for el in elements:  # Transform2D forbids the private _expr_ctx
                 if isinstance(el, dict):
                     _coerce_transform(el)
@@ -1345,6 +1369,10 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                         )
                     elif attr_name == "dashPattern":
                         symbolizer.stroke.dash_pattern = _dash_pattern(prop_value)
+                    elif attr_name == "dashOffset":
+                        symbolizer.stroke.dash_offset = _coerce_unit_scalar(
+                            prop_value, expr_ctx
+                        )
                     elif attr_name in _STROKE_STYLING_PROPERTIES:
                         inner = self._extract_anonymous_dict(expr_ctx)
                         if inner is not None:
