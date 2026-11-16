@@ -20,18 +20,14 @@ from .cql2.to_json import (
     post_process_selector,
 )
 from .models import (
-    ArithmeticExpression,
     Fill,
     Label,
     Marker,
     Metadata,
-    PropertyRef,
     Stroke,
     Style,
     StylingRule,
     Symbolizer,
-    SystemIdentifier,
-    UnitValue,
 )
 from .models.types import json_unit
 
@@ -110,30 +106,58 @@ def _parse_hotspot_string(s: str) -> Any:
     return s  # keep as-is if unparseable
 
 
+def split_property_block(text: str, stop_at_close_brace: bool = False) -> list[str]:
+    """Split a block's ``name: value`` entries on ``;`` and ``,``.
+
+    Only separators outside braces, brackets, parentheses, quoted strings and
+    ``//`` comments count, so a call's arguments (``min(a, b)``), a string
+    (``'a, b'``) and a comment (``// it's; fine``) stay in their entry. With
+    *stop_at_close_brace*, an unmatched ``}`` ends the block.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    quote = ""
+    i = 0
+    while i < len(text):
+        char = text[i]
+        if quote:
+            current.append(char)
+            if char == "\\" and i + 1 < len(text):
+                i += 1
+                current.append(text[i])
+            elif char == quote:
+                quote = ""
+        elif char in "'\"":
+            quote = char
+            current.append(char)
+        elif text.startswith("//", i):
+            end = text.find("\n", i)
+            end = len(text) if end == -1 else end
+            current.append(text[i:end])
+            i = end - 1
+        elif char in "{([":
+            depth += 1
+            current.append(char)
+        elif char in "})]":
+            if depth == 0 and char == "}" and stop_at_close_brace:
+                break
+            depth = max(depth - 1, 0)
+            current.append(char)
+        elif char in ";," and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+        i += 1
+    parts.append("".join(current).strip())
+    return [part for part in parts if part]
+
+
 def _parse_nested_props(props_str: str) -> dict:
     """Brace-aware CSS property parser."""
     props = {}
-    parts = []
-    current = ""
-    depth = 0
-    for char in props_str:
-        if char == "{":
-            depth += 1
-            current += char
-        elif char == "}":
-            if depth > 0:
-                depth -= 1
-                current += char
-            else:
-                break
-        elif char in (";", ",") and depth == 0:
-            if current.strip():
-                parts.append(current.strip())
-            current = ""
-        else:
-            current += char
-    if current.strip():
-        parts.append(current.strip())
+    parts = split_property_block(props_str, stop_at_close_brace=True)
     for part in parts:
         if "//" in part:
             part = _strip_inline_comment(part)
@@ -1005,10 +1029,7 @@ class AstToPydanticConverter:
 
             if hasattr(ast_stroke, "width") and ast_stroke.width is not None:
                 width = ast_stroke.width
-                if isinstance(
-                    width,
-                    (UnitValue, ArithmeticExpression, SystemIdentifier, PropertyRef),
-                ):
+                if not isinstance(width, (str, int, float)):
                     # Already a typed value (e.g. built directly by the
                     # parser's dot-notation handler, which — unlike this
                     # generic AST-shaped fallback — can see the ANTLR
@@ -1016,8 +1037,8 @@ class AstToPydanticConverter:
                     # ``viz.sd / 1000``). Stringifying and reparsing it via
                     # convert_literal_value would only be lossy here: a
                     # UnitValue's ``__str__`` happens to round-trip, but
-                    # ArithmeticExpression/SystemIdentifier's Pydantic repr
-                    # does not.
+                    # an expression model's Pydantic repr (arithmetic,
+                    # system identifier, function call...) does not.
                     stroke_data["width"] = width
                 else:
                     # Use convert_literal_value for proper unit conversion
