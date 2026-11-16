@@ -539,7 +539,7 @@ class TestMetadataParsing:
         assert fill["pattern"] == {
             "type": "Dot",
             "size": {"px": 4.0},
-            "color": "#010203",
+            "color": [1, 2, 3],
         }
 
     def test_fill_pattern_alter_mode_still_raises(self):

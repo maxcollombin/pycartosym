@@ -829,6 +829,18 @@ def _coerce_numeric_expr(value: Any) -> Any:
     return value
 
 
+def _dash_length_px(length: Any) -> int | float:
+    """A ``dashPattern`` item as the pixel number ``stroke-dasharray`` takes."""
+    if isinstance(length, (int, float)):
+        return int(length)
+    unit = getattr(length, "unit", None)
+    if getattr(unit, "value", unit) == "px":
+        return float(length.value)
+    raise NotImplementedError(
+        f"Stroke.dashPattern length {length!r}: stroke-dasharray takes pixels only"
+    )
+
+
 def _write_numeric_param(
     d: SldDialect, parent: etree._Element, name: str, value: Any
 ) -> None:
@@ -1089,7 +1101,17 @@ def _build_stroke_element(
                 "mapping in this codec"
             )
         if dash_pattern:
-            d.param(el, "stroke-dasharray", " ".join(str(int(p)) for p in dash_pattern))
+            d.param(
+                el,
+                "stroke-dasharray",
+                " ".join(str(_dash_length_px(p)) for p in dash_pattern),
+            )
+    dash_offset = _g(stroke, "dash_offset")
+    if dash_offset is not None:
+        raise NotImplementedError(
+            "Stroke.dashOffset (stroke-dashoffset) has no SLD/SE mapping in "
+            "this codec's scope"
+        )
     join = _g(stroke, "join")
     if join is not None:
         d.param(el, "stroke-linejoin", join)

@@ -214,14 +214,18 @@ class Stroke(BaseCartoSymModel, AlterMixin):
     center_line: StrokeStyling | None = Field(
         None, alias="centerLine", description="Center line styling"
     )
-    dash_pattern: list[int] | dict[str, int] | None = Field(
+    dash_pattern: list[int | UnitValue] | dict[str, int] | None = Field(
         None,
         alias="dashPattern",
         description=(
-            "Dash pattern: array of integers, or an indexed cascade "
-            "override {index, value}"
+            "Dash pattern: array of lengths (integers are pixels, or a unit "
+            "value), or an indexed cascade override {index, value}"
         ),
     )
+    dash_offset: FlexibleSize | None = Field(
+        None, alias="dashOffset", description="Distance into the dash pattern"
+    )
+
     pattern: Graphic | None = Field(None, description="Stroke pattern graphic")
     pattern_gap: FlexibleSize | None = Field(
         None,
@@ -241,8 +245,16 @@ class Stroke(BaseCartoSymModel, AlterMixin):
 
     validate_width = field_validator("width", mode="before")(_validate_flexible_unit)
     validate_gaps = field_validator(
-        "pattern_gap", "pattern_initial_gap", mode="before"
+        "pattern_gap", "pattern_initial_gap", "dash_offset", mode="before"
     )(_validate_flexible_unit)
+
+    @field_validator("dash_pattern", mode="before")
+    @classmethod
+    def _unit_dash_lengths(cls, v):
+        """Read each ``{unit: value}`` item of a dash array as a UnitValue."""
+        if isinstance(v, list):
+            return [parse_flexible_unit_value(item) for item in v]
+        return v
 
 
 class Marker(BaseCartoSymModel):

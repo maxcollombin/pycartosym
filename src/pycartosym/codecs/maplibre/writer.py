@@ -238,6 +238,11 @@ def _dash_array(stroke: Any, ctx: str) -> list[float] | None:
     reaching here is unflattened, not a final value; or if there is no
     literal px ``stroke.width`` to scale by.
     """
+    if getattr(stroke, "dash_offset", None) is not None:
+        raise NotImplementedError(
+            f"{ctx}: stroke.dashOffset has no MapLibre mapping "
+            "(line-dasharray cannot be shifted)"
+        )
     dash_pattern = getattr(stroke, "dash_pattern", None)
     if dash_pattern is None:
         return None
@@ -247,7 +252,7 @@ def _dash_array(stroke: Any, ctx: str) -> list[float] | None:
             "unflattened index/value cascade-override fragment?) has "
             "no MapLibre mapping in this codec"
         )
-    pattern = dash_pattern
+    pattern = [_px_number(p, "stroke.dashPattern") for p in dash_pattern]
     width_px = (
         _px_number(stroke.width, "stroke.width") if stroke.width is not None else None
     )

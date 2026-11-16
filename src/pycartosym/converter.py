@@ -1021,6 +1021,12 @@ class Converter:
             return self._format_unit_value(v)
         return str(v)
 
+    def _format_dash_length(self, length) -> str:
+        """Format a dash length: a bare number (pixels) or a unit value."""
+        if isinstance(length, (int, float)):
+            return str(length)
+        return self._format_unit_value(length)
+
     def _format_unit_value(self, uv) -> str:
         """Format a UnitValue as CSCSS syntax, e.g. '2.0 px'.
 
@@ -1212,7 +1218,11 @@ class Converter:
                     "stroke.dashPattern: only an array of numbers is written "
                     "back to CartoSym-CSS"
                 )
-            props.append(("dashPattern", "[" + ", ".join(str(d) for d in dash) + "]"))
+            items = ", ".join(self._format_dash_length(d) for d in dash)
+            props.append(("dashPattern", f"[{items}]"))
+        dash_offset = _get(stroke, "dash_offset", "dashOffset")
+        if dash_offset is not None:
+            props.append(("dashOffset", self._format_unit_value(dash_offset)))
         pattern = _get(stroke, "pattern", "pattern")
         if pattern is not None:
             props.append(("pattern", self._graphic_element_to_css_block(pattern)))
