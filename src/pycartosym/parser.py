@@ -27,6 +27,7 @@ from .ast_converter import (
     _coerce_unit_scalar,
     _normalize_graphic_element,
     convert_ast_to_pydantic,
+    split_property_block,
 )
 from .cql2.from_text import ExpressionParser
 from .cql2.model import (
@@ -447,28 +448,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
             content = content.strip()
         properties: dict = {}
         if content:
-            # Split by semicolon, but be careful with nested structures
-            parts = []
-            current_part = ""
-            brace_count = 0
-            bracket_count = 0
-            for char in content:
-                if char == "{":
-                    brace_count += 1
-                elif char == "}":
-                    brace_count -= 1
-                elif char == "[":
-                    bracket_count += 1
-                elif char == "]":
-                    bracket_count -= 1
-                elif char in (";", ",") and brace_count == 0 and bracket_count == 0:
-                    if current_part.strip():
-                        parts.append(current_part.strip())
-                    current_part = ""
-                    continue
-                current_part += char
-            if current_part.strip():
-                parts.append(current_part.strip())
+            parts = split_property_block(content)
             for part in parts:
                 # A part may start with a comment line when the previous ; was
                 # followed by an inline comment and the actual property is on the
