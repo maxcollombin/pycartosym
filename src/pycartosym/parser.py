@@ -970,7 +970,10 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         """
         if ctx.CHARACTER_LITERAL() and self.current_rule:
             self.current_rule.styling_rule_name = (
-                ctx.CHARACTER_LITERAL().getText().strip("'\"")
+                ctx.CHARACTER_LITERAL()
+                .getText()[1:-1]
+                .replace("''", "'")
+                .replace("\\'", "'")
             )
 
     def enterStylingRule(self, ctx):
@@ -986,6 +989,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                         if hasattr(self, "_pending_marker_element_assignments")
                         else {}
                     ),
+            # [1:-1] drops only the outer quotes; ``''`` / ``\'`` is an escaped one
                 }
             )
         self.current_rule = StylingRule()
