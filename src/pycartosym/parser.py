@@ -79,6 +79,16 @@ def _empty_form(value: str | None) -> str | None:
     return None
 
 
+def _vendor_value(text: str, expr_ctx: Any = None) -> Any:
+    """A vendor property's value: a literal, a unit value or an expression."""
+    value = text.strip()
+    if value in ("true", "false"):
+        return value == "true"
+    if len(value) >= 2 and value[0] == value[-1] == "'":
+        return value[1:-1].replace("''", "'")
+    return _coerce_unit_scalar(value, expr_ctx)
+
+
 class _IterativeParseTreeWalker(ParseTreeWalker):
     """Walk a parse tree without recursion.
 
@@ -1316,6 +1326,10 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 ):
                     self._pending_marker_element_assignments = {}
                 self._pending_marker_element_assignments[idx] = props
+            return
+        # A vendor extension property: `vendor.<vendorName>.<propertyName>: value`
+        if prop_name.startswith("vendor.") and prop_name.count(".") >= 2:
+            setattr(symbolizer, prop_name, _vendor_value(prop_value, expr_ctx))
             return
         # Handle dot notation properties like fill.color, stroke.width
         if "." in prop_name:

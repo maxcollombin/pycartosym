@@ -76,3 +76,28 @@ def test_not_in_wraps_the_or_in_not():
     (not_el,) = list(flt)
     assert not_el.tag == f"{_OGC}Not"
     assert list(not_el)[0].tag == f"{_OGC}Or"
+
+
+def test_a_string_that_reads_like_a_number_or_keyword_keeps_its_quotes():
+    def rule(value):
+        return {
+            "selector": {"op": "=", "args": [{"property": "code"}, value]},
+            "symbolizer": {"stroke": {"color": [255, 0, 0]}},
+        }
+
+    values = ["1000", "4.5", "null", "true", 1000, 4.5, True]
+    csjson = {"stylingRules": [rule(v) for v in values]}
+    text = Converter().csjson_to_cscss(csjson)
+    for written in ("'1000'", "'4.5'", "'null'", "'true'", "= 1000]", "= 4.5]"):
+        assert written in text
+    back = Converter().cscss_to_csjson(text)
+    assert [r["selector"]["args"][1] for r in back["stylingRules"]] == values
+
+
+def test_not_over_and_or_keeps_its_brackets():
+    for source in ("not (a = 1 or b = 2)", "not (a = 1 and b = 2)"):
+        csjson, text = _roundtrip(f"L {{ [{source}] {{ stroke: {{color: red}}; }} }}")
+        assert f"[{source}]" in text
+        assert Converter().cscss_to_csjson(text) == csjson
+    _, text = _roundtrip("L { [not a = 1] { stroke: {color: red}; } }")
+    assert "[not a = 1]" in text

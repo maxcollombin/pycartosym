@@ -91,3 +91,26 @@ def test_sld_label_concatenation_of_properties_and_text():
         "<ogc:PropertyName>Nummer</ogc:PropertyName>.<ogc:PropertyName>Teil</ogc:PropertyName>"
         in sld
     )
+
+
+@pytest.mark.parametrize("scaling", [[2, 3], {"x": 2, "y": 3}])
+def test_scaling_is_written_and_read_back(scaling):
+    graphic = {
+        "type": "Image",
+        "image": {"path": "a.svg"},
+        "transform": {"orientation": 45, "scaling": scaling},
+    }
+    csjson = {"stylingRules": [{"symbolizer": {"marker": {"elements": [graphic]}}}]}
+    text = Converter().csjson_to_cscss(csjson)
+    assert "transform: {orientation: 45; scaling: 2 3}" in text
+    back = Converter().cscss_to_csjson(text)
+    transform = back["stylingRules"][0]["symbolizer"]["marker"]["elements"][0]
+    assert transform["transform"] == {"orientation": 45, "scaling": [2, 3]}
+
+
+def test_scaling_is_read_in_a_fill_pattern():
+    sym = _json(
+        "L { fill: { pattern: Image { image: {path: 'a.svg'}; "
+        "transform: { scaling: 2 2 } } }; }"
+    )
+    assert sym["fill"]["pattern"]["transform"] == {"scaling": [2, 2]}

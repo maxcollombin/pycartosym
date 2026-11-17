@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- CartoSym-CSS: a string literal that reads like a number, a boolean or `null` (`'1000'`, `'true'`, `'null'`) is written with its quotes, so it reads back as a string (#192).
+- CartoSym-CSS: `not` over `and` / `or` is written with its brackets (`not (a = 1 or b = 2)`) instead of changing its meaning (#193).
+- CartoSym-CSS: a graphic's `transform.scaling` is written (`transform: {orientation: 45; scaling: 2 3}`) and read back as `[x, y]` instead of being dropped (#195).
+- CartoSym-CSS: symbolizer vendor properties (`vendor.<vendorName>.<propertyName>`) are written and read back instead of being dropped; a value without a CartoSym-CSS form is reported (#196).
+
 ## [0.6.5] - 2026-11-16
 
 ### Fixed
