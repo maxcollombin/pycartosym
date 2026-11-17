@@ -712,20 +712,24 @@ class TestWriteScaleDenominator:
         assert style2.styling_rules[0].selector == selector
 
 
-class TestWriteElseRule:
-    def test_else_filter_uses_se_namespace(self):
+class TestWriteSelectorlessNestedRule:
+    def test_nested_rule_without_selector_is_not_an_else_rule(self):
+        selector = {"op": "=", "args": [{"property": "kind"}, "road"]}
         root = _write(
             _rule_style(
                 {"fill": {"color": "red"}},
+                selector,
                 nested_rules=[{"symbolizer": {"fill": {"color": "gray"}}}],
             )
         )
         rules = root.findall(".//se:Rule", NS)
         assert len(rules) == 2
-        assert rules[0].find("se:ElseFilter", NS) is None
-        assert rules[1].find("se:ElseFilter", NS) is not None
-        # Regression guard: SE 1.1.0 se:ElseFilter, never SLD 1.0.0 ogc:ElseFilter.
+        assert root.find(".//se:ElseFilter", NS) is None
         assert root.find(".//ogc:ElseFilter", NS) is None
+        # both rules are filtered by the parent's selector
+        for rule in rules:
+            assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "kind"
+            assert rule.findtext(".//ogc:Literal", namespaces=NS) == "road"
 
 
 class TestWriteRuleTitleAbstract:

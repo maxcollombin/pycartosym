@@ -14,8 +14,10 @@ project's lossless-transcoding requirement.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
+from typing import Literal
 
 from lxml import etree
 
@@ -30,6 +32,8 @@ from ._filter import (
 )
 from ._symbolizer import elements_to_symbolizer
 from ._xml_helpers import OGC, SLD, local_name
+
+logger = logging.getLogger(__name__)
 
 
 def _scale_denominator_value(
@@ -51,6 +55,24 @@ def _scale_denominator_value(
             f"non-numeric se:ScaleDenominator value {text!r}"
         ) from exc
     return int(num) if num.is_integer() else num
+
+
+def _else_selector(
+    preceding: list[dict | None], own: dict | None
+) -> dict | None | Literal[False]:
+    """Selector of an ``se:ElseFilter`` rule: no earlier rule of the group applies.
+
+    ``own`` is the rule's own scale range, if any. Returns ``False`` when an
+    earlier rule has no filter and no scale range, as it then always applies
+    and the else rule never does.
+    """
+    if not preceding:
+        return own
+    if any(sel is None for sel in preceding):
+        return False
+    anyone = preceding[0] if len(preceding) == 1 else {"op": "or", "args": preceding}
+    negated = {"op": "not", "args": [anyone]}
+    return negated if own is None else {"op": "and", "args": [own, negated]}
 
 
 class SldReader(CodecReader):
@@ -170,30 +192,30 @@ class SldReader(CodecReader):
         feature_type_name = ftn_el.text if ftn_el is not None else None
 
         rule_dicts: list[dict] = []
-        # Stack of the dict each subsequent ElseFilter rule should attach
-        # to as a `nestedRules` entry — the writer flattens `nested_rules`
-        # chains into consecutive siblings, so we reverse that here.
-        attach_to: dict | None = None
+        # Selectors (filter + scale range) of the non-else rules read so far:
+        # an ElseFilter rule applies where none of them does.
+        preceding: list[dict | None] = []
 
         for rule_el in self.d.findall(fts_el, "Rule"):
             rule_dict, is_else = self._parse_rule(rule_el)
+            own_selector = rule_dict.get("selector")
             if is_else:
-                if attach_to is None:
-                    raise NotImplementedError(
-                        "se:Rule/se:ElseFilter with no preceding rule in "
-                        "the same se:FeatureTypeStyle is not supported"
+                selector = _else_selector(preceding, own_selector)
+                if selector is False:
+                    logger.warning(
+                        "SLD reader: dropping se:ElseFilter rule %r, an earlier "
+                        "rule without a filter always applies so it never does",
+                        rule_dict.get("name") or "<unnamed>",
                     )
-                attach_to.setdefault("nestedRules", []).append(rule_dict)
-                attach_to = rule_dict
+                    continue
             else:
-                selector = merge_visualization_pass(
-                    pass_number, rule_dict.get("selector")
-                )
-                selector = merge_feature_type_name(feature_type_name, selector)
-                if selector is not None:
-                    rule_dict["selector"] = selector
-                rule_dicts.append(rule_dict)
-                attach_to = rule_dict
+                preceding.append(own_selector)
+                selector = own_selector
+            selector = merge_visualization_pass(pass_number, selector)
+            selector = merge_feature_type_name(feature_type_name, selector)
+            if selector is not None:
+                rule_dict["selector"] = selector
+            rule_dicts.append(rule_dict)
 
         return rule_dicts
 
@@ -228,19 +250,14 @@ class SldReader(CodecReader):
 
         is_else = self.d.find(rule_el, "ElseFilter") is not None
 
+        filter_selector = None
         if not is_else:
             filter_el = rule_el.find(f"{OGC}Filter")
-            filter_selector = (
-                filter_xml_to_selector(filter_el) if filter_el is not None else None
-            )
-            selector = merge_scale_denominators(min_sd, max_sd, filter_selector)
-            if selector is not None:
-                rule_dict["selector"] = selector
-        elif min_sd is not None or max_sd is not None:
-            raise NotImplementedError(
-                "se:Rule with se:ElseFilter cannot also carry "
-                "se:Min/MaxScaleDenominator in this codec's scope"
-            )
+            if filter_el is not None:
+                filter_selector = filter_xml_to_selector(filter_el)
+        selector = merge_scale_denominators(min_sd, max_sd, filter_selector)
+        if selector is not None:
+            rule_dict["selector"] = selector
 
         sym_children = [
             c

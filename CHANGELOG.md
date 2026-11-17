@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- SLD/SE and MapLibre writers: a nested rule without a selector refines its parent (it applies where the parent is selected and overrides its symbolizer) instead of becoming an `se:ElseFilter` rule that lost the parent's selector, or an error in MapLibre; the SLD reader reads an `se:ElseFilter` rule as the negation of the earlier rules' selectors (#190).
 - CartoSym-CSS: a string literal that reads like a number, a boolean or `null` (`'1000'`, `'true'`, `'null'`) is written with its quotes, so it reads back as a string (#192).
 - CartoSym-CSS: `not` over `and` / `or` is written with its brackets (`not (a = 1 or b = 2)`) instead of changing its meaning (#193).
 - CartoSym-CSS: a graphic's `transform.scaling` is written (`transform: {orientation: 45; scaling: 2 3}`) and read back as `[x, y]` instead of being dropped (#195).

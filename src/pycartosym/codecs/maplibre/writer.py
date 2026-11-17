@@ -833,11 +833,6 @@ def _flatten_rules(styling_rules: list[StylingRule]) -> list[StylingRule]:
         # has no ``name``: its layer id is the ``dataLayer.id`` it selects.
         top_level = True
         for flat in flatten_cascade_rules([rule.to_dict()]):
-            if flat.get("nestedRules"):
-                raise NotImplementedError(
-                    "a selector-less nestedRules entry (OGC 'else' rule) has "
-                    "no MapLibre mapping in this codec"
-                )
             name = flat.get("name")
             if top_level and not name:
                 name = extract_feature_type_name(flat.get("selector"))[0]

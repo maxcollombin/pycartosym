@@ -3,21 +3,16 @@
 Shared by any codec whose target format has no cascade concept of its own
 (SLD/SE's ``se:Rule``, MapLibre's flat ``layers`` list — a
 ``StylingRule`` here, unlike either, nests refinements). A
-``StylingRule.nestedRules`` entry **with its own selector** is a cascading
-refinement: its selector is implicitly AND-ed with the parent's and its
-symbolizer is a partial override merged onto the parent's (CartoSym's
-``alter`` mechanism, including indexed ``marker.elements[N]`` /
-``label.elements[N]`` element overrides). Each subtree is pre-flattened
-here into independent rules, each carrying the fully-merged selector and
-symbolizer, parent before child (so a document-order-painting consumer —
-SE's ``se:Rule`` list — keeps the child on top).
-
-A nested rule **without** a selector keeps its OGC "else" meaning: it is
-left as a ``nestedRules`` entry (with its symbolizer merged onto its
-ancestors') for a consumer to interpret on its own terms (the SLD writer's
-``_flatten_nested_rules`` emits it as an ``se:ElseFilter`` sibling; a
-consumer with no such concept — MapLibre's writer, currently — can treat
-it as it treats any other nested rule).
+``StylingRule.nestedRules`` entry is a cascading refinement: it applies only
+where its parent is selected, so its selector is AND-ed with the parent's,
+and its symbolizer is a partial override merged onto the parent's
+(CartoSym's ``alter`` mechanism, including indexed ``marker.elements[N]`` /
+``label.elements[N]`` element overrides). A nested rule **without** a
+selector is the same refinement with an always-true condition, as a block
+nested in a CSS rule: it applies to what the parent selects. Each subtree is
+pre-flattened here into independent rules, each carrying the fully-merged
+selector and symbolizer, parent before child (so a document-order-painting
+consumer — SE's ``se:Rule`` list — keeps the child on top).
 """
 
 from __future__ import annotations
@@ -56,40 +51,16 @@ def _flatten(
     merged_sym = _deep_merge(parent_sym, own_sym)
     merged_sel = _and(parent_selector, rule.get("selector"))
 
-    nested = rule.get("nestedRules") or []
-    cascade = [n for n in nested if n.get("selector") is not None]
-    else_rules = [n for n in nested if n.get("selector") is None]
-
     node = _carry_name(rule)
     if merged_sel is not None:
         node["selector"] = merged_sel
     if merged_sym:
         node["symbolizer"] = merged_sym
-    if else_rules:
-        node["nestedRules"] = [_flatten_else(er, merged_sym) for er in else_rules]
 
     result = [node]
-    for child in cascade:
+    for child in rule.get("nestedRules") or []:
         result.extend(_flatten(child, merged_sel, merged_sym))
     return result
-
-
-def _flatten_else(
-    else_rule: dict[str, Any], parent_sym: dict[str, Any]
-) -> dict[str, Any]:
-    merged_sym = _deep_merge(parent_sym, else_rule.get("symbolizer") or {})
-    sub = else_rule.get("nestedRules") or []
-    if any(n.get("selector") is not None for n in sub):
-        raise NotImplementedError(
-            "a cascade refinement (selector-bearing nestedRule) nested inside "
-            "an else (selector-less) rule has no SLD/SE mapping"
-        )
-    node = _carry_name(else_rule)
-    if merged_sym:
-        node["symbolizer"] = merged_sym
-    if sub:
-        node["nestedRules"] = [_flatten_else(s, merged_sym) for s in sub]
-    return node
 
 
 # ---------------------------------------------------------------------------

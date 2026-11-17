@@ -95,22 +95,47 @@ class TestFlattenCascadeRules:
         ]
         assert "alter" not in flat[1]["symbolizer"]["marker"]
 
-    def test_selectorless_nested_rule_stays_nested_as_else(self):
+    def test_selectorless_nested_rule_refines_the_parent(self):
+        """Like a block nested in a CSS rule: it applies to what the parent selects."""
+        parent_selector = {"op": "=", "args": [{"property": "A"}, 1]}
         flat = flatten_cascade_rules(
             [
                 {
-                    "selector": {"op": "=", "args": [{"property": "A"}, 1]},
-                    "symbolizer": {"stroke": {"color": "red"}},
+                    "selector": parent_selector,
+                    "symbolizer": {"stroke": {"color": "red", "width": 3}},
                     "nestedRules": [
                         {"symbolizer": {"stroke": {"color": "gray"}}},
                     ],
                 }
             ]
         )
-        assert len(flat) == 1
-        assert "selector" not in flat[0]["nestedRules"][0]
-        # else-rule symbolizer is merged onto its ancestor's
-        assert flat[0]["nestedRules"][0]["symbolizer"]["stroke"] == {"color": "gray"}
+        assert len(flat) == 2
+        assert flat[0]["symbolizer"]["stroke"] == {"color": "red", "width": 3}
+        # same selector as the parent (not an else rule), merged symbolizer
+        assert flat[1]["selector"] == parent_selector
+        assert "nestedRules" not in flat[1]
+        assert flat[1]["symbolizer"]["stroke"] == {"color": "gray", "width": 3}
+
+    def test_selectorless_nested_rule_inside_a_selector_bearing_one(self):
+        outer = {"op": "=", "args": [{"property": "A"}, 1]}
+        inner = {"op": "=", "args": [{"property": "B"}, 2]}
+        flat = flatten_cascade_rules(
+            [
+                {
+                    "selector": outer,
+                    "nestedRules": [
+                        {
+                            "selector": inner,
+                            "nestedRules": [
+                                {"symbolizer": {"stroke": {"color": "gray"}}}
+                            ],
+                        }
+                    ],
+                }
+            ]
+        )
+        assert flat[-1]["selector"] == {"op": "and", "args": [outer, inner]}
+        assert flat[-1]["symbolizer"]["stroke"] == {"color": "gray"}
 
     def test_symbolizerless_base_node_still_emits_a_row_but_writer_drops_it(self):
         flat = flatten_cascade_rules(

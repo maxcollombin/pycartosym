@@ -82,7 +82,7 @@ class TestCascadeThroughWriter:
         }
         assert fills == {"#808080", "#006400"}
 
-    def test_selectorless_nested_rule_still_becomes_else_filter(self):
+    def test_selectorless_nested_rule_is_filtered_by_its_parent_selector(self):
         root = self._write(
             {
                 "stylingRules": [
@@ -106,5 +106,10 @@ class TestCascadeThroughWriter:
         )
         rules = root.findall(".//se:Rule", NS)
         assert len(rules) == 2
-        assert rules[1].find("se:ElseFilter", NS) is not None
+        # not an else rule: it applies to what the parent selects, on top of it
+        assert root.find(".//se:ElseFilter", NS) is None
         assert root.find(".//ogc:ElseFilter", NS) is None
+        for rule in rules:
+            assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "Class"
+        strokes = [r.find(".//se:SvgParameter[@name='stroke']", NS).text for r in rules]
+        assert strokes == ["#ff0000", "#808080"]

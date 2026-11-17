@@ -409,13 +409,101 @@ class TestReadScaleDenominator:
         }
 
 
+def _rules_xml(*rules):
+    return (
+        '<StyledLayerDescriptor version="1.1.0" '
+        'xmlns="http://www.opengis.net/sld" '
+        'xmlns:se="http://www.opengis.net/se" '
+        'xmlns:ogc="http://www.opengis.net/ogc">'
+        "<NamedLayer><se:Name>x</se:Name><UserStyle><se:FeatureTypeStyle>"
+        + "".join(rules)
+        + "</se:FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>"
+    )
+
+
+def _eq(prop, value):
+    return (
+        "<ogc:Filter><ogc:PropertyIsEqualTo>"
+        f"<ogc:PropertyName>{prop}</ogc:PropertyName>"
+        f"<ogc:Literal>{value}</ogc:Literal>"
+        "</ogc:PropertyIsEqualTo></ogc:Filter>"
+    )
+
+
+_LINE = (
+    "<se:LineSymbolizer><se:Stroke>"
+    '<se:SvgParameter name="stroke">#808080</se:SvgParameter>'
+    "</se:Stroke></se:LineSymbolizer>"
+)
+
+
+def _rule(*parts):
+    return "<se:Rule>" + "".join(parts) + _LINE + "</se:Rule>"
+
+
 class TestReadElseRule:
-    def test_nested_rules_populated(self):
+    """``se:ElseFilter`` is read as the negation of the earlier rules' selectors."""
+
+    def test_else_rule_excludes_the_preceding_rule(self):
         style = _read("5-else-rule.sld")
-        rule = style.styling_rules[0]
-        assert rule.nested_rules is not None
-        assert len(rule.nested_rules) == 1
-        assert rule.nested_rules[0].symbolizer.stroke.color == [128, 128, 128]
+        assert len(style.styling_rules) == 2
+        assert all(not r.nested_rules for r in style.styling_rules)
+        assert style.styling_rules[1].selector == {
+            "op": "and",
+            "args": [
+                {"op": "=", "args": [{"sysId": "dataLayer.id"}, "Roads"]},
+                {
+                    "op": "not",
+                    "args": [{"op": "=", "args": [{"property": "Class"}, "primary"]}],
+                },
+            ],
+        }
+        assert style.styling_rules[1].symbolizer.stroke.color == [128, 128, 128]
+
+    def test_else_rule_excludes_every_preceding_rule(self):
+        a = {"op": "=", "args": [{"property": "k"}, "a"]}
+        b = {"op": "=", "args": [{"property": "k"}, "b"]}
+        style = SldReader().read(
+            _rules_xml(
+                _rule(_eq("k", "a")),
+                _rule(_eq("k", "b")),
+                _rule("<se:ElseFilter/>"),
+            )
+        )
+        assert style.styling_rules[2].selector == {
+            "op": "not",
+            "args": [{"op": "or", "args": [a, b]}],
+        }
+
+    def test_else_rule_keeps_its_own_scale_range(self):
+        style = SldReader().read(
+            _rules_xml(
+                _rule(_eq("k", "a")),
+                _rule(
+                    "<se:ElseFilter/>",
+                    "<se:MaxScaleDenominator>5000</se:MaxScaleDenominator>",
+                ),
+            )
+        )
+        assert style.styling_rules[1].selector == {
+            "op": "and",
+            "args": [
+                {"op": "<", "args": [{"sysId": "viz.sd"}, 5000]},
+                {
+                    "op": "not",
+                    "args": [{"op": "=", "args": [{"property": "k"}, "a"]}],
+                },
+            ],
+        }
+
+    def test_else_rule_alone_applies_to_everything(self):
+        style = SldReader().read(_rules_xml(_rule("<se:ElseFilter/>")))
+        assert style.styling_rules[0].selector is None
+
+    def test_else_rule_after_an_unfiltered_rule_never_applies(self, caplog):
+        style = SldReader().read(_rules_xml(_rule(), _rule("<se:ElseFilter/>")))
+        assert len(style.styling_rules) == 1
+        assert "never does" in caplog.text
 
 
 class TestReadFeatureTypeName:

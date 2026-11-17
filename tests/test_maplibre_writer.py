@@ -880,23 +880,29 @@ def test_explicitly_named_cascade_child_keeps_its_own_name():
     assert [lyr["id"] for lyr in out["layers"]] == ["Parks"]
 
 
-def test_selectorless_nested_rule_is_rejected():
-    """A selector-less nestedRules entry is an OGC 'else' rule — MapLibre
-    has no equivalent concept, so this must raise rather than be dropped.
-    """
+def test_selectorless_nested_rule_refines_the_parent():
+    """A nested rule with no selector applies to what its parent selects."""
     style = Style.from_dict(
         {
             "stylingRules": [
                 {
-                    "name": "Roads",
-                    "symbolizer": {"stroke": {"color": "red"}},
-                    "nestedRules": [{"symbolizer": {"stroke": {"color": "gray"}}}],
+                    "name": "roads",
+                    "selector": {"op": "=", "args": [{"property": "kind"}, "road"]},
+                    "nestedRules": [
+                        {
+                            "symbolizer": {
+                                "stroke": {"color": [0, 0, 0], "width": {"px": 2}}
+                            }
+                        }
+                    ],
                 }
             ]
         }
     )
-    with pytest.raises(NotImplementedError, match="'else' rule"):
-        MaplibreWriter().write(style)
+    (layer,) = MaplibreWriter().write(style)["layers"]
+    assert layer["filter"] == ["==", ["get", "kind"], "road"]
+    assert layer["paint"]["line-color"] == "#000000"
+    assert layer["paint"]["line-width"] == 2.0
 
 
 def test_visibility_false_becomes_layout_none():
