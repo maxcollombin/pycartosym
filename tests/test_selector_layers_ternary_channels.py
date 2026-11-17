@@ -92,3 +92,24 @@ def test_channels_keep_parentheses_around_a_conditional_in_arithmetic():
     )
     assert "colorChannels.r: (B04 < 10 ? 1 : 0) / 2;" in written
     assert Converter().cscss_to_csjson(written) == data
+
+
+def test_a_path_with_a_numeric_part_is_one_property_in_a_conditional():
+    selector = _first_rule(
+        "[(v < 6 ? purpose.0 : purpose.0.general) = '1000'] "
+        "{ stroke: {color: red}; }\n"
+    )["selector"]
+    conditional = selector["args"][0]
+    assert conditional["op"] == "?:"
+    assert conditional["args"][1:] == [
+        {"property": "purpose.0"},
+        {"property": "purpose.0.general"},
+    ]
+    assert selector["args"][1] == "1000"
+
+
+def test_a_space_separated_tuple_stays_a_tuple():
+    marker = _first_rule("L { marker: {elements: [Dot { center: 2 3 }]}; }\n")[
+        "symbolizer"
+    ]["marker"]
+    assert marker["elements"][0]["center"] == {"x": 2, "y": 3}
