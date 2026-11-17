@@ -7,7 +7,7 @@ including colors, units, ranges, and custom validators.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -346,9 +346,16 @@ data-driven value expression."""
 # FlexibleUnitValue is defined once, above (line ~275).
 # FlexibleSize is defined once, above (line ~283).
 
-FlexibleAngle = Angle | str | float | ValueExpression
-"""Angle that accepts Angle objects, strings, plain numbers (assumed
-degrees), or a typed data-driven value expression."""
+AngleObject = Annotated[
+    dict[Literal["deg", "rad"], int | float | ValueExpression],
+    Field(min_length=1, max_length=1),
+]
+"""The CS-JSON schema's ``{"deg": …}`` / ``{"rad": …}`` angle, kept as given."""
+
+FlexibleAngle = Angle | AngleObject | str | float | ValueExpression
+"""Angle that accepts Angle objects, the schema's ``{"deg": …}`` / ``{"rad": …}``
+objects, strings, plain numbers (assumed degrees), or a typed data-driven
+value expression."""
 
 FlexibleOpacity = ZeroToOne | str | ValueExpression
 """Opacity that accepts a 0-1 float, string expressions, or a typed

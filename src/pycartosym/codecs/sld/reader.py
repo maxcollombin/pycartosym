@@ -14,6 +14,7 @@ project's lossless-transcoding requirement.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from lxml import etree
@@ -85,7 +86,7 @@ class SldReader(CodecReader):
             isinstance(source, str)
             and len(source) < 500
             and "\n" not in source
-            and Path(source).exists()
+            and os.path.exists(source)  # False, not OSError, for a long name
         ):
             xml_bytes = Path(source).read_bytes()
         elif isinstance(source, str):

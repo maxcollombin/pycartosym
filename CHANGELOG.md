@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CartoSym-CSS: a string literal that reads like a number, a boolean or `null` (`'1000'`, `'true'`, `'null'`) is written with its quotes, so it reads back as a string (#192).
+- CartoSym-CSS: `not` over `and` / `or` is written with its brackets (`not (a = 1 or b = 2)`) instead of changing its meaning (#193).
+- CartoSym-CSS: a graphic's `transform.scaling` is written (`transform: {orientation: 45; scaling: 2 3}`) and read back as `[x, y]` instead of being dropped (#195).
+- CartoSym-CSS: symbolizer vendor properties (`vendor.<vendorName>.<propertyName>`) are written and read back instead of being dropped; a value without a CartoSym-CSS form is reported (#196).
+- CartoSym-CSS: a property path with a numeric part (`purpose.0`, `purpose.0.general`) in a conditional is read as one property instead of a tuple or a garbled comparison (#194).
+- CS-JSON: an angle given as the schema's `{"deg": …}` / `{"rad": …}` object (e.g. `transform.orientation` of a fill or stroke pattern) is accepted and kept as given instead of failing validation; CartoSym-CSS writes one holding an expression instead of failing (#191).
+- A one-line source string longer than a file name may be (a CS-JSON or CartoSym-CSS style passed to `read`) is read as content instead of raising `OSError: File name too long` on Python 3.10-3.13 (#199).
 - MapLibre: `isNull` is written as `["==", ["get", k], null]` and its negation as `["!=", ["get", k], null]`, which also hold for a property set to null, instead of `!has` / `has`; both are read back as `isNull` (#197).
 - MapLibre: a symbolizer with only vendor properties raises the unknown-vendor-extension error instead of being dropped without a warning (#198).
 

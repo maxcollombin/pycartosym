@@ -93,6 +93,9 @@ _SPATIAL_PREDICATES = _v.SPATIAL_PREDICATES
 _SPATIAL_RELATE = _v.SPATIAL_RELATE
 _TEMPORAL_PREDICATES = _v.TEMPORAL_PREDICATES
 _ARRAY_PREDICATES = _v.ARRAY_PREDICATES
+# A property path with a numeric part (`purpose.0`, `purpose.0.general`): the
+# CartoSym-CSS grammar lexes `.0` as a number, giving a tuple `purpose .0`.
+_PATH = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+")
 _WKT_TYPES = _v.WKT_TYPES
 _WKT_TO_GEOJSON = _v.WKT_TO_GEOJSON
 _TEMPORAL_LITERAL_NAMES = _v.TEMPORAL_LITERAL_NAMES
@@ -181,6 +184,10 @@ class ExpressionParser:
             )
         if isinstance(ctx, _G.VariableExprContext):
             return IdentifierExpression(name=ctx.variable().getText())
+        if isinstance(
+            ctx, (_G.TupleExprContext, _G.MemberAccessExprContext)
+        ) and _PATH.fullmatch(ExpressionParser._ctx_source_text(ctx)):
+            return IdentifierExpression(name=ExpressionParser._ctx_source_text(ctx))
         if isinstance(ctx, _G.TupleExprContext):
             return ExpressionParser._parse_tuple_ctx(ctx.tuple_())
         if isinstance(ctx, _G.ArrayExprContext):

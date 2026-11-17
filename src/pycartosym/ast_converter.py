@@ -476,6 +476,10 @@ def _coerce_transform(el: dict) -> None:
     for key, value in list(inner.items()):
         if key == "orientation":
             inner[key] = _coerce_angle(value, ctx_map.get(key))
+        elif key == "scaling" and isinstance(value, str):
+            xy = _parse_xy(value)  # `scaling: 2 3` -> [2, 3]
+            if xy is not None:
+                inner[key] = [xy["x"], xy["y"]]
 
 
 def _normalize_graphic_element(el: dict) -> None:
@@ -978,6 +982,9 @@ class AstToPydanticConverter:
 
             if getattr(ast_symbolizer, "comment", None):
                 symbolizer_data["comment"] = ast_symbolizer.comment
+            # vendor.<vendorName>.<propertyName> extensions
+            extra = getattr(ast_symbolizer, "__pydantic_extra__", None) or {}
+            symbolizer_data.update(extra)
             return Symbolizer(**symbolizer_data) if symbolizer_data else None
 
         except Exception as e:

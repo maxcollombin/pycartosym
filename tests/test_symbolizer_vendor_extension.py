@@ -61,3 +61,30 @@ def test_non_vendor_extra_keys_are_rejected(key):
 def test_known_fields_still_validated_normally():
     sym = Symbolizer.from_dict({"fill": {"color": "#abcabc"}})
     assert sym.fill is not None
+
+
+def test_vendor_extension_round_trips_through_cartosym_css():
+    from pycartosym.converter import Converter
+
+    symbolizer = {
+        "stroke": {"width": {"px": 1}},
+        "vendor.example.offset": {"px": 2},
+        "vendor.example.flag": True,
+        "vendor.example.count": 3,
+        "vendor.example.label": "it's",
+        "vendor.example.size": {"op": "*", "args": [{"property": "h"}, 2]},
+    }
+    text = Converter().csjson_to_cscss({"stylingRules": [{"symbolizer": symbolizer}]})
+    assert "vendor.example.offset: 2 px;" in text
+    assert "vendor.example.label: 'it''s';" in text
+    back = Converter().cscss_to_csjson(text)
+    assert back["stylingRules"][0]["symbolizer"] == symbolizer
+
+
+def test_vendor_extension_without_a_css_form_is_reported(caplog):
+    from pycartosym.converter import Converter
+
+    symbolizer = {"stroke": {"width": {"px": 1}}, "vendor.example.thing": {"x": 1}}
+    text = Converter().csjson_to_cscss({"stylingRules": [{"symbolizer": symbolizer}]})
+    assert "vendor.example.thing" not in text
+    assert "vendor.example.thing" in caplog.text

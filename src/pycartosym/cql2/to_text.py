@@ -86,20 +86,14 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         return f"[{items}]"
     if isinstance(expr, bool):  # CQL2 literals are lower case
         return "true" if expr else "false"
+    if expr is None:
+        return "null"
     if not isinstance(expr, dict):
         s = str(expr)
-        if not quote_bare_strings:
-            return s  # unquoted identifier/constant
-        # Quote bare strings that are not numbers / booleans — they came from
-        # CHARACTER_LITERALs like 'parking' and must be re-quoted on write-back.
-        try:
-            float(s)
-            return s  # numeric literal – no quotes
-        except ValueError:
-            pass
-        if s.lower() in ("true", "false", "null"):
-            return s
-        # Plain string value → single-quote it
+        if not quote_bare_strings or not isinstance(expr, str):
+            return s  # unquoted identifier/constant, or a number
+        # A string is a CHARACTER_LITERAL, even one that reads like a number,
+        # a boolean or null ('1000', 'true'): quoted, it reads back as a string.
         return quote_string(s)
     # Unit around an expression: {"px": 6} -> `6 px`, {"px": w * 2} -> `w * 2 px`
     if len(expr) == 1:
@@ -285,7 +279,11 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
                 if inner_op == "isnull" and len(inner_args) == 1:
                     val = expression_to_text(inner_args[0])
                     return f"{val} is not null"
-            return f"not {expression_to_text(inner)}"
+            text = expression_to_text(inner)
+            # NOT binds tighter than AND / OR: `not (a or b)` needs its brackets
+            if isinstance(inner, dict) and inner.get("op") in ("and", "or", "?:"):
+                return f"not ({text})"
+            return f"not {text}"
 
         # Format n-ary ops (like 'and', 'or')
         if op in ("and", "or"):

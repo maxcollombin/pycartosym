@@ -6,6 +6,9 @@ using Pydantic models for robust validation and serialization.
 
 from __future__ import annotations
 
+import logging
+import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +17,8 @@ from .cql2.to_text import quote_string
 from .models import Style
 from .models.types import UnitType, cscss_unit, json_unit
 from .parser import CartoSymParser
+
+logger = logging.getLogger(__name__)
 
 _UNIT_KEYS = {u.value for u in UnitType}
 
@@ -71,7 +76,7 @@ class Converter:
                 and cscss_input.strip()
                 and len(cscss_input) < 500
                 and "\n" not in cscss_input
-                and Path(cscss_input).is_file()
+                and os.path.isfile(cscss_input)  # False, not OSError, for a long name
             ):
                 resolved = self._resolve_path(cscss_input)
                 style = self.parser.parse_file_to_pydantic(resolved)
@@ -148,7 +153,7 @@ class Converter:
         if isinstance(csjson_input, Style):
             return csjson_input
         elif isinstance(csjson_input, Path) or (
-            isinstance(csjson_input, str) and Path(csjson_input).is_file()
+            isinstance(csjson_input, str) and os.path.isfile(csjson_input)
         ):
             file_path = self._resolve_path(csjson_input)
             with open(file_path, encoding="utf-8") as f:
@@ -465,7 +470,55 @@ class Converter:
             hs = getattr(symbolizer, "hillShading", None)
         if hs is not None:
             lines.extend(self._hill_shading_to_css(hs, sym_indent=indent))
+        vendor = getattr(symbolizer, "__pydantic_extra__", None) or {}
+        for key, value in vendor.items():
+            text = self._vendor_value_text(value)
+            if text is None:
+                logger.warning(
+                    "Vendor property %s has no CartoSym-CSS form and is not written",
+                    key,
+                )
+            else:
+                lines.append(f"  {key}: {text};")
         return lines
+
+    def _scaling_text(self, scaling) -> str | None:
+        """``transform.scaling`` (a Scale2D) as ``x y``, or None if absent."""
+        if scaling is None:
+            return None
+        if isinstance(scaling, dict) and "x" in scaling and "y" in scaling:
+            x, y = scaling["x"], scaling["y"]
+        elif isinstance(scaling, (list, tuple)) and len(scaling) == 2:
+            x, y = scaling
+        else:
+            logger.warning("transform.scaling %r has no CartoSym-CSS form", scaling)
+            return None
+        return f"{self._format_axis_value(x)} {self._format_axis_value(y)}"
+
+    def _vendor_value_text(self, value) -> str | None:
+        """A vendor property's value as CSS: a literal, unit value or expression."""
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, str):
+            return quote_string(value)
+        if (
+            isinstance(value, dict)
+            and len(value) == 1
+            and next(iter(value)) in _UNIT_KEYS
+        ):
+            return self._format_unit_value(value)
+        if isinstance(value, dict) and ("property" in value or "op" in value):
+            return self._expr_text(value)
+        return None
+
+    def _angle_expression_text(self, unit: str, value) -> str:
+        """``{"deg": expr}`` as ``expr`` (the default unit), ``rad`` converted."""
+        if hasattr(value, "model_dump"):
+            value = value.model_dump(by_alias=True, exclude_none=True)
+        text = self._expr_text(value)
+        return text if unit == "deg" else f"({text}) * {math.degrees(1)!r}"
 
     def _channel_expr_to_css(self, expr) -> str:
         """Format a channel expression to CSCSS.
@@ -824,9 +877,10 @@ class Converter:
                 prop_lines.append(f"alignment: {' '.join(str(v) for v in vals)}")
             # empty dict — emit nothing (no information to preserve)
 
-        # transform (Part 2 Transform2D): only orientation has a CSS form
+        # transform (Part 2 Transform2D): orientation and scaling have a CSS form
         transform = _get(el, "transform")
         if transform is not None:
+            transform_parts = []
             orientation = _get(transform, "orientation")
             if hasattr(orientation, "model_dump"):
                 orientation = orientation.model_dump(by_alias=True, exclude_none=True)
@@ -837,7 +891,11 @@ class Converter:
                     and next(iter(orientation)) in ("deg", "rad")
                 ):
                     unit, val = next(iter(orientation.items()))
-                    text = f"{val:g} {unit}"
+                    text = (
+                        f"{val:g} {unit}"
+                        if isinstance(val, (int, float))
+                        else self._angle_expression_text(unit, val)
+                    )
                 elif isinstance(orientation, dict):
                     text = self._expr_text(orientation)
                 else:
@@ -846,7 +904,12 @@ class Converter:
                         if isinstance(orientation, (int, float))
                         else str(orientation)
                     )
-                prop_lines.append(f"transform: {{orientation: {text}}}")
+                transform_parts.append(f"orientation: {text}")
+            scaling = self._scaling_text(_get(transform, "scaling"))
+            if scaling is not None:
+                transform_parts.append(f"scaling: {scaling}")
+            if transform_parts:
+                prop_lines.append(f"transform: {{{'; '.join(transform_parts)}}}")
 
         # position2D
         pos2d = _get(el, "position2D") or _get(el, "position_2d")
