@@ -7,6 +7,7 @@ using Pydantic models for robust validation and serialization.
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 from typing import Any
 
@@ -511,6 +512,13 @@ class Converter:
             return self._expr_text(value)
         return None
 
+    def _angle_expression_text(self, unit: str, value) -> str:
+        """``{"deg": expr}`` as ``expr`` (the default unit), ``rad`` converted."""
+        if hasattr(value, "model_dump"):
+            value = value.model_dump(by_alias=True, exclude_none=True)
+        text = self._expr_text(value)
+        return text if unit == "deg" else f"({text}) * {math.degrees(1)!r}"
+
     def _channel_expr_to_css(self, expr) -> str:
         """Format a channel expression to CSCSS.
 
@@ -882,7 +890,11 @@ class Converter:
                     and next(iter(orientation)) in ("deg", "rad")
                 ):
                     unit, val = next(iter(orientation.items()))
-                    text = f"{val:g} {unit}"
+                    text = (
+                        f"{val:g} {unit}"
+                        if isinstance(val, (int, float))
+                        else self._angle_expression_text(unit, val)
+                    )
                 elif isinstance(orientation, dict):
                     text = self._expr_text(orientation)
                 else:

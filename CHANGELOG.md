@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - CartoSym-CSS: a graphic's `transform.scaling` is written (`transform: {orientation: 45; scaling: 2 3}`) and read back as `[x, y]` instead of being dropped (#195).
 - CartoSym-CSS: symbolizer vendor properties (`vendor.<vendorName>.<propertyName>`) are written and read back instead of being dropped; a value without a CartoSym-CSS form is reported (#196).
 - CartoSym-CSS: a property path with a numeric part (`purpose.0`, `purpose.0.general`) in a conditional is read as one property instead of a tuple or a garbled comparison (#194).
+- CS-JSON: an angle given as the schema's `{"deg": …}` / `{"rad": …}` object (e.g. `transform.orientation` of a fill or stroke pattern) is accepted and kept as given instead of failing validation; CartoSym-CSS writes one holding an expression instead of failing (#191).
 
 ## [0.6.5] - 2026-11-16
 
