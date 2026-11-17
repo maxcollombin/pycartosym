@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-16
+
+### Fixed
+
+- CartoSym-CSS: `marker` and `label` set to `null`, to an empty `{ }` or to `{ elements: [] }` are kept in both directions instead of being merged into one form (#174).
+- CartoSym-CSS: a style with many rules converts instead of failing on the depth of the parse tree, which is now walked iteratively (#178).
+- CartoSym-CSS: `colorChannels` and `singleChannel` expressions are written back as infix CartoSym-CSS (#172), and `contains`, `startsWith` and `endsWith` as lower-camel-case function calls (#173).
+- CartoSym-CSS: `stroke.dashOffset` is kept (it was dropped without a warning) and written back (#182). SLD/SE and MapLibre raise a clear error for it, as neither has a mapping.
+- CartoSym-CSS: a `dashPattern` with units (`[ 8 px, 4 mm ]`) is read as unit values instead of being ignored (#183). SLD/SE writes lengths in pixels only; a length in another unit raises an error.
+- CartoSym-CSS: a bare name in label placement (`priority: elevation`) is a property reference, not a string (#184).
+- CartoSym-CSS: the hex colour of a `Dot`, and the `tint` and `blackTint` of an `Image`, are written as `[r, g, b]` like other colours (#185).
+- CartoSym-CSS: `''` and `\'` in a styling rule name are read as a quote, and the name is written back escaped (#179).
+- CartoSym-CSS: a call with several arguments in a property value (`stroke: { width: min(a, b) }`, `stroke.width: abs(a)`) is converted to an operation instead of being cut at the comma or turned into text; a quoted string or a `//` comment containing `,` or `;` no longer splits a block (#187).
+
 ## [0.6.4] - 2026-11-09
 
 ### Fixed
@@ -188,7 +202,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/maxcollombin/pycartosym/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/maxcollombin/pycartosym/compare/v0.6.1...v0.6.2
