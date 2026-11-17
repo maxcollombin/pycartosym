@@ -165,6 +165,10 @@ def filter_to_selector(mb_filter: list[Any]) -> dict[str, Any]:
                     dimension,
                 ],
             }
+        if op in ("==", "!=") and _literal(value) is None:
+            # `k == null` is CQL2 `k is null` (`= null` never selects anything)
+            is_null = {"op": "isNull", "args": [_operand_to_property(prop)]}
+            return is_null if op == "==" else {"op": "not", "args": [is_null]}
         return {
             "op": _CMP[op],
             "args": [_operand_to_property(prop), _literal(value)],
@@ -346,8 +350,9 @@ def selector_to_filter(selector: Any) -> list[Any]:
     if op == "not":
         (inner,) = args
         if isinstance(inner, dict) and _is_op(inner.get("op"), "isNull"):
-            # ¬(k is null)  ==  "feature has k"
-            return ["has", _property_name(inner["args"][0])]
+            # `get` is null for a missing key and for a null value, `has` only
+            # for a missing one: ¬(k is null) is `k != null`, not `has k`
+            return ["!=", ["get", _property_name(inner["args"][0])], None]
         if isinstance(inner, dict) and inner.get("op") == "in":
             prop, values = inner["args"]
             return ["!in", ["get", _property_name(prop)], ["literal", list(values)]]
@@ -361,7 +366,7 @@ def selector_to_filter(selector: Any) -> list[Any]:
         prop, values = args
         return ["in", ["get", _property_name(prop)], ["literal", list(values)]]
     if _is_op(op, "isNull"):
-        return ["!", ["has", _property_name(args[0])]]
+        return ["==", ["get", _property_name(args[0])], None]
     if op == "between":
         prop, low, high = args
         target = ["get", _property_name(prop)]

@@ -2469,3 +2469,44 @@ class TestStepZoomRecombination:
         )
         out = MaplibreWriter().write(style)
         assert [layer["id"] for layer in out["layers"]] == ["l-1", "l-2"]
+
+
+def test_a_symbolizer_with_only_vendor_extensions_is_rejected():
+    style = Style.from_dict(
+        {
+            "stylingRules": [
+                {"name": "r", "symbolizer": {"vendor.example.casing": {"px": 3}}}
+            ]
+        }
+    )
+    with pytest.raises(NotImplementedError, match="vendor.example.casing"):
+        MaplibreWriter().write(style)
+
+
+@pytest.mark.parametrize(
+    ("selector", "expected"),
+    [
+        (
+            {"op": "isNull", "args": [{"property": "height"}]},
+            ["==", ["get", "height"], None],
+        ),
+        (
+            {
+                "op": "not",
+                "args": [{"op": "isNull", "args": [{"property": "height"}]}],
+            },
+            ["!=", ["get", "height"], None],
+        ),
+    ],
+)
+def test_is_null_compares_with_null_and_reads_back(selector, expected):
+    rule = {
+        "name": "r",
+        "selector": selector,
+        "symbolizer": {"stroke": {"color": [0, 0, 0], "width": {"px": 1}}},
+    }
+    out = MaplibreWriter().write(Style.from_dict({"stylingRules": [rule]}))
+    assert out["layers"][0]["filter"] == expected
+    assert_maplibre_valid(out)
+    back = MaplibreReader().read(out).to_dict()["stylingRules"][0]["selector"]
+    assert back == selector

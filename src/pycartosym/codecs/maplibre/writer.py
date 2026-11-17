@@ -869,6 +869,9 @@ def _is_empty_of_paint(rule: Any) -> bool:
         return True
     if any(getattr(sym, part, None) is not None for part in _RASTER_SYMBOLIZER_PARTS):
         return False
+    extras = getattr(sym, "__pydantic_extra__", None) or {}
+    if any(key != "vendor.maplibre.layer-type" for key in extras):
+        return False  # :func:`_vendor_layer_type` raises on it, not dropped here
     return (
         sym.fill is None
         and sym.stroke is None

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- MapLibre: `isNull` is written as `["==", ["get", k], null]` and its negation as `["!=", ["get", k], null]`, which also hold for a property set to null, instead of `!has` / `has`; both are read back as `isNull` (#197).
+- MapLibre: a symbolizer with only vendor properties raises the unknown-vendor-extension error instead of being dropped without a warning (#198).
+
 ## [0.6.5] - 2026-11-16
 
 ### Fixed
