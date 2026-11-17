@@ -202,7 +202,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/maxcollombin/pycartosym/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/maxcollombin/pycartosym/compare/v0.6.1...v0.6.2
