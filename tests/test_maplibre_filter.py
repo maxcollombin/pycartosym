@@ -115,8 +115,8 @@ CANONICAL_FILTERS = [
     ["any", ["==", ["get", "a"], 1], ["==", ["get", "a"], 2]],
     ["in", ["get", "type"], ["literal", ["road", "rail"]]],
     ["!in", ["get", "type"], ["literal", ["road"]]],
-    ["has", "name"],
-    ["!", ["has", "name"]],
+    ["!=", ["get", "name"], None],
+    ["==", ["get", "name"], None],
     ["!", ["==", ["get", "a"], 1]],
     ["==", ["geometry-type"], "Point"],
     ["!=", ["geometry-type"], "Polygon"],
@@ -333,7 +333,7 @@ def test_selector_to_filter_isnull_is_case_insensitive(spelling):
     must be accepted.
     """
     selector = {"op": spelling, "args": [{"property": "name"}]}
-    assert selector_to_filter(selector) == ["!", ["has", "name"]]
+    assert selector_to_filter(selector) == ["==", ["get", "name"], None]
 
 
 @pytest.mark.parametrize("spelling", ["isNull", "isnull"])
@@ -342,7 +342,7 @@ def test_selector_to_filter_not_isnull_is_case_insensitive(spelling):
         "op": "not",
         "args": [{"op": spelling, "args": [{"property": "name"}]}],
     }
-    assert selector_to_filter(selector) == ["has", "name"]
+    assert selector_to_filter(selector) == ["!=", ["get", "name"], None]
 
 
 def test_strip_datalayer_id_keeps_a_comparison_against_another_expression():
