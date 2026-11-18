@@ -240,6 +240,13 @@ class UnitType(str, Enum):
     METERS = "m"
     FEET = "ft"
 
+    @classmethod
+    def _missing_(cls, value: object) -> UnitType | None:
+        """Read the CartoSym-CSS spelling ``inch`` as ``in``."""
+        if value == "inch":
+            return cls.INCHES
+        return None
+
 
 # CartoSym-CSS writes inches as ``inch``; CS-JSON (and ``UnitType``) as ``in``.
 _JSON_UNIT = {"inch": "in"}

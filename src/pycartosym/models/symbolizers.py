@@ -39,7 +39,7 @@ from .value_expressions import PropertyRef
 _VENDOR_KEY_RE = re.compile(r"^vendor\.[A-Za-z0-9_-]+\.[A-Za-z0-9_.-]+$")
 
 
-_UNIT_NAMES = {u.value for u in UnitType}
+_UNIT_NAMES = {u.value for u in UnitType} | {"inch"}  # `inch`: CartoSym-CSS spelling
 
 
 def parse_flexible_unit_value(v):

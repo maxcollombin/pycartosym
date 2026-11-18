@@ -670,6 +670,7 @@
           { "type": "object", "properties": { "mm": { "$ref": "#/$defs/numericExpression" } }, "required": [ "mm" ] },
           { "type": "object", "properties": { "cm": { "$ref": "#/$defs/numericExpression" } }, "required": [ "cm" ] },
           { "type": "object", "properties": { "in": { "$ref": "#/$defs/numericExpression" } }, "required": [ "in" ] },
+          { "type": "object", "properties": { "inch": { "$ref": "#/$defs/numericExpression" } }, "required": [ "inch" ] },
           { "type": "object", "properties": { "pt": { "$ref": "#/$defs/numericExpression" } }, "required": [ "pt" ] },
           { "type": "object", "properties": { "em": { "$ref": "#/$defs/numericExpression" } }, "required": [ "em" ] },
           { "type": "object", "properties": { "pc": { "$ref": "#/$defs/numericExpression" } }, "required": [ "pc" ] },
