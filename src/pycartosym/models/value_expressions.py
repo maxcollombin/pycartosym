@@ -186,18 +186,22 @@ class CoalesceExpression(BaseCartoSymModel):
 
 
 class VariableRef(BaseCartoSymModel):
-    """Reference to a style variable: ``{"$ref": "#/$variables/name"}``."""
+    """Reference to a style variable: ``{"$ref": "#/$variables/name"}``.
+
+    The pointer can name an included file before the ``#``
+    (``"base.cs.json#/$variables/name"``).
+    """
 
     ref: str = Field(
         alias="$ref",
-        pattern=r"^#/\$variables/.+",
-        description="JSON Pointer to a member of the top-level $variables object",
+        pattern=r"^[^#]*#/\$variables/.+",
+        description="JSON Pointer to a member of a $variables object",
     )
 
     @property
     def variable_name(self) -> str:
         """Name of the referenced variable."""
-        return self.ref.removeprefix("#/$variables/")
+        return self.ref.partition("#/$variables/")[2]
 
 
 class OperationExpression(BaseCartoSymModel):

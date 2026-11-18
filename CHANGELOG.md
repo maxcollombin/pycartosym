@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CS-JSON: shapes that are valid in the revised schema and were rejected are read: a boolean `selector` (`true` selects everything, `false` nothing; written as `[true]` in CartoSym-CSS, no filter in SLD/SE and MapLibre), `stroke.center` (the name in the specification text, read as `centerLine`), the unit key `inch` (read as `in`), an RGB colour whose components are expressions or that only overrides some of them (`{"alter": true, "r": 100}`), and a variable reference into an included file (`"base.cs.json#/$variables/w"`, written as `@w`). The bundled schema accepts `inch` and the file-qualified reference. A colour with expression or partial components has no CartoSym-CSS or SLD/SE form and is refused with a clear error.
 - CartoSym-CSS: a nested rule without a selector keeps none, instead of receiving a copy of its parent's selector, so it merges into its parent (the last of several siblings wins) in SLD/SE and MapLibre; it was written as a separate rule that was drawn too (#190).
 - SLD/SE: the vertical offset of a graphic or label `position` is written as the opposite `se:DisplacementY` and read back the same way: a positive `y` points down in CartoSym and up in `se:DisplacementY`. Offsets were written with the wrong vertical direction.
 - The colour name `fuchsia` (the spelling of the revised schema) is accepted next to the misspelled `fuschia`, in CS-JSON, CartoSym-CSS and SLD/SE; each is kept as given.

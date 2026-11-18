@@ -9,6 +9,7 @@ import re
 from typing import Annotated, Any
 
 from pydantic import (
+    AliasChoices,
     ConfigDict,
     Field,
     PrivateAttr,
@@ -38,7 +39,7 @@ from .value_expressions import PropertyRef
 _VENDOR_KEY_RE = re.compile(r"^vendor\.[A-Za-z0-9_-]+\.[A-Za-z0-9_.-]+$")
 
 
-_UNIT_NAMES = {u.value for u in UnitType}
+_UNIT_NAMES = {u.value for u in UnitType} | {"inch"}  # `inch`: CartoSym-CSS spelling
 
 
 def parse_flexible_unit_value(v):
@@ -211,8 +212,13 @@ class Stroke(BaseCartoSymModel, AlterMixin):
 
     # Extended stroke properties
     casing: StrokeStyling | None = Field(None, description="Stroke casing")
+    # `center` is the name in the specification text (the schema says
+    # `centerLine`): both are read, `centerLine` is written.
     center_line: StrokeStyling | None = Field(
-        None, alias="centerLine", description="Center line styling"
+        None,
+        validation_alias=AliasChoices("centerLine", "center", "center_line"),
+        serialization_alias="centerLine",
+        description="Center line styling",
     )
     dash_pattern: list[int | UnitValue] | dict[str, int] | None = Field(
         None,

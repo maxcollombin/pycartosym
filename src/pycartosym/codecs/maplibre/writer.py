@@ -822,6 +822,12 @@ def _flatten_rules(styling_rules: list[StylingRule]) -> list[StylingRule]:
     positional suffix (a MapLibre layer id must be unique, unlike an SE
     rule which needs no name at all).
     """
+    # a boolean selector: `true` selects everything (no filter), `false` nothing
+    styling_rules = [
+        rule.model_copy(update={"selector": None}) if rule.selector is True else rule
+        for rule in styling_rules
+        if rule.selector is not False
+    ]
     if not any(rule.nested_rules for rule in styling_rules):
         return list(styling_rules)
 

@@ -32,9 +32,12 @@ def flatten_cascade_rules(rule_dicts: list[dict[str, Any]]) -> list[dict[str, An
 
 
 def _and(a: Any | None, b: Any | None) -> Any | None:
-    if a is None:
+    # a boolean selector: ``true`` selects everything, ``false`` nothing
+    if a is False or b is False:
+        return False
+    if a is None or a is True:
         return b
-    if b is None:
+    if b is None or b is True:
         return a
     return {"op": "and", "args": [a, b]}
 
@@ -74,6 +77,10 @@ def _flatten(
     own_sym = rule.get("symbolizer") or {}
     merged_sym, refinements = _fold_selectorless(rule, _deep_merge(parent_sym, own_sym))
     merged_sel = _and(parent_selector, rule.get("selector"))
+    if merged_sel is False:
+        return []  # a rule that selects nothing, with its nested rules
+    if merged_sel is True:
+        merged_sel = None
 
     node = _carry_name(rule)
     if merged_sel is not None:

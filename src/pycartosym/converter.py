@@ -347,6 +347,9 @@ class Converter:
         - Landuse[other filter]
         - [complex filter]
         """
+        # A boolean selector: `[true]` selects everything, `[false]` nothing
+        if isinstance(selector, bool):
+            return "[true]" if selector else "[false]"
         # Simple string selector
         if isinstance(selector, str):
             return selector
@@ -1043,6 +1046,13 @@ class Converter:
         expr = self._format_numeric_expression(color)
         if expr is not None:  # e.g. a reference to a variable: @c
             return expr
+        if isinstance(color, list) or (
+            isinstance(color, dict) and ("r" in color or "alter" in color)
+        ):
+            raise NotImplementedError(
+                "A color with an expression as a component, or one that only "
+                f"overrides some of r, g and b, has no CartoSym-CSS form: {color!r}"
+            )
         return str(color)
 
     def _format_value(self, value) -> str:
