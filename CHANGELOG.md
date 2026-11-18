@@ -6,12 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-11-18
+
 ### Added
 
 - `feature.pass` is a system identifier: CartoSym-CSS `[feature.pass = 0]` is read as `{"sysId": "feature.pass"}` instead of a property, and the SLD/SE writer turns rules that differ only by their `feature.pass` into the symbolizers of one `se:Rule`, in pass order; the SLD/SE reader reads a symbolizer kind repeated in one `se:Rule` (casing, parallel strokes, which the second used to override) as one rule per `feature.pass` (#203).
 
 ### Fixed
 
+- Bundled schema: a stroke accepts `dashOffset` (a unit value), as the converters already read and write it (#182).
 - SLD/SE and MapLibre writers: a nested rule without a selector refines its parent (its symbolizer is merged into the parent's, as if its curly brackets were removed) instead of becoming an `se:ElseFilter` rule that lost the parent's selector, or an error in MapLibre; the SLD reader reads an `se:ElseFilter` rule as the negation of the earlier rules' selectors (#190).
 - CartoSym-CSS: a string literal that reads like a number, a boolean or `null` (`'1000'`, `'true'`, `'null'`) is written with its quotes, so it reads back as a string (#192).
 - CartoSym-CSS: `not` over `and` / `or` is written with its brackets (`not (a = 1 or b = 2)`) instead of changing its meaning (#193).
@@ -219,7 +222,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/maxcollombin/pycartosym/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/maxcollombin/pycartosym/compare/v0.6.2...v0.6.3
