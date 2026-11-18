@@ -166,6 +166,14 @@ def merge_visualization_pass(
     return {"op": "and", "args": [pass_eq, selector]}
 
 
+def merge_feature_pass(pass_number: int, selector: dict | None) -> dict:
+    """Reader-side inverse of :func:`extract_feature_pass`."""
+    pass_eq = {"op": "=", "args": [{"sysId": _FEATURE_PASS_SYSID}, pass_number]}
+    if selector is None:
+        return pass_eq
+    return {"op": "and", "args": [selector, pass_eq]}
+
+
 def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 

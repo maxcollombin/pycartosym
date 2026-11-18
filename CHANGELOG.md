@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- `feature.pass` is a system identifier: CartoSym-CSS `[feature.pass = 0]` is read as `{"sysId": "feature.pass"}` instead of a property, and the SLD/SE writer turns rules that differ only by their `feature.pass` into the symbolizers of one `se:Rule`, in pass order (#203).
+- `feature.pass` is a system identifier: CartoSym-CSS `[feature.pass = 0]` is read as `{"sysId": "feature.pass"}` instead of a property, and the SLD/SE writer turns rules that differ only by their `feature.pass` into the symbolizers of one `se:Rule`, in pass order; the SLD/SE reader reads a symbolizer kind repeated in one `se:Rule` (casing, parallel strokes, which the second used to override) as one rule per `feature.pass` (#203).
 
 ### Fixed
 

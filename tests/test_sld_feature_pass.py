@@ -53,3 +53,46 @@ def test_feature_passes_become_symbolizers_of_one_rule_in_pass_order():
     assert len(root.findall(".//se:Rule", NS)) == 1
     colors = [p.text for p in root.iterfind(".//se:SvgParameter[@name='stroke']", NS)]
     assert colors == ["#000000", "#ffffff"]
+
+
+def _read_rule(symbolizers):
+    from pycartosym.codecs.sld.reader import SldReader
+
+    sld = (
+        '<StyledLayerDescriptor xmlns="http://www.opengis.net/sld" '
+        'xmlns:se="http://www.opengis.net/se" version="1.1.0"><NamedLayer>'
+        "<UserStyle><se:FeatureTypeStyle><se:Rule>"
+        f"{symbolizers}"
+        "</se:Rule></se:FeatureTypeStyle></UserStyle></NamedLayer>"
+        "</StyledLayerDescriptor>"
+    )
+    return SldReader().read(sld)
+
+
+def _line(color):
+    return (
+        "<se:LineSymbolizer><se:Stroke>"
+        f'<se:SvgParameter name="stroke">{color}</se:SvgParameter>'
+        "</se:Stroke></se:LineSymbolizer>"
+    )
+
+
+def test_sld_reader_reads_a_repeated_symbolizer_kind_as_feature_passes():
+    style = _read_rule(_line("#000000") + _line("#ffffff"))
+    rules = style.model_dump(by_alias=True, exclude_none=True)["stylingRules"]
+    assert [r["selector"]["args"][1] for r in rules] == [0, 1]
+    assert rules[0]["selector"]["args"][0] == {"sysId": "feature.pass"}
+    assert [r["symbolizer"]["stroke"]["color"] for r in rules] == [
+        [0, 0, 0],
+        [255, 255, 255],
+    ]
+
+
+def test_sld_reader_keeps_different_symbolizer_kinds_in_one_rule():
+    polygon = (
+        "<se:PolygonSymbolizer><se:Fill>"
+        '<se:SvgParameter name="fill">#ff0000</se:SvgParameter>'
+        "</se:Fill></se:PolygonSymbolizer>"
+    )
+    style = _read_rule(polygon + _line("#000000"))
+    assert len(style.styling_rules) == 1
