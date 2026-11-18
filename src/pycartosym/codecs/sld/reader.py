@@ -26,12 +26,15 @@ from ..base import CodecReader
 from ._dialect import SE_1_1_0, SLD_1_0_0, SldDialect
 from ._filter import (
     filter_xml_to_selector,
+    merge_feature_pass,
     merge_feature_type_name,
     merge_scale_denominators,
     merge_visualization_pass,
 )
 from ._symbolizer import elements_to_symbolizer
 from ._xml_helpers import OGC, SLD, local_name
+
+_OVERRIDING_KINDS = frozenset({"LineSymbolizer", "PolygonSymbolizer"})
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +220,20 @@ class SldReader(CodecReader):
             selector = merge_feature_type_name(feature_type_name, selector)
             if selector is not None:
                 rule_dict["selector"] = selector
-            rule_dicts.append(rule_dict)
+            extra = rule_dict.pop("_later_passes", [])
+            if not extra:
+                rule_dicts.append(rule_dict)
+                continue
+            # Symbolizers drawn one after the other for each feature: one rule
+            # per feature.pass, in drawing order.
+            for number, symbolizer in enumerate([rule_dict["symbolizer"], *extra]):
+                rule_dicts.append(
+                    {
+                        **rule_dict,
+                        "selector": merge_feature_pass(number, selector),
+                        "symbolizer": symbolizer,
+                    }
+                )
 
         return rule_dicts
 
@@ -267,6 +283,21 @@ class SldReader(CodecReader):
             if isinstance(c.tag, str) and local_name(c).endswith("Symbolizer")
         ]
         if sym_children:
-            rule_dict["symbolizer"] = elements_to_symbolizer(self.d, sym_children)
+            # A line or polygon symbolizer met twice (casing, parallel strokes)
+            # cannot be one CartoSym symbolizer, where the second would override
+            # the first; each further layer is a feature.pass. Point and text
+            # symbolizers pile up as marker / label elements instead.
+            passes: list[list[etree._Element]] = [[]]
+            for child in sym_children:
+                if local_name(child) in _OVERRIDING_KINDS and any(
+                    local_name(c) == local_name(child) for c in passes[-1]
+                ):
+                    passes.append([])
+                passes[-1].append(child)
+            rule_dict["symbolizer"] = elements_to_symbolizer(self.d, passes[0])
+            if len(passes) > 1:
+                rule_dict["_later_passes"] = [
+                    elements_to_symbolizer(self.d, group) for group in passes[1:]
+                ]
 
         return rule_dict, is_else

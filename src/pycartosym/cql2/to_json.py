@@ -195,10 +195,7 @@ def post_process_selector(selector: Any) -> Any:
             if split is not None:
                 op, left_part, right_part = split
                 # Determine if left part is system property or regular property
-                if "." in left_part and any(
-                    left_part.startswith(prefix)
-                    for prefix in ["viz", "dataLayer", "feature"]
-                ):
+                if "." in left_part and _is_system_name(left_part):
                     left_arg = {"sysId": left_part}
                 # Special case: certain properties are known system identifiers
                 elif left_part in [
@@ -237,9 +234,7 @@ def convert_string_to_json_selector(selector_str: str) -> dict[str, Any]:
         op, left_part, right_part = split
         right_part = right_part.strip("'\"")
         # Determine if left part is system property or regular property
-        if "." in left_part and any(
-            left_part.startswith(prefix) for prefix in ["viz", "dataLayer"]
-        ):
+        if "." in left_part and _is_system_name(left_part):
             left_arg = {"sysId": left_part}
         elif left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
             left_arg = {"property": left_part}
@@ -250,9 +245,7 @@ def convert_string_to_json_selector(selector_str: str) -> dict[str, Any]:
             right_arg = int(right_part)
         elif right_part.replace(".", "").isdigit():
             right_arg = float(right_part)
-        elif "." in right_part and any(
-            right_part.startswith(prefix) for prefix in ["viz", "dataLayer"]
-        ):
+        elif "." in right_part and _is_system_name(right_part):
             right_arg = {"sysId": right_part}
         elif right_part in ["validDate", "FunctionCode", "FunctionTitle"]:
             right_arg = {"property": right_part}
@@ -405,7 +398,7 @@ def expression_to_json(expression: Any) -> Any:
         full_property = get_full_property(expression)
         # Top-level prefix check for sysId
         top_level = full_property.split(".", 1)[0]
-        if top_level in ["viz", "vis", "dataLayer"]:
+        if top_level in ["viz", "vis", "dataLayer"] or full_property in _FEATURE_SYSIDS:
             return {"sysId": full_property}
         else:
             return {"property": full_property}
@@ -623,9 +616,7 @@ def convert_identifier(name: str) -> Any:
         op, left_part, right_part = split
         # Convert left part (property)
         if "." in left_part:
-            if any(
-                left_part.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]
-            ):
+            if _is_system_name(left_part):
                 # Map system properties correctly
                 mapped_prop = _map_system_property(left_part)
                 left_arg = {"sysId": mapped_prop}
@@ -634,9 +625,7 @@ def convert_identifier(name: str) -> Any:
         else:
             if left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
                 left_arg = {"property": left_part}
-            elif any(
-                left_part.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]
-            ):
+            elif _is_system_name(left_part):
                 mapped_prop = _map_system_property(left_part)
                 left_arg = {"sysId": mapped_prop}
             else:
@@ -653,7 +642,7 @@ def convert_identifier(name: str) -> Any:
 
     # No operator - determine property type
     if "." in name:
-        if any(name.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]):
+        if _is_system_name(name):
             mapped_prop = _map_system_property(name)
             return {"sysId": mapped_prop}
         else:
@@ -661,7 +650,7 @@ def convert_identifier(name: str) -> Any:
     else:
         if name in ["validDate", "FunctionCode", "FunctionTitle"]:
             return {"property": name}
-        elif any(name.startswith(prefix) for prefix in ["viz", "vis", "dataLayer"]):
+        elif _is_system_name(name):
             mapped_prop = _map_system_property(name)
             return {"sysId": mapped_prop}
         elif len(name) > 1 and name[0] == name[-1] == '"':
@@ -672,6 +661,21 @@ def convert_identifier(name: str) -> Any:
             if name.isidentifier() and value == name:
                 return _Identifier(name)
             return value
+
+
+_FEATURE_SYSIDS = frozenset(
+    {"feature.id", "feature.geometry", "feature.geometryDimensions", "feature.pass"}
+)
+
+
+def _is_system_name(name: str) -> bool:
+    """Whether a dotted/bare *name* is a CartoSym system identifier.
+
+    ``viz``/``vis``/``dataLayer`` match by prefix; ``feature`` only for its
+    defined members (``feature.pass`` included), so a data property that
+    merely starts with ``feature`` stays a property.
+    """
+    return name in _FEATURE_SYSIDS or name.startswith(("viz", "vis", "dataLayer"))
 
 
 def _map_system_property(prop: str) -> str:
