@@ -1,0 +1,30 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "Built-in casing, no passes needed.",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "property": "kind"
+          },
+          "road"
+        ]
+      },
+      "symbolizer": {
+        "stroke": {
+          "color": "white",
+          "width": {
+            "px": 3.0
+          },
+          "casing": {
+            "color": "black",
+            "width": {
+              "px": 1.0
+            }
+          }
+        }
+      }
+    }
+  ]
+}

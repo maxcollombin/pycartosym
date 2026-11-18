@@ -1,0 +1,56 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "All the roads are drawn with the black stroke first, then all of them\nwith the white one: the white strokes cross over every black stroke.",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "sysId": "dataLayer.id"
+          },
+          "Roads"
+        ]
+      },
+      "nestedRules": [
+        {
+          "selector": {
+            "op": "=",
+            "args": [
+              {
+                "sysId": "viz.pass"
+              },
+              0
+            ]
+          },
+          "symbolizer": {
+            "stroke": {
+              "color": "black",
+              "width": {
+                "px": 5.0
+              }
+            }
+          }
+        },
+        {
+          "selector": {
+            "op": "=",
+            "args": [
+              {
+                "sysId": "viz.pass"
+              },
+              1
+            ]
+          },
+          "symbolizer": {
+            "stroke": {
+              "color": "white",
+              "width": {
+                "px": 3.0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

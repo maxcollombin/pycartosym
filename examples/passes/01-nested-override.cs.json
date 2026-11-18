@@ -1,0 +1,38 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "Nested rules without a selector are the same as removing their curly\nbrackets: the second overrides the first, only the white stroke remains.",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "property": "kind"
+          },
+          "road"
+        ]
+      },
+      "nestedRules": [
+        {
+          "symbolizer": {
+            "stroke": {
+              "color": "black",
+              "width": {
+                "px": 5.0
+              }
+            }
+          }
+        },
+        {
+          "symbolizer": {
+            "stroke": {
+              "color": "white",
+              "width": {
+                "px": 3.0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

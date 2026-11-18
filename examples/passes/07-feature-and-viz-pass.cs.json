@@ -1,0 +1,88 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "Both identifiers: for each viz.pass, each feature is drawn with its\nfeature.pass symbolizers in order.",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "sysId": "dataLayer.id"
+          },
+          "Roads"
+        ]
+      },
+      "nestedRules": [
+        {
+          "selector": {
+            "op": "=",
+            "args": [
+              {
+                "sysId": "viz.pass"
+              },
+              0
+            ]
+          },
+          "nestedRules": [
+            {
+              "selector": {
+                "op": "=",
+                "args": [
+                  {
+                    "sysId": "feature.pass"
+                  },
+                  0
+                ]
+              },
+              "symbolizer": {
+                "stroke": {
+                  "color": "black",
+                  "width": {
+                    "px": 7.0
+                  }
+                }
+              }
+            },
+            {
+              "selector": {
+                "op": "=",
+                "args": [
+                  {
+                    "sysId": "feature.pass"
+                  },
+                  1
+                ]
+              },
+              "symbolizer": {
+                "stroke": {
+                  "color": "white",
+                  "width": {
+                    "px": 5.0
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "selector": {
+            "op": "=",
+            "args": [
+              {
+                "sysId": "viz.pass"
+              },
+              1
+            ]
+          },
+          "symbolizer": {
+            "stroke": {
+              "color": "red",
+              "width": {
+                "px": 1.0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

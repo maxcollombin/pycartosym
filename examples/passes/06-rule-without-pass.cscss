@@ -1,0 +1,8 @@
+// A rule without viz.pass next to rules that have one: which passes does
+// the background fill belong to? (every pass, or only the first one)
+Zones { fill: { color: lightGray; }; }
+Roads
+{
+   [viz.pass = 0] { stroke: { color: black; width: 5 px; }; }
+   [viz.pass = 1] { stroke: { color: white; width: 3 px; }; }
+}

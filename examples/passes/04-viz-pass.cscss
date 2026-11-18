@@ -1,0 +1,7 @@
+// All the roads are drawn with the black stroke first, then all of them
+// with the white one: the white strokes cross over every black stroke.
+Roads
+{
+   [viz.pass = 0] { stroke: { color: black; width: 5 px; }; }
+   [viz.pass = 1] { stroke: { color: white; width: 3 px; }; }
+}

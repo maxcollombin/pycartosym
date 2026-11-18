@@ -1,0 +1,11 @@
+// Both identifiers: for each viz.pass, each feature is drawn with its
+// feature.pass symbolizers in order.
+Roads
+{
+   [viz.pass = 0]
+   {
+      [feature.pass = 0] { stroke: { color: black; width: 7 px; }; }
+      [feature.pass = 1] { stroke: { color: white; width: 5 px; }; }
+   }
+   [viz.pass = 1] { stroke: { color: red; width: 1 px; }; }
+}

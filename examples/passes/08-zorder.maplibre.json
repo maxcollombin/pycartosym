@@ -1,0 +1,32 @@
+{
+  "version": 8,
+  "sources": {
+    "cartosym": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "r0",
+      "type": "line",
+      "source": "cartosym",
+      "paint": {
+        "line-color": "gray",
+        "line-width": 4.0
+      }
+    },
+    {
+      "id": "r1",
+      "type": "line",
+      "source": "cartosym",
+      "paint": {
+        "line-color": "black",
+        "line-width": 2.0
+      }
+    }
+  ]
+}

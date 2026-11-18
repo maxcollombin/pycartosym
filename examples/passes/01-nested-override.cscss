@@ -1,0 +1,7 @@
+// Nested rules without a selector are the same as removing their curly
+// brackets: the second overrides the first, only the white stroke remains.
+[kind = 'road']
+{
+   { stroke: { color: black; width: 5 px; }; }
+   { stroke: { color: white; width: 3 px; }; }
+}

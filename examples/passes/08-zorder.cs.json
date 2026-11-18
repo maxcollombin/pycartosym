@@ -1,0 +1,45 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "zOrder reorders the features of one pass (here, rails above roads).",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "sysId": "dataLayer.id"
+          },
+          "Roads"
+        ]
+      },
+      "symbolizer": {
+        "zOrder": 0,
+        "stroke": {
+          "color": "gray",
+          "width": {
+            "px": 4.0
+          }
+        }
+      }
+    },
+    {
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "sysId": "dataLayer.id"
+          },
+          "Rails"
+        ]
+      },
+      "symbolizer": {
+        "zOrder": 1,
+        "stroke": {
+          "color": "black",
+          "width": {
+            "px": 2.0
+          }
+        }
+      }
+    }
+  ]
+}

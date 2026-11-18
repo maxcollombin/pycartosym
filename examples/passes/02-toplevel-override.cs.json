@@ -1,0 +1,43 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "Top-level rules with the same selector override one another as well:\nidentical to the single rule with the white stroke.",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "property": "kind"
+          },
+          "road"
+        ]
+      },
+      "symbolizer": {
+        "stroke": {
+          "color": "black",
+          "width": {
+            "px": 5.0
+          }
+        }
+      }
+    },
+    {
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "property": "kind"
+          },
+          "road"
+        ]
+      },
+      "symbolizer": {
+        "stroke": {
+          "color": "white",
+          "width": {
+            "px": 3.0
+          }
+        }
+      }
+    }
+  ]
+}
