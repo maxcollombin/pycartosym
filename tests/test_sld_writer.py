@@ -2401,7 +2401,8 @@ class TestWritePropertyDrivenPosition:
         disp_y = root.find(".//se:Graphic/se:Displacement/se:DisplacementY", NS)
         prop = disp_x.find("ogc:PropertyName", NS)
         assert prop is not None and prop.text == "dx"
-        assert disp_y.text == "3"
+        # positive y points down in CartoSym, up in se:DisplacementY
+        assert disp_y.text == "-3"
 
         from pycartosym.codecs.sld.reader import SldReader
 

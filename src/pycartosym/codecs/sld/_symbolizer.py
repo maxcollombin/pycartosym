@@ -1612,6 +1612,28 @@ def _build_closed_path_symbolizer(
     return ps
 
 
+def _negate_axis(value: Any) -> Any:
+    """Return the opposite of one ``position`` axis, as a number or an expression.
+
+    CartoSym's ``position`` has a positive ``y`` pointing down (screen space),
+    while ``se:DisplacementY`` points up: the vertical offset is negated on
+    the way out and again on the way back. A property or arithmetic
+    expression becomes ``-1 * expression``, and a ``-1 * expression`` goes
+    back to the expression, so a written and re-read offset is unchanged.
+    """
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return 0 - value
+    value = _coerce_numeric_expr(value)
+    if (
+        isinstance(value, ArithmeticExpression)
+        and value.op == "*"
+        and len(value.args) == 2
+        and value.args[0] == -1
+    ):
+        return value.args[1]
+    return ArithmeticExpression(op="*", args=[-1, value])
+
+
 def _build_graphic_displacement(
     d: SldDialect, graphic: etree._Element, position: Any, ctx: str
 ) -> None:
@@ -1632,7 +1654,7 @@ def _build_graphic_displacement(
         )
     disp = d.el("Displacement", parent=graphic)
     _write_numeric_element(d, disp, "DisplacementX", px or 0)
-    _write_numeric_element(d, disp, "DisplacementY", py or 0)
+    _write_numeric_element(d, disp, "DisplacementY", _negate_axis(py or 0))
 
 
 def _percent_to_fraction(value: Any) -> float:
@@ -1908,7 +1930,7 @@ def _build_text_symbolizer(
         if has_displacement:
             disp_el = d.el("Displacement", parent=point_placement_el)
             _write_numeric_element(d, disp_el, "DisplacementX", px or 0)
-            _write_numeric_element(d, disp_el, "DisplacementY", py or 0)
+            _write_numeric_element(d, disp_el, "DisplacementY", _negate_axis(py or 0))
         # se:PointPlacementType order: AnchorPoint?, Displacement?, Rotation?
         _write_rotation(d, point_placement_el, transform)
 
@@ -2803,6 +2825,17 @@ def _parse_font_glyph_mark(
     return result
 
 
+def _read_negated_axis(value: Any) -> Any:
+    """Turn a parsed ``se:DisplacementY`` back into ``y`` (see :func:`_negate_axis`)."""
+    if isinstance(value, dict) and value.get("op") == "*":
+        args = value.get("args") or []
+        if len(args) == 2 and args[0] == -1:
+            return args[1]
+    if isinstance(value, dict):
+        return {"op": "*", "args": [-1, value]}
+    return _negate_axis(value)
+
+
 def _graphic_displacement(d: SldDialect, graphic_el: etree._Element) -> dict:
     """Return the ``{x, y}`` offset from a point ``Graphic``'s ``se:Displacement``.
 
@@ -2814,7 +2847,7 @@ def _graphic_displacement(d: SldDialect, graphic_el: etree._Element) -> dict:
         return {"x": 0, "y": 0}
     return {
         "x": _parsed_axis_or_zero(d.find(disp_el, "DisplacementX")),
-        "y": _parsed_axis_or_zero(d.find(disp_el, "DisplacementY")),
+        "y": _read_negated_axis(_parsed_axis_or_zero(d.find(disp_el, "DisplacementY"))),
     }
 
 
@@ -3005,7 +3038,7 @@ def _parse_text_symbolizer(d: SldDialect, ts_el: etree._Element) -> dict:
             dy = d.find(disp_el, "DisplacementY")
             result["position"] = {
                 "x": _parsed_axis_or_zero(dx),
-                "y": _parsed_axis_or_zero(dy),
+                "y": _read_negated_axis(_parsed_axis_or_zero(dy)),
             }
         rotation_text = element_text(d.find(point_placement_el, "Rotation"))
         if rotation_text is not None:
