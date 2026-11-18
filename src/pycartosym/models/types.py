@@ -173,7 +173,8 @@ class WebColorName(str, Enum):
     PURPLE = "purple"
     DARK_MAGENTA = "darkMagenta"
     MAGENTA = "magenta"
-    FUSCHIA = "fuschia"
+    FUCHSIA = "fuchsia"
+    FUSCHIA = "fuschia"  # misspelling of the schema up to its 2020-12 revision
     ORCHID = "orchid"
     MEDIUM_VIOLET_RED = "mediumVioletRed"
     DEEP_PINK = "deepPink"

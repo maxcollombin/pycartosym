@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- The colour name `fuchsia` (the spelling of the revised schema) is accepted next to the misspelled `fuschia`, in CS-JSON, CartoSym-CSS and SLD/SE; each is kept as given.
+
 ## [0.6.6] - 2026-11-18
 
 ### Added
