@@ -163,6 +163,7 @@
                      "casing": { "$ref": "#/$defs/strokeStyling" },
                      "centerLine": { "$ref": "#/$defs/strokeStyling" },
                      "dashPattern": { "$ref": "#/$defs/dashPattern" },
+                     "dashOffset": { "$ref": "#/$defs/unitValue" },
                      "pattern": { "$ref": "#/$defs/graphic" },
                      "patternGap": { "type": "number" },
                      "patternInitialGap": { "type": "number" },
