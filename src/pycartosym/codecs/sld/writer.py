@@ -232,9 +232,6 @@ class SldWriter(CodecWriter):
                 if rule_el is not None:
                     fts.append(rule_el)
                     n_rules += 1
-            for else_rule in self._flatten_nested_rules(rule):
-                fts.append(else_rule)
-                n_rules += 1
         if n_rules == 0:
             # Every rule in this group was symbolizer-less and faithfully
             # dropped — se:FeatureTypeStyle/se:CoverageStyle both require
@@ -248,31 +245,10 @@ class SldWriter(CodecWriter):
             return True
         return any(self._rule_has_raster(n) for n in rule.nested_rules or [])
 
-    def _flatten_nested_rules(self, rule: StylingRule) -> list[etree._Element]:
-        """Emit the selector-less ``nested_rules`` as sibling ``se:Rule`` elements.
-
-        Each carries an ``ElseFilter`` marker in the dialect's symbology
-        namespace (``se:ElseFilter`` for SE 1.1.0).
-
-        By the time this runs, ``flatten_cascade_rules`` has already
-        pulled every *selector-bearing* nested rule out into an
-        independent top-level rule; what is left here is genuine OGC
-        else-rule fallback (no selector), symbolizer already merged onto
-        its ancestors'.
-        """
-        out = []
-        for nested in rule.nested_rules or []:
-            nested_el = self._build_rule(nested, None, is_else=True)
-            if nested_el is not None:
-                out.append(nested_el)
-            out.extend(self._flatten_nested_rules(nested))
-        return out
-
     def _build_rule(
         self,
         rule: StylingRule,
         remaining_selector: dict | None,
-        is_else: bool = False,
     ) -> etree._Element | None:
         sym_elements = (
             symbolizer_to_elements(self.d, rule.symbolizer)
@@ -291,7 +267,7 @@ class SldWriter(CodecWriter):
                 for f in ("visibility", "opacity", "z_order")
                 if sym is not None and getattr(sym, f, None) is not None
             ]
-            if carried and not is_else:
+            if carried:
                 logger.warning(
                     "SLD/SE writer: dropping symbolizer-less rule %r "
                     "(carried %s) — not representable in SE 1.1.0",
@@ -318,25 +294,16 @@ class SldWriter(CodecWriter):
             if rule.comment:
                 self.d.el("Abstract", parent=desc, text=rule.comment)
 
-        if is_else:
-            self.d.el("ElseFilter", parent=rule_el)
-        else:
-            min_sd, max_sd, filter_selector = extract_scale_denominators(
-                remaining_selector
-            )
-            filt = selector_to_filter_xml(filter_selector)
-            if filt is not None:
-                rule_el.append(filt)
-            # SE 1.1.0 RuleType order: (Filter|ElseFilter)?, then
-            # MinScaleDenominator?, MaxScaleDenominator?, then Symbolizer*.
-            if min_sd is not None:
-                self.d.el(
-                    "MinScaleDenominator", parent=rule_el, text=_scale_text(min_sd)
-                )
-            if max_sd is not None:
-                self.d.el(
-                    "MaxScaleDenominator", parent=rule_el, text=_scale_text(max_sd)
-                )
+        min_sd, max_sd, filter_selector = extract_scale_denominators(remaining_selector)
+        filt = selector_to_filter_xml(filter_selector)
+        if filt is not None:
+            rule_el.append(filt)
+        # SE 1.1.0 RuleType order: Filter?, then
+        # MinScaleDenominator?, MaxScaleDenominator?, then Symbolizer*.
+        if min_sd is not None:
+            self.d.el("MinScaleDenominator", parent=rule_el, text=_scale_text(min_sd))
+        if max_sd is not None:
+            self.d.el("MaxScaleDenominator", parent=rule_el, text=_scale_text(max_sd))
 
         for sym_el in sym_elements:
             rule_el.append(sym_el)
