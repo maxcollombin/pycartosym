@@ -161,6 +161,7 @@ _WEB_COLOR_HEX = {
     "purple": "#800080",
     "darkMagenta": "#8b008b",
     "magenta": "#ff00ff",
+    "fuchsia": "#ff00ff",
     "fuschia": "#ff00ff",
     "orchid": "#da70d6",
     "mediumVioletRed": "#c71585",
