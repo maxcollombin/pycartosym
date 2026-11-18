@@ -82,7 +82,7 @@ class TestCascadeThroughWriter:
         }
         assert fills == {"#808080", "#006400"}
 
-    def test_selectorless_nested_rule_is_filtered_by_its_parent_selector(self):
+    def test_selectorless_nested_rule_merges_into_its_parent_rule(self):
         root = self._write(
             {
                 "stylingRules": [
@@ -104,46 +104,11 @@ class TestCascadeThroughWriter:
                 ]
             }
         )
-        rules = root.findall(".//se:Rule", NS)
-        assert len(rules) == 2
-        # not an else rule: it applies to what the parent selects, on top of it
+        # not an else rule and not a second rule drawn over the parent: a
+        # nested rule without selector is the parent with its brackets removed
         assert root.find(".//se:ElseFilter", NS) is None
         assert root.find(".//ogc:ElseFilter", NS) is None
-        for rule in rules:
-            assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "Class"
-        strokes = [r.find(".//se:SvgParameter[@name='stroke']", NS).text for r in rules]
-        assert strokes == ["#ff0000", "#808080"]
-
-    def test_selectorless_siblings_are_written_as_stacked_rules(self):
-        selector = {"op": "=", "args": [{"property": "Class"}, "primary"]}
-        root = self._write(
-            {
-                "stylingRules": [
-                    {
-                        "selector": selector,
-                        "nestedRules": [
-                            {
-                                "symbolizer": {
-                                    "stroke": {"color": "black", "width": {"px": 5}}
-                                }
-                            },
-                            {
-                                "symbolizer": {
-                                    "stroke": {"color": "white", "width": {"px": 3}}
-                                }
-                            },
-                        ],
-                    }
-                ]
-            }
-        )
-        rules = root.findall(".//se:Rule", NS)
-        # two layers drawn in document order, both over what the parent selects
-        assert len(rules) == 2
-        assert root.find(".//se:ElseFilter", NS) is None
-        widths = [
-            r.find(".//se:SvgParameter[@name='stroke-width']", NS).text for r in rules
-        ]
-        assert widths == ["5", "3"]
-        for rule in rules:
-            assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "Class"
+        (rule,) = root.findall(".//se:Rule", NS)
+        assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "Class"
+        assert rule.find(".//se:SvgParameter[@name='stroke']", NS).text == "#808080"
+        assert rule.find(".//se:SvgParameter[@name='stroke-width']", NS).text == "1"
