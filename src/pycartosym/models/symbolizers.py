@@ -9,6 +9,7 @@ import re
 from typing import Annotated, Any
 
 from pydantic import (
+    AliasChoices,
     ConfigDict,
     Field,
     PrivateAttr,
@@ -211,8 +212,13 @@ class Stroke(BaseCartoSymModel, AlterMixin):
 
     # Extended stroke properties
     casing: StrokeStyling | None = Field(None, description="Stroke casing")
+    # `center` is the name in the specification text (the schema says
+    # `centerLine`): both are read, `centerLine` is written.
     center_line: StrokeStyling | None = Field(
-        None, alias="centerLine", description="Center line styling"
+        None,
+        validation_alias=AliasChoices("centerLine", "center", "center_line"),
+        serialization_alias="centerLine",
+        description="Center line styling",
     )
     dash_pattern: list[int | UnitValue] | dict[str, int] | None = Field(
         None,
