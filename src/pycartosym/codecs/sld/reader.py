@@ -58,19 +58,21 @@ def _scale_denominator_value(
 
 
 def _else_selector(
-    preceding: list[dict | None], own: dict | None
+    others: list[dict | None], own: dict | None
 ) -> dict | None | Literal[False]:
-    """Selector of an ``se:ElseFilter`` rule: no earlier rule of the group applies.
+    """Selector of an ``se:ElseFilter`` rule: no other rule of the group applies.
 
-    ``own`` is the rule's own scale range, if any. Returns ``False`` when an
-    earlier rule has no filter and no scale range, as it then always applies
-    and the else rule never does.
+    ``others`` holds the selectors of the group's non-else rules (a scale
+    range counts only where it is active, as SE discards the rules outside
+    the nominal scale first) and ``own`` the rule's own scale range, if any.
+    Returns ``False`` when another rule has no filter and no scale range, as
+    it then always applies and the else rule never does.
     """
-    if not preceding:
+    if not others:
         return own
-    if any(sel is None for sel in preceding):
+    if any(sel is None for sel in others):
         return False
-    anyone = preceding[0] if len(preceding) == 1 else {"op": "or", "args": preceding}
+    anyone = others[0] if len(others) == 1 else {"op": "or", "args": others}
     negated = {"op": "not", "args": [anyone]}
     return negated if own is None else {"op": "and", "args": [own, negated]}
 
@@ -192,25 +194,25 @@ class SldReader(CodecReader):
         feature_type_name = ftn_el.text if ftn_el is not None else None
 
         rule_dicts: list[dict] = []
-        # Selectors (filter + scale range) of the non-else rules read so far:
-        # an ElseFilter rule applies where none of them does.
-        preceding: list[dict | None] = []
+        parsed = [
+            self._parse_rule(rule_el) for rule_el in self.d.findall(fts_el, "Rule")
+        ]
+        # Selectors (filter + scale range) of every non-else rule of the group:
+        # an ElseFilter rule applies where none of them does, wherever they
+        # sit relative to it (SE 1.1.0 10.3: the order is unimportant).
+        others = [rd.get("selector") for rd, is_else in parsed if not is_else]
 
-        for rule_el in self.d.findall(fts_el, "Rule"):
-            rule_dict, is_else = self._parse_rule(rule_el)
-            own_selector = rule_dict.get("selector")
+        for rule_dict, is_else in parsed:
+            selector = rule_dict.get("selector")
             if is_else:
-                selector = _else_selector(preceding, own_selector)
+                selector = _else_selector(others, selector)
                 if selector is False:
                     logger.warning(
-                        "SLD reader: dropping se:ElseFilter rule %r, an earlier "
+                        "SLD reader: dropping se:ElseFilter rule %r, another "
                         "rule without a filter always applies so it never does",
                         rule_dict.get("name") or "<unnamed>",
                     )
                     continue
-            else:
-                preceding.append(own_selector)
-                selector = own_selector
             selector = merge_visualization_pass(pass_number, selector)
             selector = merge_feature_type_name(feature_type_name, selector)
             if selector is not None:

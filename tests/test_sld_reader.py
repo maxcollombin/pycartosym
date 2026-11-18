@@ -442,7 +442,12 @@ def _rule(*parts):
 
 
 class TestReadElseRule:
-    """``se:ElseFilter`` is read as the negation of the earlier rules' selectors."""
+    """``se:ElseFilter`` is read as the negation of the other rules' selectors.
+
+    SE 1.1.0 (OGC 05-077r4) 10.3: ``not (a or b …)`` over every other rule of
+    the group, after discarding the rules outside the nominal scale, and "the
+    order of rules with Filters and ElseFilters is unimportant".
+    """
 
     def test_else_rule_excludes_the_preceding_rule(self):
         style = _read("5-else-rule.sld")
@@ -460,7 +465,7 @@ class TestReadElseRule:
         }
         assert style.styling_rules[1].symbolizer.stroke.color == [128, 128, 128]
 
-    def test_else_rule_excludes_every_preceding_rule(self):
+    def test_else_rule_excludes_every_other_rule(self):
         a = {"op": "=", "args": [{"property": "k"}, "a"]}
         b = {"op": "=", "args": [{"property": "k"}, "b"]}
         style = SldReader().read(
@@ -474,6 +479,36 @@ class TestReadElseRule:
             "op": "not",
             "args": [{"op": "or", "args": [a, b]}],
         }
+
+    def test_else_rule_before_the_rules_it_excludes(self):
+        style = SldReader().read(
+            _rules_xml(_rule("<se:ElseFilter/>"), _rule(_eq("k", "a")))
+        )
+        assert style.styling_rules[0].selector == {
+            "op": "not",
+            "args": [{"op": "=", "args": [{"property": "k"}, "a"]}],
+        }
+
+    def test_else_rule_with_scale_dependent_rules(self):
+        """The example of SE 1.1.0 10.3: gray where no red/yellow rule is active."""
+        style = SldReader().read(
+            _rules_xml(
+                _rule(
+                    _eq("A", 1),
+                    "<se:MaxScaleDenominator>250000</se:MaxScaleDenominator>",
+                ),
+                _rule(
+                    _eq("A", 1),
+                    "<se:MinScaleDenominator>250000</se:MinScaleDenominator>",
+                    "<se:MaxScaleDenominator>5000000</se:MaxScaleDenominator>",
+                ),
+                _rule("<se:ElseFilter/>"),
+            )
+        )
+        red, yellow, gray = (r.selector for r in style.styling_rules)
+        # A = 1 at 5M and above, and A != 1 at every scale, fall through to gray
+        assert gray == {"op": "not", "args": [{"op": "or", "args": [red, yellow]}]}
+        assert {"op": "<", "args": [{"sysId": "viz.sd"}, 250000]} in red["args"]
 
     def test_else_rule_keeps_its_own_scale_range(self):
         style = SldReader().read(
