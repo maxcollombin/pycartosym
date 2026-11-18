@@ -22,7 +22,7 @@ per pass) or the built-in `casing`.
 | `03-feature-pass` | Per feature: black stroke, then white | One `se:Rule` with two `se:LineSymbolizer`, in pass order | Error: `feature.pass` has no mapping (a layer draws all its features) |
 | `04-viz-pass` | All black strokes, then all white strokes | Two `se:FeatureTypeStyle`, in pass order | Error: `viz.pass` is not mapped (it could be the layer order) |
 | `05-casing` | Built-in casing | Error: `Stroke.casing` has no mapping | Error: `stroke.casing` has no mapping |
-| `06-rule-without-pass` | A background rule next to rules with a `viz.pass` | Error: the pass of the rule without `viz.pass` is undefined (#207) | Error: `viz.pass` is not mapped |
+| `06-rule-without-pass` | A background rule next to rules with a `viz.pass`: it applies in pass 0 only (#198) | The rule without a pass is in the first `se:FeatureTypeStyle` (pass 0), then one per `viz.pass` | Error: `viz.pass` is not mapped |
 | `07-feature-and-viz-pass` | Both identifiers | Two `se:FeatureTypeStyle`, the first with a `se:Rule` of two symbolizers | Error: `viz.pass` is not mapped |
 | `08-zorder` | Rails drawn above roads | Two `se:FeatureTypeStyle` in document order; `zOrder` is not written | Two layers in document order; `zOrder` is not written |
 

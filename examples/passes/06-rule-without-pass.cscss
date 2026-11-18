@@ -1,5 +1,6 @@
-// A rule without viz.pass next to rules that have one: which passes does
-// the background fill belong to? (every pass, or only the first one)
+// A rule without viz.pass next to rules that have one: it applies in pass 0
+// only (settled in opengeospatial/cartographic-symbology#198), so the
+// background fill is drawn once, with the first pass.
 Zones { fill: { color: lightGray; }; }
 Roads
 {
