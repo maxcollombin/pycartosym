@@ -500,6 +500,11 @@ def format_color(value: Any) -> str:
     if isinstance(value, WebColorName):
         return _WEB_COLOR_HEX[value.value]
     if isinstance(value, RGBColor):
+        if None in (value.r, value.g, value.b):
+            raise NotImplementedError(
+                "A color that only overrides some of r, g and b (alter) has no "
+                "SLD/SE mapping in this codec"
+            )
         return f"#{value.r:02x}{value.g:02x}{value.b:02x}"
     if isinstance(value, RGBColorNormalized):
         r, g, b = round(value.r * 255), round(value.g * 255), round(value.b * 255)
@@ -514,6 +519,11 @@ def format_color(value: Any) -> str:
         raise NotImplementedError(f"Unsupported color dict shape: {value!r}")
     if isinstance(value, (list, tuple)) and len(value) == 3:
         r, g, b = value
+        if not all(isinstance(c, (int, float)) for c in (r, g, b)):
+            raise NotImplementedError(
+                "A color with an expression as a component has no SLD/SE "
+                "mapping in this codec"
+            )
         return f"#{int(r):02x}{int(g):02x}{int(b):02x}"
     if isinstance(value, str):
         if value.startswith("#"):

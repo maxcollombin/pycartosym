@@ -105,9 +105,11 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             if isinstance(pushed, dict) and len(pushed) == 1:
                 return f"{pushed[unit]} {cscss_unit(unit)}"
             return expression_to_text(pushed)
-    # Reference to a style variable: {"$ref": "#/$variables/w"} -> `@w`
-    if len(expr) == 1 and str(expr.get("$ref", "")).startswith("#/$variables/"):
-        return "@" + str(expr["$ref"]).removeprefix("#/$variables/")
+    # Reference to a style variable: {"$ref": "#/$variables/w"} -> `@w`. A
+    # pointer into an included file ("base.cs.json#/$variables/w") is written
+    # the same way: the file is the one the style includes.
+    if len(expr) == 1 and "#/$variables/" in str(expr.get("$ref", "")):
+        return "@" + str(expr["$ref"]).partition("#/$variables/")[2]
     # Conditional: {"op": "?:", "args": [c, a, b]} -> `c ? a : b`
     if expr.get("op") == "?:" and len(expr.get("args", [])) == 3:
         cond, yes, no = (_infix_operand(a, "?:") for a in expr["args"])

@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .value_expressions import ValueExpression
 
@@ -187,12 +187,28 @@ class WebColorName(str, Enum):
 
 
 class RGBColor(BaseModel):
-    """RGB color with 0-255 components."""
+    """RGB color with 0-255 components.
 
-    r: Annotated[int, Field(ge=0, le=255, description="Red component (0-255)")]
-    g: Annotated[int, Field(ge=0, le=255, description="Green component (0-255)")]
-    b: Annotated[int, Field(ge=0, le=255, description="Blue component (0-255)")]
+    With ``alter`` set, the object only overrides the components it gives
+    (``{"alter": true, "r": 100}``), so each one is optional then.
+    """
+
+    r: Annotated[
+        int | None, Field(ge=0, le=255, description="Red component (0-255)")
+    ] = None
+    g: Annotated[
+        int | None, Field(ge=0, le=255, description="Green component (0-255)")
+    ] = None
+    b: Annotated[
+        int | None, Field(ge=0, le=255, description="Blue component (0-255)")
+    ] = None
     alter: bool = Field(False, description="Alter flag")
+
+    @model_validator(mode="after")
+    def _components_required_unless_altering(self) -> RGBColor:
+        if not self.alter and None in (self.r, self.g, self.b):
+            raise ValueError("r, g and b are required unless alter is set")
+        return self
 
 
 class RGBColorNormalized(BaseModel):
@@ -209,7 +225,8 @@ Color = (
     WebColorName  # Named colors
     | RGBColor  # RGB object with 0-255 values
     | RGBColorNormalized  # RGB object with 0-1 values
-    | list[Annotated[int, Field(ge=0, le=255)]]  # RGB array [r, g, b]
+    # RGB array [r, g, b], each component an integer or a numeric expression
+    | list[Annotated[int, Field(ge=0, le=255)] | dict[str, Any]]
     | str  # Hex colors like "#ff0000" or expressions
 )
 
