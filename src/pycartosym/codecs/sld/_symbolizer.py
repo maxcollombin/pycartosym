@@ -453,6 +453,14 @@ def symbolizer_to_elements(d: SldDialect, sym: Any) -> list[etree._Element]:
     fill = _g(sym, "fill")
     stroke = _g(sym, "stroke")
     marker = _g(sym, "marker")
+    if (
+        marker is not None
+        and not hasattr(marker, "elements")
+        and not isinstance(marker, dict)
+    ):
+        raise NotImplementedError(
+            "A marker given as an expression has no SLD/SE mapping in this codec"
+        )
     label = _g(sym, "label")
     # SE 1.1.0 has no whole-symbolizer opacity — fold Symbolizer.opacity
     # into every leaf opacity produced below.

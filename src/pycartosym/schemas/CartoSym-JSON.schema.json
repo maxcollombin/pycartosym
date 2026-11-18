@@ -214,6 +214,7 @@
     "marker": {
        "anyOf": [
           { "type": "null" },
+          { "$ref": "#/$defs/idOrFnExpression" },
           { "$ref": "#/$defs/multiGraphic" },
           {
              "allOf": [
