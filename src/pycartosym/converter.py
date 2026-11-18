@@ -427,8 +427,14 @@ class Converter:
         # An explicit ``null`` unsets the default Marker / Label: writing nothing
         # would leave the default in place.
         explicit: set[str] = getattr(symbolizer, "model_fields_set", set())
-        if getattr(symbolizer, "marker", None):
-            lines.extend(self._marker_to_css(symbolizer.marker))
+        marker = getattr(symbolizer, "marker", None)
+        if marker is not None and not hasattr(marker, "elements"):
+            # the grammar only takes a `{ ... }` object as the value of `marker`
+            raise NotImplementedError(
+                "A marker given as an expression has no CartoSym-CSS form"
+            )
+        if marker:
+            lines.extend(self._marker_to_css(marker))
         elif "marker" in explicit:
             lines.append("  marker: null;")
         if getattr(symbolizer, "label", None):

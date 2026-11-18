@@ -29,7 +29,7 @@ from .types import (
     UnitType,
     UnitValue,
 )
-from .value_expressions import PropertyRef
+from .value_expressions import PropertyRef, ValueExpression
 
 # A vendor-extension property on a symbolizer, per the conceptual model's
 # generic vendor-extension mechanism: a symbolizer property named
@@ -676,7 +676,10 @@ class SymbolizerEnhanced(BaseCartoSymModel, CommentMixin):
     # Vector symbolizers
     fill: Fill | None = Field(None, description="Fill symbolizer")
     stroke: Stroke | None = Field(None, description="Stroke symbolizer")
-    marker: Marker | None = Field(None, description="Marker symbolizer")
+    # An expression (a property, a variable...) can stand for the whole marker.
+    marker: Marker | ValueExpression | None = Field(
+        None, description="Marker symbolizer"
+    )
     label: Label | None = Field(None, description="Label symbolizer")
 
     # Raster/coverage symbolizers
@@ -730,7 +733,10 @@ class Symbolizer(BaseCartoSymModel, CommentMixin):
     # Vector symbolizers
     fill: Fill | None = Field(None, description="Fill symbolizer")
     stroke: Stroke | None = Field(None, description="Stroke symbolizer")
-    marker: Marker | None = Field(None, description="Marker symbolizer")
+    # An expression (a property, a variable...) can stand for the whole marker.
+    marker: Marker | ValueExpression | None = Field(
+        None, description="Marker symbolizer"
+    )
     label: Label | None = Field(None, description="Label symbolizer")
 
     # Raster symbolizers

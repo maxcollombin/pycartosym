@@ -1071,6 +1071,11 @@ def _rule_to_layers(rule: Any) -> list[dict[str, Any]]:
     if sym is None:
         raise NotImplementedError("styling rule without a symbolizer")
 
+    if sym.marker is not None and not hasattr(sym.marker, "elements"):
+        raise NotImplementedError(
+            "a marker given as an expression has no MapLibre mapping in this codec"
+        )
+
     layer_id = rule.name or extract_feature_type_name(rule.selector)[0]
     if not layer_id:
         raise NotImplementedError("styling rule without a name → MapLibre layer id")
