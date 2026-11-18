@@ -14,6 +14,7 @@ silently dropped, per this project's lossless-transcoding requirement.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import OrderedDict
 
@@ -25,12 +26,14 @@ from ..base import CodecWriter
 from ._conditional import split_conditionals
 from ._dialect import SE_1_1_0, SldDialect
 from ._filter import (
+    extract_feature_pass,
     extract_feature_type_name,
     extract_scale_denominators,
     extract_visualization_pass,
     selector_to_filter_xml,
 )
 from ._symbolizer import has_raster_fields, symbolizer_to_elements
+from ._xml_helpers import local_name
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +221,11 @@ class SldWriter(CodecWriter):
             if feature_type_name is not None:
                 self.d.el("FeatureTypeName", parent=fts, text=str(feature_type_name))
         n_rules = 0
+        # Rules differing only by their feature.pass share one se:Rule: a
+        # feature.pass draws every pass of a feature before the next feature,
+        # as the several symbolizers of one se:Rule do. Key: the rest of the
+        # selector -> (first se:Rule, [(pass, its symbolizers)]).
+        stacked: dict[str, tuple[etree._Element, list[tuple[int, list]]]] = {}
         for rule, remaining_selector in rules_and_selectors:
             # a conditional expression in the symbolizer becomes one rule
             # per branch, each filtered by the branch's condition
@@ -228,10 +236,25 @@ class SldWriter(CodecWriter):
                     else rule.model_copy(update={"symbolizer": symbolizer})
                 )
                 selector = _and_selector(remaining_selector, conditions)
+                feature_pass, selector = extract_feature_pass(selector)
                 rule_el = self._build_rule(variant, selector)
-                if rule_el is not None:
-                    fts.append(rule_el)
-                    n_rules += 1
+                if rule_el is None:
+                    continue
+                if feature_pass is not None:
+                    key = json.dumps(selector, sort_keys=True)
+                    symbolizers = [
+                        c for c in rule_el if local_name(c).endswith("Symbolizer")
+                    ]
+                    if key in stacked:
+                        stacked[key][1].append((feature_pass, symbolizers))
+                        continue
+                    stacked[key] = (rule_el, [(feature_pass, symbolizers)])
+                fts.append(rule_el)
+                n_rules += 1
+        for rule_el, passes in stacked.values():
+            for _, syms in sorted(passes, key=lambda p: p[0]):
+                for sym in syms:
+                    rule_el.append(sym)  # lxml moves an element it already holds
         if n_rules == 0:
             # Every rule in this group was symbolizer-less and faithfully
             # dropped — se:FeatureTypeStyle/se:CoverageStyle both require

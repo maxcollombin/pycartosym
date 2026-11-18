@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `feature.pass` is a system identifier: CartoSym-CSS `[feature.pass = 0]` is read as `{"sysId": "feature.pass"}` instead of a property, and the SLD/SE writer turns rules that differ only by their `feature.pass` into the symbolizers of one `se:Rule`, in pass order (#203).
+
 ### Fixed
 
 - SLD/SE and MapLibre writers: a nested rule without a selector refines its parent (its symbolizer is merged into the parent's, as if its curly brackets were removed) instead of becoming an `se:ElseFilter` rule that lost the parent's selector, or an error in MapLibre; the SLD reader reads an `se:ElseFilter` rule as the negation of the earlier rules' selectors (#190).

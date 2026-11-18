@@ -65,6 +65,7 @@ _TEXT_OP_PATTERNS = {
 
 _SCALE_SYSID = "viz.sd"
 _PASS_SYSID = "viz.pass"
+_FEATURE_PASS_SYSID = "feature.pass"
 _FLIP_OP = {
     "<": ">",
     "<=": ">=",
@@ -96,29 +97,20 @@ def merge_feature_type_name(name: str | None, selector: dict | None) -> dict | N
     return {"op": "and", "args": [id_eq, selector]}
 
 
-def extract_visualization_pass(
-    selector: dict | None,
-) -> tuple[int | None, dict | None]:
-    """Split a literal ``viz.pass = N`` conjunct out of *selector*.
+def _extract_pass(selector: dict | None, sysid: str) -> tuple[int | None, dict | None]:
+    """Split a literal ``<sysid> = N`` conjunct out of *selector*.
 
-    ``viz.pass`` (visualization rendering pass) maps to the order of
-    ``se:FeatureTypeStyle`` elements in a ``se:UserStyle``: every feature
-    is drawn with an earlier style before any is drawn with a later one.
     Same flatten/reassemble pattern as :func:`extract_feature_type_name`.
-    A ``viz.pass`` compared otherwise (an attribute-driven expression, a
-    range) stays in the remaining selector, where the filter encoder
-    rejects it: a feature-dependent pass has no static FeatureTypeStyle.
-
-    Returns:
-    -------
-    (pass_number, remaining_selector)
+    A pass compared otherwise (an attribute-driven expression, a range)
+    stays in the remaining selector, where the filter encoder rejects it:
+    a feature-dependent pass has no static SLD/SE structure.
     """
     if selector is None:
         return None, None
     pass_number: int | None = None
     remaining: list[Any] = []
     for conjunct in _flatten_and_conjuncts(selector):
-        value = conjunct["args"][1] if _is_sysid_eq(conjunct, _PASS_SYSID) else None
+        value = conjunct["args"][1] if _is_sysid_eq(conjunct, sysid) else None
         if (
             pass_number is None
             and isinstance(value, int)
@@ -128,6 +120,38 @@ def extract_visualization_pass(
         else:
             remaining.append(conjunct)
     return pass_number, _reassemble_and(remaining)
+
+
+def extract_visualization_pass(
+    selector: dict | None,
+) -> tuple[int | None, dict | None]:
+    """Split a literal ``viz.pass = N`` conjunct out of *selector*.
+
+    ``viz.pass`` (visualization rendering pass) maps to the order of
+    ``se:FeatureTypeStyle`` elements in a ``se:UserStyle``: every feature
+    is drawn with an earlier style before any is drawn with a later one.
+
+    Returns:
+    -------
+    (pass_number, remaining_selector)
+    """
+    return _extract_pass(selector, _PASS_SYSID)
+
+
+def extract_feature_pass(
+    selector: dict | None,
+) -> tuple[int | None, dict | None]:
+    """Split a literal ``feature.pass = N`` conjunct out of *selector*.
+
+    ``feature.pass`` draws one feature completely (all its passes, in
+    order) before the next, which is what several symbolizers of a single
+    ``se:Rule`` do in SE.
+
+    Returns:
+    -------
+    (pass_number, remaining_selector)
+    """
+    return _extract_pass(selector, _FEATURE_PASS_SYSID)
 
 
 def merge_visualization_pass(
