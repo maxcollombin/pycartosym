@@ -1,0 +1,32 @@
+# Weekly check that the CartoSym-JSON schema of the specification has not changed
+# since it was last compared with the bundled one
+# (src/pycartosym/schemas/CartoSym-JSON.schema.json). When it fails, review the
+# changes of the upstream schema, update the bundled schema, then record the new
+# blob SHA in .github/upstream-schema.sha.
+name: Schema drift
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compare with the upstream schema
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          recorded=$(tr -d '[:space:]' < .github/upstream-schema.sha)
+          current=$(gh api repos/opengeospatial/cartographic-symbology/contents/1-core/schemas/CartoSym-JSON.schema.json --jq .sha)
+          echo "recorded: $recorded"
+          echo "current:  $current"
+          if [ "$recorded" != "$current" ]; then
+            echo "::error::The upstream CartoSym-JSON schema changed since it was last compared with the bundled one."
+            exit 1
+          fi
