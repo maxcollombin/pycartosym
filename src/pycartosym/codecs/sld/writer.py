@@ -161,6 +161,10 @@ class SldWriter(CodecWriter):
         ] = OrderedDict()
         for rule in rules:
             selector = rule.selector
+            if selector is False:
+                continue  # a rule that selects nothing
+            if selector is True:
+                selector = None  # a rule that selects everything has no filter
             if selector is not None and not isinstance(selector, dict):
                 raise NotImplementedError(
                     f"StylingRule.selector of type {type(selector).__name__} "

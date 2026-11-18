@@ -347,6 +347,9 @@ class Converter:
         - Landuse[other filter]
         - [complex filter]
         """
+        # A boolean selector: `[true]` selects everything, `[false]` nothing
+        if isinstance(selector, bool):
+            return "[true]" if selector else "[false]"
         # Simple string selector
         if isinstance(selector, str):
             return selector

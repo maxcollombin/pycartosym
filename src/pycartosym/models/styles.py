@@ -49,7 +49,7 @@ class StylingRule(BaseCartoSymModel, CommentMixin):
     name: str | None = Field(
         None, description="Styling rule name (CSCSS ``.name``, ``se:Rule/se:Name``)"
     )
-    selector: dict[str, Any] | list[str] | str | None = Field(
+    selector: dict[str, Any] | list[str] | str | bool | None = Field(
         None,
         description="Selector expression (flexible - can be dict, list, or string)",
     )
