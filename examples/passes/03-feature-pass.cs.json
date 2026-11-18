@@ -1,0 +1,56 @@
+{
+  "stylingRules": [
+    {
+      "$comment": "Each feature is drawn with the black stroke, then with the white one,\nbefore the next feature is drawn.",
+      "selector": {
+        "op": "=",
+        "args": [
+          {
+            "property": "kind"
+          },
+          "road"
+        ]
+      },
+      "nestedRules": [
+        {
+          "selector": {
+            "op": "=",
+            "args": [
+              {
+                "sysId": "feature.pass"
+              },
+              0
+            ]
+          },
+          "symbolizer": {
+            "stroke": {
+              "color": "black",
+              "width": {
+                "px": 5.0
+              }
+            }
+          }
+        },
+        {
+          "selector": {
+            "op": "=",
+            "args": [
+              {
+                "sysId": "feature.pass"
+              },
+              1
+            ]
+          },
+          "symbolizer": {
+            "stroke": {
+              "color": "white",
+              "width": {
+                "px": 3.0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

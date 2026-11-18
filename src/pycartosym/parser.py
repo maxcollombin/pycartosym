@@ -1101,9 +1101,9 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 if hasattr(selector, "name") and selector.name:
                     self.current_rule.name = selector.name
                     break
-        else:
-            if self.rule_stack and "selectors" in self.rule_stack[-1]:
-                self.current_rule.selectors = self.rule_stack[-1]["selectors"].copy()
+        # A nested rule without a selector keeps none: it is the same as
+        # removing its curly brackets, which the converters rely on to merge it
+        # into its parent (copying the parent's selector made it a refinement).
         # Handle nesting: if we're in a nested rule, add to parent
         if self.rule_stack:
             parent_state = self.rule_stack.pop()

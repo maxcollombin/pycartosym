@@ -1,0 +1,2 @@
+// Built-in casing, no passes needed.
+[kind = 'road'] { stroke: { color: white; width: 3 px; casing: { color: black; width: 1 px; }; }; }

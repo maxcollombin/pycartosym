@@ -6,8 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `examples/passes/`: CartoSym-CSS cases for nested-rule overriding, `feature.pass`, `viz.pass`, casing and `zOrder`, with the SLD/SE and MapLibre that pycartosym writes from them.
+
 ### Fixed
 
+- CartoSym-CSS: a nested rule without a selector keeps none, instead of receiving a copy of its parent's selector, so it merges into its parent (the last of several siblings wins) in SLD/SE and MapLibre; it was written as a separate rule that was drawn too (#190).
 - The colour name `fuchsia` (the spelling of the revised schema) is accepted next to the misspelled `fuschia`, in CS-JSON, CartoSym-CSS and SLD/SE; each is kept as given.
 
 ## [0.6.6] - 2026-11-18
