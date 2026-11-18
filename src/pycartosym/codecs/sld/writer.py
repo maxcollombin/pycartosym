@@ -142,28 +142,22 @@ class SldWriter(CodecWriter):
 
     def _group_rules_by_feature_type(
         self, rules: list[StylingRule]
-    ) -> OrderedDict[
-        tuple[int | None, str | None], list[tuple[StylingRule, dict | None]]
-    ]:
+    ) -> OrderedDict[tuple[int, str | None], list[tuple[StylingRule, dict | None]]]:
         """Group top-level rules by their ``viz.pass`` and ``dataLayer.id`` conjuncts.
 
         Each group becomes one ``se:FeatureTypeStyle``, in ascending
         ``viz.pass`` order (SE draws the styles of a ``se:UserStyle`` one
-        after the other), then in order of first appearance. Rules with no
+        after the other), then in order of first appearance. A rule that does
+        not test ``viz.pass`` applies in pass 0 only. Rules with no
         ``dataLayer.id`` conjunct go into a ``se:FeatureTypeStyle`` with no
         ``se:FeatureTypeName`` child. Also strips (without re-emitting)
         any ``dataLayer.type``/``dataLayer.featuresGeometryDimensions``
         conjuncts found alongside it — see
         ``_filter.py::extract_feature_type_name``. SLD/SE has no
         representation for either, so this is a write-only lossy strip.
-
-        Raises:
-            NotImplementedError: If some rendering rules have a ``viz.pass``
-                and others do not — which pass the latter belong to is not
-                defined by the conceptual model.
         """
         groups: OrderedDict[
-            tuple[int | None, str | None], list[tuple[StylingRule, dict | None]]
+            tuple[int, str | None], list[tuple[StylingRule, dict | None]]
         ] = OrderedDict()
         for rule in rules:
             selector = rule.selector
@@ -175,31 +169,11 @@ class SldWriter(CodecWriter):
                 )
             feature_type_name, remaining = extract_feature_type_name(selector)
             pass_number, remaining = extract_visualization_pass(remaining)
-            groups.setdefault((pass_number, feature_type_name), []).append(
+            # a rule that does not test viz.pass applies in pass 0 only
+            groups.setdefault((pass_number or 0, feature_type_name), []).append(
                 (rule, remaining)
             )
-        passes = {key[0] for key, members in groups.items() if self._renders(members)}
-        if None in passes and len(passes) > 1:
-            raise NotImplementedError(
-                "Some styling rules select a viz.pass and others do not: the "
-                "pass of the latter is undefined, so their se:FeatureTypeStyle "
-                "order cannot be decided"
-            )
-        return OrderedDict(sorted(groups.items(), key=lambda item: item[0][0] or 0))
-
-    def _renders(self, members: list[tuple[StylingRule, dict | None]]) -> bool:
-        """Return True if any rule of a group yields a se:Rule (see _build_rule)."""
-        return any(
-            rule.nested_rules
-            or (
-                rule.symbolizer is not None
-                # the first variant stands for all: they differ by values only
-                and symbolizer_to_elements(
-                    self.d, split_conditionals(rule.symbolizer)[0][1]
-                )
-            )
-            for rule, _ in members
-        )
+        return OrderedDict(sorted(groups.items(), key=lambda item: item[0][0]))
 
     def _build_feature_type_style(
         self,

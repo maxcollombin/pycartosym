@@ -1,7 +1,7 @@
 {
   "stylingRules": [
     {
-      "$comment": "A rule without viz.pass next to rules that have one: which passes does\nthe background fill belong to? (every pass, or only the first one)",
+      "$comment": "A rule without viz.pass next to rules that have one: it applies in pass 0\nonly (settled in opengeospatial/cartographic-symbology#198), so the\nbackground fill is drawn once, with the first pass.",
       "selector": {
         "op": "=",
         "args": [

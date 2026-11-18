@@ -80,7 +80,7 @@ def test_nested_pass_rules_under_a_symbolizer_less_layer_rule():
     assert _strokes(root) == [["#808080"], ["#ffffff"]]
 
 
-def test_rules_with_and_without_a_pass_are_rejected():
+def test_a_rule_without_a_pass_applies_in_pass_zero_only():
     style = Style.from_dict(
         {
             "stylingRules": [
@@ -89,8 +89,8 @@ def test_rules_with_and_without_a_pass_are_rejected():
             ]
         }
     )
-    with pytest.raises(NotImplementedError, match="viz.pass"):
-        SldWriter().write(style)
+    root = etree.fromstring(SldWriter().write(style).encode("utf-8"))
+    assert _strokes(root) == [["#808080"], ["#ffffff"]]
 
 
 def test_attribute_driven_pass_is_rejected():
