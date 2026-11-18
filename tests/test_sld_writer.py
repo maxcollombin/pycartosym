@@ -722,13 +722,14 @@ class TestWriteSelectorlessNestedRule:
                 nested_rules=[{"symbolizer": {"fill": {"color": "gray"}}}],
             )
         )
+        rules = root.findall(".//se:Rule", NS)
+        assert len(rules) == 2
         assert root.find(".//se:ElseFilter", NS) is None
         assert root.find(".//ogc:ElseFilter", NS) is None
-        # one rule filtered by the parent's selector, the nested fill merged in
-        (rule,) = root.findall(".//se:Rule", NS)
-        assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "kind"
-        assert rule.findtext(".//ogc:Literal", namespaces=NS) == "road"
-        assert rule.find(".//se:SvgParameter[@name='fill']", NS).text == "#808080"
+        # both rules are filtered by the parent's selector
+        for rule in rules:
+            assert rule.findtext(".//ogc:PropertyName", namespaces=NS) == "kind"
+            assert rule.findtext(".//ogc:Literal", namespaces=NS) == "road"
 
 
 class TestWriteRuleTitleAbstract:

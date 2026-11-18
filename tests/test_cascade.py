@@ -95,8 +95,8 @@ class TestFlattenCascadeRules:
         ]
         assert "alter" not in flat[1]["symbolizer"]["marker"]
 
-    def test_selectorless_nested_rule_merges_into_the_parent(self):
-        """Same as removing its curly brackets: one rule, no second row."""
+    def test_selectorless_nested_rule_refines_the_parent(self):
+        """Like a block nested in a CSS rule: it applies to what the parent selects."""
         parent_selector = {"op": "=", "args": [{"property": "A"}, 1]}
         flat = flatten_cascade_rules(
             [
@@ -104,56 +104,36 @@ class TestFlattenCascadeRules:
                     "selector": parent_selector,
                     "symbolizer": {"stroke": {"color": "red", "width": 3}},
                     "nestedRules": [
-                        {"symbolizer": {"stroke": {"color": "gray", "width": 1}}},
+                        {"symbolizer": {"stroke": {"color": "gray"}}},
                     ],
                 }
             ]
         )
-        assert len(flat) == 1
-        assert flat[0]["selector"] == parent_selector
-        assert "nestedRules" not in flat[0]
-        assert flat[0]["symbolizer"]["stroke"] == {"color": "gray", "width": 1}
+        assert len(flat) == 2
+        assert flat[0]["symbolizer"]["stroke"] == {"color": "red", "width": 3}
+        # same selector as the parent (not an else rule), merged symbolizer
+        assert flat[1]["selector"] == parent_selector
+        assert "nestedRules" not in flat[1]
+        assert flat[1]["symbolizer"]["stroke"] == {"color": "gray", "width": 3}
 
-    def test_selectorless_nested_rule_is_inherited_by_later_refinements(self):
+    def test_selectorless_siblings_stay_separate_layers(self):
+        """Stacked layers (casing under a stroke) must not override each other."""
         parent = {"op": "=", "args": [{"property": "A"}, 1]}
-        child = {"op": "=", "args": [{"property": "B"}, 2]}
         flat = flatten_cascade_rules(
             [
                 {
                     "selector": parent,
-                    "symbolizer": {"stroke": {"color": "red"}},
                     "nestedRules": [
-                        {"selector": child, "symbolizer": {"fill": {"color": "blue"}}},
-                        {"symbolizer": {"stroke": {"width": 3}}},
+                        {"symbolizer": {"stroke": {"color": "black", "width": 5}}},
+                        {"symbolizer": {"stroke": {"color": "white", "width": 3}}},
                     ],
                 }
             ]
         )
-        assert [r.get("selector") for r in flat] == [
-            parent,
-            {"op": "and", "args": [parent, child]},
-        ]
-        # the selector-less rule comes last in the document but, being part of
-        # the parent, applies to the refinement too
-        assert flat[1]["symbolizer"]["stroke"] == {"color": "red", "width": 3}
-        assert flat[1]["symbolizer"]["fill"] == {"color": "blue"}
-
-    def test_selectorless_rule_nested_in_a_selectorless_one(self):
-        flat = flatten_cascade_rules(
-            [
-                {
-                    "symbolizer": {"stroke": {"color": "red"}},
-                    "nestedRules": [
-                        {
-                            "symbolizer": {"stroke": {"width": 2}},
-                            "nestedRules": [{"symbolizer": {"stroke": {"width": 4}}}],
-                        }
-                    ],
-                }
-            ]
-        )
-        assert len(flat) == 1
-        assert flat[0]["symbolizer"]["stroke"] == {"color": "red", "width": 4}
+        # symbolizer-less parent first (dropped by the writers), then the layers
+        assert [r.get("selector") for r in flat] == [parent, parent, parent]
+        assert flat[1]["symbolizer"]["stroke"] == {"color": "black", "width": 5}
+        assert flat[2]["symbolizer"]["stroke"] == {"color": "white", "width": 3}
 
     def test_selectorless_nested_rule_inside_a_selector_bearing_one(self):
         outer = {"op": "=", "args": [{"property": "A"}, 1]}
