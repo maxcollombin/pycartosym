@@ -299,20 +299,21 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         # Format n-ary ops (like 'and', 'or')
         if op in ("and", "or"):
 
-            def needs_parens(arg):
-                return (
-                    isinstance(arg, dict)
-                    and arg.get("op") in ("and", "or")
-                    and arg.get("op") != op
-                )
+            def needs_parens(arg, index):
+                # `and` / `or` read to the left, so a nested one of the same
+                # operator only needs brackets as a later operand:
+                # `x and (y and z)` is not `x and y and z`.
+                if not (isinstance(arg, dict) and arg.get("op") in ("and", "or")):
+                    return False
+                return arg.get("op") != op or index > 0
 
             joined = f" {op} ".join(
                 (
                     f"({expression_to_text(a)})"
-                    if needs_parens(a)
+                    if needs_parens(a, i)
                     else expression_to_text(a)
                 )
-                for a in args
+                for i, a in enumerate(args)
             )
             return joined
         # Non-operator "op" values are function calls

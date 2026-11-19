@@ -47,3 +47,16 @@ def test_right_operand_of_the_same_precedence_keeps_its_brackets():
     for text in ("a - (b - c)", "a / (b * c)", "a % (b * c)", "a - b - c"):
         written = cql2.to_cql2_text(cql2.to_cql2_json(cql2.parse_text(text)))
         assert written == text
+
+
+def test_nested_and_or_keep_the_structure_when_written():
+    for text in (
+        "x and (y and z)",
+        "x or (y or z)",
+        "x or (y and z)",
+        "(x or y) and z",
+    ):
+        written = cql2.to_cql2_text(cql2.to_cql2_json(cql2.parse_text(text)))
+        assert written == text
+    left = cql2.to_cql2_json(cql2.parse_text("(x and y) and z"))
+    assert cql2.to_cql2_text(left) == "x and y and z"
