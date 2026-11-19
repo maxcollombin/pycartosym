@@ -14,6 +14,12 @@ removing its curly brackets, so its symbolizer is merged into its parent's
 independent rules, each carrying the fully-merged selector and symbolizer,
 parent before child (so a document-order-painting consumer — SE's
 ``se:Rule`` list — keeps the child on top).
+
+A feature selected by a refinement must not also be drawn by its parent
+(a target that draws every matching rule would stack the two), so the
+parent's selector excludes the selectors of its refinements, see
+:func:`_exclusion`. Two refinements that select the same feature are still
+both drawn.
 """
 
 from __future__ import annotations
@@ -82,9 +88,15 @@ def _flatten(
     if merged_sel is True:
         merged_sel = None
 
+    # nothing to exclude from a rule that draws nothing itself
+    excluded = (
+        _exclusion([c.get("selector") for c in refinements]) if merged_sym else None
+    )
+    merged_own = _and(merged_sel, excluded) if excluded is not None else merged_sel
+
     node = _carry_name(rule)
-    if merged_sel is not None:
-        node["selector"] = merged_sel
+    if merged_own is not None:
+        node["selector"] = merged_own
     if merged_sym:
         node["symbolizer"] = merged_sym
 
@@ -92,6 +104,29 @@ def _flatten(
     for child in refinements:
         result.extend(_flatten(child, merged_sel, merged_sym))
     return result
+
+
+def _uses_sysid(expr: Any) -> bool:
+    """Whether *expr* (a selector) reads a system identifier (a pass, a scale…)."""
+    if isinstance(expr, dict):
+        return "sysId" in expr or any(_uses_sysid(v) for v in expr.values())
+    if isinstance(expr, list):
+        return any(_uses_sysid(v) for v in expr)
+    return False
+
+
+def _exclusion(selectors: list[Any]) -> Any | None:
+    """Selector that is false where one of the refinement *selectors* holds.
+
+    Refinements that test a system identifier are left out: ``viz.pass`` and
+    ``feature.pass`` refinements are stacked on purpose, and a scale
+    denominator is written as a rule bound, not as a filter.
+    """
+    terms = [sel for sel in selectors if isinstance(sel, dict) and not _uses_sysid(sel)]
+    if not terms:
+        return None
+    any_of = terms[0] if len(terms) == 1 else {"op": "or", "args": terms}
+    return {"op": "not", "args": [any_of]}
 
 
 # ---------------------------------------------------------------------------

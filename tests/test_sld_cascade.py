@@ -71,10 +71,11 @@ class TestCascadeThroughWriter:
         ]
         # both carry the inherited MaxScaleDenominator
         assert all(r.find("se:MaxScaleDenominator", NS).text == "200000" for r in rules)
-        # only the refined rule carries the FunctionCode filter
+        # the refined rule selects the park; the base rule excludes it
         filtered = [r for r in rules if r.find("ogc:Filter", NS) is not None]
-        assert len(filtered) == 1
-        assert filtered[0].find(".//ogc:Literal", NS).text == "park"
+        assert len(filtered) == 2
+        assert [r.find(".//ogc:Not", NS) is not None for r in filtered] == [True, False]
+        assert all(r.find(".//ogc:Literal", NS).text == "park" for r in filtered)
         # refined rule's fill is the override; parent rule's is gray
         fills = {
             r.find(".//se:PolygonSymbolizer/se:Fill/se:SvgParameter", NS).text
