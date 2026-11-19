@@ -999,11 +999,11 @@ class Converter:
         # tint / blackTint / alphaThreshold
         tint = _get(el, "tint")
         if tint is not None:
-            prop_lines.append(f"tint: {tint}")
+            prop_lines.append(f"tint: {self._format_color(tint)}")
 
         black_tint = _get(el, "blackTint") or _get(el, "black_tint")
         if black_tint is not None:
-            prop_lines.append(f"blackTint: {black_tint}")
+            prop_lines.append(f"blackTint: {self._format_color(black_tint)}")
 
         alpha_threshold = _get(el, "alphaThreshold") or _get(el, "alpha_threshold")
         if alpha_threshold is not None:
