@@ -26,7 +26,14 @@ class TestFlattenCascadeRules:
             ]
         )
         assert len(flat) == 2
-        assert flat[0]["selector"] == {"op": "=", "args": [{"property": "A"}, 1]}
+        # the parent does not select what its refinement selects
+        assert flat[0]["selector"] == {
+            "op": "and",
+            "args": [
+                {"op": "=", "args": [{"property": "A"}, 1]},
+                {"op": "not", "args": [{"op": "=", "args": [{"property": "B"}, 2]}]},
+            ],
+        }
         assert flat[1]["selector"] == {
             "op": "and",
             "args": [
@@ -130,7 +137,7 @@ class TestFlattenCascadeRules:
             ]
         )
         assert [r.get("selector") for r in flat] == [
-            parent,
+            {"op": "and", "args": [parent, {"op": "not", "args": [child]}]},
             {"op": "and", "args": [parent, child]},
         ]
         # the selector-less rule comes last in the document but, being part of
@@ -199,3 +206,42 @@ class TestFlattenCascadeRules:
         )
         assert flat[0]["symbolizer"] == {"visibility": False}
         assert flat[1]["symbolizer"]["visibility"] is True
+
+
+class TestParentExcludesItsRefinements:
+    """A feature selected by a refinement is not also drawn by its parent."""
+
+    _A = {"op": "=", "args": [{"property": "kind"}, "motorway"]}
+    _B = {"op": "=", "args": [{"property": "bridge"}, True]}
+
+    def _rule(self, *nested):
+        return {
+            "name": "Roads",
+            "symbolizer": {"stroke": {"color": "black"}},
+            "nestedRules": [
+                {"selector": s, "symbolizer": {"stroke": {"color": "white"}}}
+                for s in nested
+            ],
+        }
+
+    def test_several_refinements_are_excluded_together(self):
+        flat = flatten_cascade_rules([self._rule(self._A, self._B)])
+        assert flat[0]["selector"] == {
+            "op": "not",
+            "args": [{"op": "or", "args": [self._A, self._B]}],
+        }
+
+    def test_overlapping_refinements_are_both_kept(self):
+        flat = flatten_cascade_rules([self._rule(self._A, self._B)])
+        assert [r["selector"] for r in flat[1:]] == [self._A, self._B]
+
+    def test_pass_refinements_do_not_exclude_the_parent(self):
+        p = {"op": "=", "args": [{"sysId": "feature.pass"}, 1]}
+        flat = flatten_cascade_rules([self._rule(p)])
+        assert "selector" not in flat[0]
+
+    def test_a_rule_without_symbolizer_has_nothing_to_exclude(self):
+        rule = self._rule(self._A)
+        del rule["symbolizer"]
+        flat = flatten_cascade_rules([rule])
+        assert "selector" not in flat[0]
