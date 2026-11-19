@@ -12,7 +12,7 @@ from __future__ import annotations
 __all__ = ["expression_to_text", "geojson_to_wkt"]
 
 _UNITS = {"px", "mm", "cm", "in", "pt", "em", "pc", "m", "ft"}
-_ARITHMETIC_OPS = {"+", "-", "*", "/", "^"}
+_ARITHMETIC_OPS = {"+", "-", "*", "/", "%", "^"}
 # Binding strength of the infix operators, to know where parentheses are needed.
 _PRECEDENCE = {
     "or": 1,
@@ -28,6 +28,7 @@ _PRECEDENCE = {
     "-": 4,
     "*": 5,
     "/": 5,
+    "%": 5,
     "^": 6,
 }
 
@@ -57,12 +58,19 @@ def _carries_unit(arg) -> bool:
     return isinstance(arg, dict) and arg.get("op") in _ARITHMETIC_OPS
 
 
-def _infix_operand(arg, parent_op: str) -> str:
-    """Format an operand of an infix operator, parenthesised if it binds looser."""
+def _infix_operand(arg, parent_op: str, right: bool = False) -> str:
+    """Format an operand of an infix operator, parenthesised if it binds looser.
+
+    A right operand of the same precedence is parenthesised too, since the
+    operators associate to the left: ``a - (b - c)`` is not ``a - b - c``.
+    """
     text = expression_to_text(arg)
     if isinstance(arg, dict):
         inner = _PRECEDENCE.get(arg.get("op", ""))
-        if inner is not None and inner < _PRECEDENCE.get(parent_op, 0):
+        parent = _PRECEDENCE.get(parent_op, 0)
+        if inner is not None and (
+            inner < parent or (right and inner == parent and parent_op != "^")
+        ):
             return f"({text})"
         if arg.get("op") == "?:":
             return f"({text})"
@@ -176,6 +184,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             "-",
             "*",
             "/",
+            "%",
             "^",
         }
 
@@ -290,20 +299,21 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         # Format n-ary ops (like 'and', 'or')
         if op in ("and", "or"):
 
-            def needs_parens(arg):
-                return (
-                    isinstance(arg, dict)
-                    and arg.get("op") in ("and", "or")
-                    and arg.get("op") != op
-                )
+            def needs_parens(arg, index):
+                # `and` / `or` read to the left, so a nested one of the same
+                # operator only needs brackets as a later operand:
+                # `x and (y and z)` is not `x and y and z`.
+                if not (isinstance(arg, dict) and arg.get("op") in ("and", "or")):
+                    return False
+                return arg.get("op") != op or index > 0
 
             joined = f" {op} ".join(
                 (
                     f"({expression_to_text(a)})"
-                    if needs_parens(a)
+                    if needs_parens(a, i)
                     else expression_to_text(a)
                 )
-                for a in args
+                for i, a in enumerate(args)
             )
             return joined
         # Non-operator "op" values are function calls
@@ -332,7 +342,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
             # If left side is a sysId, right side is an identifier/enum — don't quote
             right_quote = not (isinstance(left_arg, dict) and "sysId" in left_arg)
             if isinstance(right_arg, dict) and right_quote:
-                right = _infix_operand(right_arg, op)
+                right = _infix_operand(right_arg, op, right=True)
             elif isinstance(right_arg, dict) and set(right_arg) == {"property"}:
                 # Against a sysId a bare word is an enumeration value, so a
                 # property must be double-quoted to stay one on the way back.
