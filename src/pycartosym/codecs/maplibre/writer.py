@@ -97,7 +97,7 @@ from ...models.value_expressions import (
     SystemIdentifier,
 )
 from .._cascade import flatten_cascade_rules
-from .._selector import extract_feature_type_name
+from .._selector import extract_feature_type_name, extract_visualization_pass
 from ..base import CodecWriter
 from . import _raster
 from ._expressions import (
@@ -853,6 +853,31 @@ def _flatten_rules(styling_rules: list[StylingRule]) -> list[StylingRule]:
     return out
 
 
+def _order_by_viz_pass(rules: list[StylingRule]) -> list[StylingRule]:
+    """Order *rules* by their ``viz.pass``, and drop that test from their selector.
+
+    ``viz.pass`` draws every feature of a pass before any of the next one. In
+    MapLibre that is the order of the layers, which are all drawn from the
+    same source: the layers of a pass come after those of the previous pass.
+    A rule that does not test ``viz.pass`` is in pass 0 only (a stable sort
+    keeps the document order within a pass).
+    """
+    keyed: list[tuple[int, StylingRule]] = []
+    for rule in rules:
+        data = rule.to_dict()
+        number, remaining = extract_visualization_pass(data.get("selector"))
+        if number is not None:
+            if remaining is None:
+                data.pop("selector", None)
+            else:
+                data["selector"] = remaining
+            rule = StylingRule.from_dict(data)
+        keyed.append((number or 0, rule))
+    if all(number == 0 for number, _ in keyed):
+        return [rule for _, rule in keyed]
+    return [rule for _, rule in sorted(keyed, key=lambda item: item[0])]
+
+
 def _is_empty_of_paint(rule: Any) -> bool:
     """Return True if *rule* draws nothing and is safe to drop from ``layers``.
 
@@ -1313,7 +1338,7 @@ class MaplibreWriter(CodecWriter):
                 "Style.$include has no MapLibre mapping in this codec"
             )
         style = style.resolve_variables()  # MapLibre has no variables
-        rules = _flatten_rules(style.styling_rules)
+        rules = _order_by_viz_pass(_flatten_rules(style.styling_rules))
         layers: list[dict[str, Any]] = []
         for group in _group_stepped_rules(rules):
             combined = _combine_stepped_rules(group) if len(group) > 1 else None
