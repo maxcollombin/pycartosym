@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+- MapLibre: `viz.pass` orders the layers (a layer of a pass comes after those of the previous pass; a rule without a pass is in pass 0). `feature.pass` still raises, it has no MapLibre equivalent.
 - `examples/passes/`: CartoSym-CSS cases for nested-rule overriding, `feature.pass`, `viz.pass`, casing and `zOrder`, with the SLD/SE and MapLibre that pycartosym writes from them.
 
 ### Changed
