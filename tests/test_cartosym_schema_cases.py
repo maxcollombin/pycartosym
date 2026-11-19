@@ -9,12 +9,14 @@ and export them again, not here.
 What is tested: the models read every valid document, and the bundled schema
 accepts it. The documents the bundled schema rejects are the ones the revised
 schema accepts; they are `xfail(strict=False)` until the bundled schema is
-replaced by the revised one. The invalid documents are not tested: the models
-convert, they do not validate.
+replaced by the revised one. The bundled schema must also reject the invalid
+documents; the ones it accepts are `xfail(strict=False)` as well. The models are
+not tested on the invalid documents: they convert, they do not validate.
 """
 
 from __future__ import annotations
 
+import gzip
 import json
 from pathlib import Path
 from typing import Any
@@ -24,7 +26,7 @@ from jsonschema import Draft201909Validator, Draft202012Validator
 
 from pycartosym.models.styles import Style
 
-_DATA = Path(__file__).parent / "data" / "cartosym_schema_cases.json"
+_DATA = Path(__file__).parent / "data" / "cartosym_schema_cases.json.gz"
 _SCHEMA = (
     Path(__file__).parent.parent
     / "src"
@@ -33,7 +35,7 @@ _SCHEMA = (
     / "CartoSym-JSON.schema.json"
 )
 _VALID: list[dict[str, Any]] = [
-    c for c in json.loads(_DATA.read_text(encoding="utf-8"))["cases"] if c["valid"]
+    c for c in json.loads(gzip.decompress(_DATA.read_bytes()))["cases"] if c["valid"]
 ]
 
 # Valid in the revised schema, rejected by the bundled one (until it is replaced).
@@ -101,3 +103,32 @@ def test_models_read_a_valid_document(case):
 )
 def test_bundled_schema_accepts_a_valid_document(case):
     assert _validator().is_valid(case["document"])
+
+
+_INVALID: list[dict[str, Any]] = [
+    c
+    for c in json.loads(gzip.decompress(_DATA.read_bytes()))["cases"]
+    if not c["valid"]
+]
+_BUNDLED_IS_REVISED = (
+    "2020-12" in json.loads(_SCHEMA.read_text(encoding="utf-8"))["$schema"]
+)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(
+            c,
+            marks=pytest.mark.xfail(
+                not _BUNDLED_IS_REVISED,
+                reason="the bundled schema accepts what the revised one (#188) rejects",
+                strict=False,
+            ),
+        )
+        for c in _INVALID
+    ],
+    ids=_id,
+)
+def test_bundled_schema_rejects_an_invalid_document(case):
+    assert not _validator().is_valid(case["document"])
