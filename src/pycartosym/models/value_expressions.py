@@ -209,11 +209,12 @@ class OperationExpression(BaseCartoSymModel):
 
     Pass-through for operations without a typed model above (``?:``, string
     functions such as ``upperCase``, comparisons...), kept as the plain JSON
-    the converter produced rather than rejected.
+    the converter produced rather than rejected. ``args`` can be empty: a call
+    such as ``random()`` has no argument.
     """
 
     op: str
-    args: list[Any] = Field(min_length=1)
+    args: list[Any]
 
 
 ValueExpression = (
