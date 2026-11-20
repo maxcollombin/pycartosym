@@ -61,8 +61,8 @@
          "opacity": { "$ref": "#/$defs/zeroToOne" },
          "zOrder": { "$ref": "#/$defs/numericExpression" },
 
-         "fill": { "$ref": "#/$defs/fill" },
-         "stroke": { "$ref": "#/$defs/stroke" },
+         "fill": { "anyOf": [ { "type": "null" }, { "$ref": "#/$defs/fill" } ] },
+         "stroke": { "anyOf": [ { "type": "null" }, { "$ref": "#/$defs/stroke" } ] },
          "marker": { "$ref": "#/$defs/marker" },
          "label": { "$ref": "#/$defs/label" },
 

@@ -779,7 +779,7 @@ class Symbolizer(BaseCartoSymModel, CommentMixin):
 
     @model_serializer(mode="wrap")
     def _keep_explicit_null(self, handler: Any) -> dict[str, Any]:
-        """Keep ``marker: null`` / ``label: null``, which unset the default.
+        """Keep an explicit ``null`` for ``fill``, ``stroke``, ``marker``, ``label``.
 
         ``exclude_none=True`` drops every ``None``, but for these two
         properties an explicit ``null`` differs from an absent one: it removes
@@ -789,7 +789,7 @@ class Symbolizer(BaseCartoSymModel, CommentMixin):
         data: dict[str, Any] = handler(self)
         explicit = [
             name
-            for name in ("marker", "label")
+            for name in ("fill", "stroke", "marker", "label")
             if name in self.model_fields_set and getattr(self, name) is None
         ]
         if not explicit:
