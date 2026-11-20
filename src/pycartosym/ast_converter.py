@@ -865,8 +865,12 @@ class AstToPydanticConverter:
                     symbolizer_data["stroke"] = stroke
 
             # ``marker`` / ``label`` can also be an explicit ``null`` or an
-            # empty object: neither is the same as an absent property.
+            # empty object: neither is the same as an absent property. ``fill``
+            # and ``stroke`` can be an explicit ``null`` too (not drawn).
             explicit: set[str] = getattr(ast_symbolizer, "model_fields_set", set())
+            for name in ("fill", "stroke"):
+                if name in explicit and getattr(ast_symbolizer, name, None) is None:
+                    symbolizer_data[name] = None
             if hasattr(ast_symbolizer, "marker") and ast_symbolizer.marker:
                 marker = self._convert_marker(ast_symbolizer.marker)
                 if marker:

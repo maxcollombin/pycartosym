@@ -1249,6 +1249,11 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         # Retrieve the ANTLR expression context stored during enterPropertyAssignment
         expr_ctx = getattr(assignment, "_antlr_expr_ctx", None) if assignment else None
 
+        # ``fill: null`` / ``stroke: null``: not drawn (recorded in model_fields_set)
+        if prop_name in ("fill", "stroke") and _empty_form(prop_value) == "null":
+            setattr(symbolizer, prop_name, None)
+            return
+
         # Special handler for marker property (must be first, not nested)
         if prop_name == "marker":
             form = _empty_form(prop_value)

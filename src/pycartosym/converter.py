@@ -419,14 +419,19 @@ class Converter:
             zorder_val = getattr(symbolizer, "z_order", None)
         if zorder_val is not None:
             lines.append(f"  zOrder: {zorder_val};")
+        # An explicit ``null`` is not the same as an absent property: for
+        # ``fill`` / ``stroke`` it means not drawn, for ``marker`` / ``label`` it
+        # unsets the default (writing nothing would leave the default in place).
+        explicit: set[str] = getattr(symbolizer, "model_fields_set", set())
         # Vector symbolizers
         if getattr(symbolizer, "fill", None):
             lines.extend(self._fill_to_css(symbolizer.fill))
+        elif "fill" in explicit:
+            lines.append("  fill: null;")
         if getattr(symbolizer, "stroke", None):
             lines.extend(self._stroke_to_css(symbolizer.stroke))
-        # An explicit ``null`` unsets the default Marker / Label: writing nothing
-        # would leave the default in place.
-        explicit: set[str] = getattr(symbolizer, "model_fields_set", set())
+        elif "stroke" in explicit:
+            lines.append("  stroke: null;")
         marker = getattr(symbolizer, "marker", None)
         if marker is not None and not hasattr(marker, "elements"):
             # the grammar only takes a `{ ... }` object as the value of `marker`
