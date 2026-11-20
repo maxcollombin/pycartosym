@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - CQL2-Text writer: a property named `null`, `true`, `false` or another keyword, or whose name is not a plain identifier, is written double-quoted; written bare, `"null"` read back as the `null` literal.
+- CartoSym-CSS writer: `%` is written as an infix operator with the precedence of `*` and `/`; a right operand of the same precedence keeps its brackets (`a - (b - c)` was written `a - b - c`), and so does a nested `and` / `or` written as a later operand.
+- CartoSym-CSS writer: the `tint` and `blackTint` of an Image are written as colors; the `[r, g, b]` array was read back as a string.
 - CartoSym-CSS and CS-JSON: `fill: null` and `stroke: null` are kept (they were dropped when reading CartoSym-CSS and refused by the bundled schema). `null` means the entity is not drawn by that property, as for `marker` and `label`; SLD/SE and MapLibre write nothing for it.
 - SLD/SE and MapLibre: a rule with refinements no longer draws the features its refinements select (they were drawn twice, the parent's stroke under the refinement's). The parent's selector now excludes its refinements' property selectors; refinements that test a system identifier (`viz.pass`, `feature.pass`, scale) still stack. Two refinements that select the same feature are both still drawn.
 - CS-JSON: a `marker` given as an expression (`{"property": "m"}`, a variable reference) is read and kept, as the revised schema allows. It has no CartoSym-CSS or SLD/SE or MapLibre form and is refused with a clear error by the writers.
