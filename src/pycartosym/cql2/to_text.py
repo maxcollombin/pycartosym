@@ -9,7 +9,25 @@ points from :mod:`pycartosym.cql2` rather than from here directly.
 
 from __future__ import annotations
 
+import re
+
 __all__ = ["expression_to_text", "geojson_to_wkt"]
+
+# A property written bare: dotted plain identifiers, other than the words that
+# CQL2-Text reads as something else (`null` is the literal, `"null"` a property).
+_BARE_PROPERTY = re.compile(r"[^\W\d]\w*(\.[^\W\d]\w*)*")
+_RESERVED_WORDS = {
+    "null", "true", "false", "and", "or", "not", "like", "in", "is", "between",
+}  # fmt: skip
+
+
+def _property_text(name: object) -> str:
+    """A property name as CQL2-Text: double-quoted when it would not read back."""
+    text = str(name)
+    if _BARE_PROPERTY.fullmatch(text) and text.lower() not in _RESERVED_WORDS:
+        return text
+    return '"' + text.replace('"', '""') + '"'
+
 
 _UNITS = {"px", "mm", "cm", "in", "pt", "em", "pc", "m", "ft"}
 _ARITHMETIC_OPS = {"+", "-", "*", "/", "%", "^"}
@@ -124,7 +142,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
         return f"{cond} ? {yes} : {no}"
     # Handle bare property reference (e.g., {"property": "viz.date"})
     if "property" in expr and len(expr) == 1:
-        return str(expr["property"])
+        return _property_text(expr["property"])
     # Handle date literal (e.g., {"date": "2020-01-01"} → DATE('2020-01-01'))
     if "date" in expr and len(expr) == 1:
         return f"DATE('{expr['date']}')"
@@ -354,7 +372,7 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     if "sysId" in expr:
         return str(expr["sysId"])
     if "property" in expr:
-        return str(expr["property"])
+        return _property_text(expr["property"])
     return str(expr)
 
 
