@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- CartoSym-CSS and CS-JSON: a call without argument as the value of a property (`opacity: random()`) is read and written back; it was refused with a validation error. SLD/SE and MapLibre have no equivalent and still refuse it, with a clear error.
 - CQL2-Text writer: a property named `null`, `true`, `false` or another keyword, or whose name is not a plain identifier, is written double-quoted; written bare, `"null"` read back as the `null` literal.
 - CartoSym-CSS writer: `%` is written as an infix operator with the precedence of `*` and `/`; a right operand of the same precedence keeps its brackets (`a - (b - c)` was written `a - b - c`), and so does a nested `and` / `or` written as a later operand.
 - CartoSym-CSS writer: the `tint` and `blackTint` of an Image are written as colors; the `[r, g, b]` array was read back as a string.
