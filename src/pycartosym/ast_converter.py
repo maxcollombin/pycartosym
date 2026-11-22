@@ -29,7 +29,7 @@ from .models import (
     StylingRule,
     Symbolizer,
 )
-from .models.types import json_unit
+from .models.types import WebColorName, json_unit
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,27 @@ def _parse_color_value(v: str):
         except ValueError:
             pass
     return v
+
+
+def _color_value(text: str) -> Any:
+    """A color value: a literal, or a CQL2-JSON expression such as ``a ? red : #fff``.
+
+    In a conditional expression a bare web color name stays the name (a color),
+    not a property reference.
+    """
+    literal = convert_literal_value(text)
+    if not isinstance(literal, str):
+        return literal
+    parsed = convert_property_expression(text)
+    if not isinstance(parsed, dict) or "op" not in parsed:
+        return literal
+    if parsed["op"] == "?:":
+        names = {c.value for c in WebColorName}
+        parsed["args"] = [parsed["args"][0]] + [
+            a["property"] if isinstance(a, dict) and a.get("property") in names else a
+            for a in parsed["args"][1:]
+        ]
+    return parsed
 
 
 def _coerce_font_dict(font: dict) -> None:
@@ -521,7 +542,8 @@ def _normalize_graphic_element(el: dict) -> None:
     # colour and an Image's tint / blackTint likewise.
     for color_key in ("color", "tint", "blackTint"):
         if isinstance(el.get(color_key), str):
-            el[color_key] = _parse_color_value(el[color_key])
+            parsed = _parse_color_value(el[color_key])
+            el[color_key] = _color_value(parsed) if isinstance(parsed, str) else parsed
 
     # position2D / position_2d (CSCSS syntax) → the schema's `position`
     # field (a UnitPoint): "{ 10, -4 }" → {x: 10, y: -4}
@@ -1005,7 +1027,7 @@ class AstToPydanticConverter:
 
             if hasattr(ast_fill, "color") and ast_fill.color is not None:
                 # Use convert_literal_value for proper hex/color conversion
-                fill_data["color"] = convert_literal_value(str(ast_fill.color))
+                fill_data["color"] = _color_value(str(ast_fill.color))
 
             if hasattr(ast_fill, "opacity") and ast_fill.opacity is not None:
                 fill_data["opacity"] = _number_or_expression(ast_fill.opacity)
@@ -1036,7 +1058,7 @@ class AstToPydanticConverter:
 
             if hasattr(ast_stroke, "color") and ast_stroke.color is not None:
                 # Use convert_literal_value for proper hex/color conversion
-                stroke_data["color"] = convert_literal_value(str(ast_stroke.color))
+                stroke_data["color"] = _color_value(str(ast_stroke.color))
 
             if hasattr(ast_stroke, "width") and ast_stroke.width is not None:
                 width = ast_stroke.width
