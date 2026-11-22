@@ -398,7 +398,10 @@ def expression_to_json(expression: Any) -> Any:
         full_property = get_full_property(expression)
         # Top-level prefix check for sysId
         top_level = full_property.split(".", 1)[0]
-        if top_level in ["viz", "vis", "dataLayer"] or full_property in _FEATURE_SYSIDS:
+        if (
+            top_level in ["viz", "vis", "dataLayer", "capabilities"]
+            or full_property in _FEATURE_SYSIDS
+        ):
             return {"sysId": full_property}
         else:
             return {"property": full_property}
@@ -671,11 +674,13 @@ _FEATURE_SYSIDS = frozenset(
 def _is_system_name(name: str) -> bool:
     """Whether a dotted/bare *name* is a CartoSym system identifier.
 
-    ``viz``/``vis``/``dataLayer`` match by prefix; ``feature`` only for its
-    defined members (``feature.pass`` included), so a data property that
-    merely starts with ``feature`` stays a property.
+    ``viz``/``vis``/``dataLayer``/``capabilities`` match by prefix;
+    ``feature`` only for its defined members (``feature.pass`` included), so a
+    data property that merely starts with ``feature`` stays a property.
     """
-    return name in _FEATURE_SYSIDS or name.startswith(("viz", "vis", "dataLayer"))
+    return name in _FEATURE_SYSIDS or name.startswith(
+        ("viz", "vis", "dataLayer", "capabilities")
+    )
 
 
 def _map_system_property(prop: str) -> str:
