@@ -143,8 +143,24 @@ def _opacity_value(text: str) -> float | dict | None:
     except ValueError:
         pass
     expr = convert_property_expression(text)
+    if expr is None and _IDENTIFIER_RE.match(text.strip()):
+        return {"property": text.strip()}  # a bare name is a property
     if expr is None:
         logger.warning("opacity: cannot parse %r, ignored", text)
+    return expr
+
+
+def _z_order_value(text: str) -> int | float | dict | None:
+    """Parse a ``zOrder`` value: an integer, or an expression as CQL2-JSON."""
+    try:
+        return int(text)
+    except ValueError:
+        pass
+    expr = convert_property_expression(text)
+    if expr is None and _IDENTIFIER_RE.match(text.strip()):
+        return {"property": text.strip()}
+    if expr is None:
+        logger.warning("zOrder: cannot parse %r, ignored", text)
     return expr
 
 
@@ -587,14 +603,9 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                             _stroke_styling(inner),
                         )
         elif prop_name_lower == "zorder" or prop_name_lower == "z_order":
-            try:
-                symbolizer.z_order = int(
-                    properties.get("zOrder", properties.get("z_order", 0))
-                )
-            except Exception:
-                symbolizer.z_order = properties.get(
-                    "zOrder", properties.get("z_order", 0)
-                )
+            symbolizer.z_order = _z_order_value(
+                str(properties.get("zOrder", properties.get("z_order", 0)))
+            )
         elif prop_name_lower == "hillshading" or prop_name_lower == "hill_shading":
             symbolizer.hill_shading = self._parse_hill_shading_object(properties)
         else:
@@ -1419,10 +1430,7 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                 elif prop_name_lower == "opacity":
                     symbolizer.opacity = _opacity_value(prop_value)
                 elif prop_name_lower in ("zorder", "z_order"):
-                    try:
-                        symbolizer.z_order = int(prop_value)
-                    except Exception:
-                        symbolizer.z_order = prop_value
+                    symbolizer.z_order = _z_order_value(prop_value)
                 elif prop_name_lower in ("singlechannel", "single_channel"):
                     symbolizer.single_channel = prop_value.strip()
                 elif prop_name_lower in ("colorchannels", "color_channels"):

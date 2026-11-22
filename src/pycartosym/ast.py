@@ -82,7 +82,7 @@ class Symbolizer:
     # Basic properties
     visibility: bool | None = None
     opacity: float | None = None
-    z_order: int | None = None
+    z_order: int | float | dict | None = None
 
     # Vector symbolizers
     fill: Fill | None = None
