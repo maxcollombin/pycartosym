@@ -15,7 +15,7 @@ from typing import Any
 from .cql2.to_json import split_on_comparison_operator
 from .cql2.to_text import quote_string
 from .models import Style
-from .models.types import UnitType, cscss_unit, json_unit
+from .models.types import UnitType, WebColorName, cscss_unit, json_unit
 from .parser import CartoSymParser
 
 logger = logging.getLogger(__name__)
@@ -1054,8 +1054,11 @@ class Converter:
                 )
             except (TypeError, ValueError):
                 pass
-        expr = self._format_numeric_expression(color)
+        texts: dict[str, str] = {}
+        expr = self._format_numeric_expression(self._color_branches(color, texts))
         if expr is not None:  # e.g. a reference to a variable: @c
+            for placeholder, text in texts.items():
+                expr = expr.replace(placeholder, text)
             return expr
         if isinstance(color, list) or (
             isinstance(color, dict) and ("r" in color or "alter" in color)
@@ -1065,6 +1068,35 @@ class Converter:
                 f"overrides some of r, g and b, has no CartoSym-CSS form: {color!r}"
             )
         return str(color)
+
+    def _color_branches(self, color, texts: dict[str, str]):
+        """Make the colors of a conditional expression writable as bare text.
+
+        The branches of ``a ? #d0483a : red`` are ``[r, g, b]`` arrays or web color
+        names in CartoSym-JSON. Each is replaced by a placeholder property whose
+        text goes in *texts*, so that it is written as ``#rrggbb`` or the name,
+        not as an array, a quoted string or a quoted property.
+        """
+        if hasattr(color, "model_dump"):
+            color = color.model_dump(exclude_none=True, by_alias=True)
+        if not (isinstance(color, dict) and color.get("op") == "?:"):
+            return color
+        names = {c.value for c in WebColorName}
+
+        def branch(arg):
+            text = None
+            if isinstance(arg, list) and len(arg) == 3:
+                text = self._format_color(arg)
+            elif isinstance(arg, str) and arg in names:
+                text = arg
+            if text is None:
+                return self._color_branches(arg, texts)
+            placeholder = f"colorbranch{len(texts)}x"
+            texts[placeholder] = text
+            return {"property": placeholder}
+
+        args = color["args"]
+        return {**color, "args": [args[0], *(branch(a) for a in args[1:])]}
 
     def _format_value(self, value) -> str:
         """Format a scalar property value: an expression as text, else ``str``."""
