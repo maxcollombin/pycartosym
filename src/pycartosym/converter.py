@@ -418,7 +418,7 @@ class Converter:
         if zorder_val is None:
             zorder_val = getattr(symbolizer, "z_order", None)
         if zorder_val is not None:
-            lines.append(f"  zOrder: {zorder_val};")
+            lines.append(f"  zOrder: {self._format_value(zorder_val)};")
         # An explicit ``null`` is not the same as an absent property: for
         # ``fill`` / ``stroke`` it means not drawn, for ``marker`` / ``label`` it
         # unsets the default (writing nothing would leave the default in place).

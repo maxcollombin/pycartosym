@@ -27,5 +27,5 @@ def test_text_function_call_is_an_expression_not_a_property_name():
 
 def test_unparseable_opacity_warns(caplog):
     with caplog.at_level(logging.WARNING):
-        CartoSymParser().parse_string_to_pydantic("Areas { opacity: red; }")
+        CartoSymParser().parse_string_to_pydantic("Areas { opacity: 'x'; }")
     assert any("opacity" in r.message for r in caplog.records)
