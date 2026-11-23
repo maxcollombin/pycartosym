@@ -2,6 +2,7 @@
 // with the white one: the white strokes cross over every black stroke.
 Roads
 {
+   marker: null;
    [viz.pass = 0] { stroke: { color: black; width: 5 px; }; }
    [viz.pass = 1] { stroke: { color: white; width: 3 px; }; }
 }

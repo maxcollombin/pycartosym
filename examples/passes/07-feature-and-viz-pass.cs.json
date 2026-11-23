@@ -11,6 +11,9 @@
           "Roads"
         ]
       },
+      "symbolizer": {
+        "marker": null
+      },
       "nestedRules": [
         {
           "selector": {

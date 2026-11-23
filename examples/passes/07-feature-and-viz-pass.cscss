@@ -2,6 +2,7 @@
 // feature.pass symbolizers in order.
 Roads
 {
+   marker: null;
    [viz.pass = 0]
    {
       [feature.pass = 0] { stroke: { color: black; width: 7 px; }; }

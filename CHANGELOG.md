@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- Bundled schema: replaced by the revised CartoSym-JSON schema of the specification (`capabilities`, `viz.pass`, `feature.pass`, `fill`/`stroke` `null`, expressions of any type as arguments, `horizontal`/`vertical`), keeping the Part 2 additions pycartosym reads and writes (`Circle`, `Arc`, `SectorArc`, `ChordArc`, shape `outline`, stroke `cap`/`join`/`patternGap`).
+- `examples/passes/`: `marker: null;` on each top-level rule, so that the default Dot is not drawn on every feature (opengeospatial/cartographic-symbology#212). The MapLibre files of 01 and 02 (written with ids the writer no longer produces) are removed and 08 is regenerated; a test now checks each example against what the writers produce.
 - CartoSym-CSS and CS-JSON: a call without argument as the value of a property (`opacity: random()`) is read and written back; it was refused with a validation error. SLD/SE and MapLibre have no equivalent and still refuse it, with a clear error.
 - CQL2-Text writer: a property named `null`, `true`, `false` or another keyword, or whose name is not a plain identifier, is written double-quoted; written bare, `"null"` read back as the `null` literal.
 - CartoSym-CSS writer: `%` is written as an infix operator with the precedence of `*` and `/`; a right operand of the same precedence keeps its brackets (`a - (b - c)` was written `a - b - c`), and so does a nested `and` / `or` written as a later operand.

@@ -7,7 +7,10 @@ and [#212](https://github.com/opengeospatial/cartographic-symbology/issues/212).
 Each case has its CartoSym-CSS (`.cscss`) and CS-JSON (`.cs.json`), and the
 SLD/SE (`.sld`) and MapLibre (`.maplibre.json`) that pycartosym writes from it,
 when it can. They show what the two target formats do with each case; they are
-not renders. MapLibre needs a layer id, so unnamed rules are named `r0`, `r1`..., and a rule that comes from a nested rule is named after its parent (`Roads-1`...).
+not renders. MapLibre needs a layer id: the writer uses the name of the rule or its data layer (`Roads`), and numbers the rules that come from a nested rule (`Roads-1`...); a rule with neither, such as `[kind = 'road']`, is refused.
+
+Each top-level rule has `marker: null;`: without it the default Dot is drawn on
+every feature (`/req/core/default-values`, opengeospatial/cartographic-symbology#207).
 
 Meaning, as settled in #197: a nested rule without a selector is the same as
 removing its curly brackets, so several of them override one another, as do
@@ -17,8 +20,8 @@ per pass) or the built-in `casing`.
 
 | Case | Meaning | SLD/SE | MapLibre |
 |---|---|---|---|
-| `01-nested-override` | Only the white stroke remains | One `se:Rule`, white stroke | One layer, white |
-| `02-toplevel-override` | The same as 01 | **Two `se:Rule`: both are drawn, black then white** | **Two layers, both drawn** |
+| `01-nested-override` | Only the white stroke remains | One `se:Rule`, white stroke | Error: a rule with no name or data layer has no layer id |
+| `02-toplevel-override` | The same as 01 | **Two `se:Rule`: both are drawn, black then white** | Error: a rule with no name or data layer has no layer id |
 | `03-feature-pass` | Per feature: black stroke, then white | One `se:Rule` with two `se:LineSymbolizer`, in pass order | Error: `feature.pass` has no mapping (a layer draws all its features) |
 | `04-viz-pass` | All black strokes, then all white strokes | Two `se:FeatureTypeStyle`, in pass order | Two layers on the same source, in pass order |
 | `05-casing` | Built-in casing | Error: `Stroke.casing` has no mapping | Error: `stroke.casing` has no mapping |

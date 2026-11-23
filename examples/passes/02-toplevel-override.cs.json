@@ -17,7 +17,8 @@
           "width": {
             "px": 5.0
           }
-        }
+        },
+        "marker": null
       }
     },
     {
@@ -36,7 +37,8 @@
           "width": {
             "px": 3.0
           }
-        }
+        },
+        "marker": null
       }
     }
   ]
