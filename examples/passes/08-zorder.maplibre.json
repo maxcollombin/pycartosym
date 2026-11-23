@@ -11,7 +11,7 @@
   },
   "layers": [
     {
-      "id": "r0",
+      "id": "Roads",
       "type": "line",
       "source": "cartosym",
       "paint": {
@@ -20,7 +20,7 @@
       }
     },
     {
-      "id": "r1",
+      "id": "Rails",
       "type": "line",
       "source": "cartosym",
       "paint": {

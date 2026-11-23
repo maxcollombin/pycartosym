@@ -1,4 +1,4 @@
 // Top-level rules with the same selector override one another as well:
 // identical to the single rule with the white stroke.
-[kind = 'road'] { stroke: { color: black; width: 5 px; }; }
-[kind = 'road'] { stroke: { color: white; width: 3 px; }; }
+[kind = 'road'] { marker: null; stroke: { color: black; width: 5 px; }; }
+[kind = 'road'] { marker: null; stroke: { color: white; width: 3 px; }; }

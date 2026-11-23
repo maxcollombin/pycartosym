@@ -1,3 +1,3 @@
 // zOrder reorders the features of one pass (here, rails above roads).
-Roads { stroke: { color: gray; width: 4 px; }; zOrder: 0; }
-Rails { stroke: { color: black; width: 2 px; }; zOrder: 1; }
+Roads { marker: null; stroke: { color: gray; width: 4 px; }; zOrder: 0; }
+Rails { marker: null; stroke: { color: black; width: 2 px; }; zOrder: 1; }

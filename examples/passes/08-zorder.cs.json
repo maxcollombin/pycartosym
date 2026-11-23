@@ -18,7 +18,8 @@
           "width": {
             "px": 4.0
           }
-        }
+        },
+        "marker": null
       }
     },
     {
@@ -38,7 +39,8 @@
           "width": {
             "px": 2.0
           }
-        }
+        },
+        "marker": null
       }
     }
   ]

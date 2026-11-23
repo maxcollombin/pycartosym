@@ -14,7 +14,8 @@
       "symbolizer": {
         "fill": {
           "color": "lightGray"
-        }
+        },
+        "marker": null
       }
     },
     {
@@ -26,6 +27,9 @@
           },
           "Roads"
         ]
+      },
+      "symbolizer": {
+        "marker": null
       },
       "nestedRules": [
         {
