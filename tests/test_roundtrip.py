@@ -440,7 +440,8 @@ class TestMetadataParsing:
         result = self.converter.cscss_to_csjson(EXAMPLES_DIR / "3-vector-line.cscss")
         meta = result.get("metadata", {})
         assert meta.get("title") == "Styling line vector features"
-        assert "abstract" in meta
+        assert "description" in meta
+        assert "abstract" not in meta
 
     def test_geo_data_classes_roundtrip(self):
         """.geoDataClasses must survive CSCSS → CS-JSON → CSCSS write-back

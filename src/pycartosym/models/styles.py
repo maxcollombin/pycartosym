@@ -22,7 +22,14 @@ class Metadata(BaseCartoSymModel, CommentMixin):
     """
 
     title: str | None = Field(None, description="Style title")
-    abstract: str | None = Field(None, description="Style abstract/summary")
+    abstract: str | None = Field(
+        None,
+        description=(
+            "Not in the specification (title and description only); kept so that "
+            "a file with an abstract, which the specification examples used to "
+            "have, still converts"
+        ),
+    )
     description: str | None = Field(None, description="Style description")
     authors: list[str] | None = Field(None, description="List of authors")
     keywords: list[str] | None = Field(None, description="Keywords for the style")

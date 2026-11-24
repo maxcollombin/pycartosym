@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Styling point vector features with shape graphics",
-    "abstract": "A point Marker drawn as a filled, outlined Circle (shape graphic)"
+    "description": "A point Marker drawn as a filled, outlined Circle (shape graphic)"
   },
   "stylingRules": [
     {

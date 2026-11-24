@@ -1,5 +1,5 @@
 .title 'Styling point vector features'
-.abstract 'Basic vector features styling (points)'
+.description 'Basic vector features styling (points)'
 
 Amenities[dataLayer.type = 'vector' and dataLayer.featuresGeometryDimensions = 0]
 {
