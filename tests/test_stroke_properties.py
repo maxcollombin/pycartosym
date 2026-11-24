@@ -23,7 +23,7 @@ def test_block_form_reads_every_property():
     assert stroke["cap"] == "round" and stroke["join"] == "miter"
     assert stroke["dashPattern"] == [2, 1]
     assert stroke["casing"] == {"color": [51, 51, 51], "width": 1.0}
-    assert stroke["centerLine"] == {
+    assert stroke["center"] == {
         "color": "red",
         "width": {"value": 1.0, "unit": "px"},
     }
@@ -36,7 +36,7 @@ def test_dash_pattern_tuple_and_array_forms(text):
 
 
 def test_center_line_alias_is_accepted():
-    assert "centerLine" in _parse("L { stroke: { centerLine: { width: 1 } }; }")
+    assert "center" in _parse("L { stroke: { centerLine: { width: 1 } }; }")
 
 
 def test_dot_form():

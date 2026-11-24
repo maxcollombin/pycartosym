@@ -167,7 +167,8 @@ def _z_order_value(text: str) -> int | float | dict | None:
 # CartoSym-CSS stroke property -> Stroke model attribute.
 _STROKE_TEXT_PROPERTIES = {"cap": "cap", "join": "join"}
 _COLOR_CHANNEL_KEYS = ("r", "g", "b")
-# ``center`` is the UML name, ``centerLine`` the JSON schema's.
+# ``center`` is the name in the specification; ``centerLine`` is the older
+# one, still read.
 _STROKE_STYLING_PROPERTIES = {
     "casing": "casing",
     "center": "center_line",

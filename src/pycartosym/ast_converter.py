@@ -1091,7 +1091,7 @@ class AstToPydanticConverter:
                 ("dash_pattern", "dashPattern"),
                 ("dash_offset", "dashOffset"),
                 ("casing", "casing"),
-                ("center_line", "centerLine"),
+                ("center_line", "center"),
                 ("pattern", "pattern"),
                 ("pattern_gap", "patternGap"),
                 ("pattern_initial_gap", "patternInitialGap"),
