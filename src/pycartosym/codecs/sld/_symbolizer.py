@@ -4,7 +4,7 @@ Covers ``{Point,Line,Polygon,Text,Raster}Symbolizer``.
 
 Scope: vector symbolizers plus basic Part-1 raster/coverage styling
 (channels, color map, shaded relief). ``Fill.hatch/dotpattern/stipple``,
-``Stroke.casing/centerLine``, ``Label.placement``,
+``Stroke.casing/center``, ``Label.placement``,
 ``Symbolizer.alphaChannel``, ``Symbolizer.opacityMap``, and
 ``HillShading.sun``/``colorMap``/``opacityMap`` are all out of scope and
 raise :exc:`NotImplementedError` naming the field — per this project's
@@ -1040,9 +1040,7 @@ def _raise_if_stroke_out_of_scope(stroke: Any) -> None:
     if _g(stroke, "casing") is not None:
         raise NotImplementedError("Stroke.casing has no SLD/SE mapping in this codec")
     if _g(stroke, "center_line") is not None:
-        raise NotImplementedError(
-            "Stroke.centerLine has no SLD/SE mapping in this codec"
-        )
+        raise NotImplementedError("Stroke.center has no SLD/SE mapping in this codec")
 
 
 def _gap_number(value: Any) -> float:

@@ -212,12 +212,13 @@ class Stroke(BaseCartoSymModel, AlterMixin):
 
     # Extended stroke properties
     casing: StrokeStyling | None = Field(None, description="Stroke casing")
-    # `center` is the name in the specification text (the schema says
-    # `centerLine`): both are read, `centerLine` is written.
+    # `center` is the name in the specification text, UML and schema, and is
+    # the one written; `centerLine` (the name of earlier schema versions and
+    # pycartosym releases up to 0.6.7) is still read.
     center_line: StrokeStyling | None = Field(
         None,
-        validation_alias=AliasChoices("centerLine", "center", "center_line"),
-        serialization_alias="centerLine",
+        validation_alias=AliasChoices("center", "centerLine", "center_line"),
+        serialization_alias="center",
         description="Center line styling",
     )
     dash_pattern: list[int | UnitValue] | dict[str, int] | None = Field(

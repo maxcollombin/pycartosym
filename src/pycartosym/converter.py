@@ -1351,7 +1351,7 @@ class Converter:
                 props.append((alias, self._format_unit_value(gap)))
         for attr, alias, css_name in (
             ("casing", "casing", "casing"),
-            ("center_line", "centerLine", "center"),
+            ("center_line", "center", "center"),
         ):
             styling = _get(stroke, attr, alias)
             if styling is not None:
