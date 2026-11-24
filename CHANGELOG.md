@@ -6,8 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-## [0.6.8] - 2026-11-24
-
 ### Changed
 
 - Metadata: the specification has a `title` and a `description`, no `abstract` (opengeospatial/cartographic-symbology#137). SLD/SE reads a style's `Abstract` as the `description` and writes the `description` as the `Abstract`; a style with both an `abstract` and a `description` is refused, as SLD/SE has one `Abstract`. The `abstract` field is still read and written back as given, so a file that has one still converts. The examples use `.description`.
@@ -259,8 +257,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.8...HEAD
-[0.6.8]: https://github.com/maxcollombin/pycartosym/compare/v0.6.7...v0.6.8
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.7...HEAD
 [0.6.7]: https://github.com/maxcollombin/pycartosym/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/maxcollombin/pycartosym/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...v0.6.5
