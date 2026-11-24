@@ -94,7 +94,14 @@ class SldWriter(CodecWriter):
                     raise NotImplementedError(
                         f"Style.metadata.{field} has no SLD/SE mapping in this codec"
                     )
-            if metadata.title or metadata.abstract:
+            if metadata.description and metadata.abstract:
+                raise NotImplementedError(
+                    "Style.metadata.abstract and description are both set: "
+                    "SLD/SE has a single Abstract, and the specification has no "
+                    "abstract, only a description"
+                )
+            abstract = metadata.description or metadata.abstract
+            if metadata.title or abstract:
                 # SE 1.1.0 wraps Title/Abstract in se:Description; SLD 1.0.0
                 # puts them directly under UserStyle.
                 desc = (
@@ -104,8 +111,8 @@ class SldWriter(CodecWriter):
                 )
                 if metadata.title:
                     self.d.el("Title", parent=desc, text=metadata.title)
-                if metadata.abstract:
-                    self.d.el("Abstract", parent=desc, text=metadata.abstract)
+                if abstract:
+                    self.d.el("Abstract", parent=desc, text=abstract)
         if style.include:
             raise NotImplementedError(
                 "Style.$include has no SLD/SE mapping in this codec"

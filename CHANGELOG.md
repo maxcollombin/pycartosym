@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-## [0.6.7] - 2026-11-23
+### Changed
+
+- Metadata: the specification has a `title` and a `description`, no `abstract` (opengeospatial/cartographic-symbology#137). SLD/SE reads a style's `Abstract` as the `description` and writes the `description` as the `Abstract`; a style with both an `abstract` and a `description` is refused, as SLD/SE has one `Abstract`. The `abstract` field is still read and written back as given, so a file that has one still converts. The examples use `.description`.
+
+## [0.6.7] - 2026-11-24
 
 ### Added
 

@@ -1,5 +1,5 @@
 .title 'Styling line vector features'
-.abstract 'Basic vector features styling (lines)'
+.description 'Basic vector features styling (lines)'
 
 Roads[dataLayer.type = vector and dataLayer.featuresGeometryDimensions = 1]
 {

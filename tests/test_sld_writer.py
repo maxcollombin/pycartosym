@@ -731,6 +731,35 @@ class TestWriteSelectorlessNestedRule:
         assert rule.find(".//se:SvgParameter[@name='fill']", NS).text == "#808080"
 
 
+class TestWriteStyleDescription:
+    RULE = {"symbolizer": {"fill": {"color": "red"}}}
+
+    def test_description_is_the_style_abstract(self):
+        root = _write(
+            {
+                "metadata": {"title": "T", "description": "Long text"},
+                "stylingRules": [self.RULE],
+            }
+        )
+        assert root.find(".//se:Description/se:Title", NS).text == "T"
+        assert root.find(".//se:Description/se:Abstract", NS).text == "Long text"
+
+    def test_abstract_alone_is_still_written_as_the_abstract(self):
+        root = _write(
+            {"metadata": {"abstract": "Old text"}, "stylingRules": [self.RULE]}
+        )
+        assert root.find(".//se:Description/se:Abstract", NS).text == "Old text"
+
+    def test_abstract_and_description_together_are_refused(self):
+        with pytest.raises(NotImplementedError, match="abstract"):
+            _write(
+                {
+                    "metadata": {"abstract": "a", "description": "d"},
+                    "stylingRules": [self.RULE],
+                }
+            )
+
+
 class TestWriteRuleTitleAbstract:
     def test_rule_name_and_comment_map_to_title_and_abstract(self):
         root = _write(

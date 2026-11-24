@@ -167,7 +167,7 @@ class SldReader(CodecReader):
             if title_el is not None and title_el.text:
                 metadata["title"] = title_el.text
             if abstract_el is not None and abstract_el.text:
-                metadata["abstract"] = abstract_el.text
+                metadata["description"] = abstract_el.text
 
         styles = [
             child

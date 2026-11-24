@@ -562,10 +562,10 @@ class TestReadMultiSymbolizerRule:
 
 
 class TestReadMetadata:
-    def test_title_and_abstract(self):
+    def test_title_and_abstract_as_description(self):
         style = _read("9-metadata.sld")
         assert style.metadata.title == "Metadata-only style"
-        assert style.metadata.abstract == (
+        assert style.metadata.description == (
             "SLD/SE codec fixture: se:Description/Title/Abstract mapping"
         )
 
