@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-11-23
+
 ### Added
 
 - MapLibre: `viz.pass` orders the layers (a layer of a pass comes after those of the previous pass; a rule without a pass is in pass 0). `feature.pass` still raises, it has no MapLibre equivalent.
@@ -30,6 +32,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - CartoSym-CSS: a nested rule without a selector keeps none, instead of receiving a copy of its parent's selector, so it merges into its parent (the last of several siblings wins) in SLD/SE and MapLibre; it was written as a separate rule that was drawn too (#190).
 - SLD/SE: the vertical offset of a graphic or label `position` is written as the opposite `se:DisplacementY` and read back the same way: a positive `y` points down in CartoSym and up in `se:DisplacementY`. Offsets were written with the wrong vertical direction.
 - The colour name `fuchsia` (the spelling of the revised schema) is accepted next to the misspelled `fuschia`, in CS-JSON, CartoSym-CSS and SLD/SE; each is kept as given.
+- CQL2-JSON writer: a `capabilities.*` System Identifier (such as `capabilities.opacity`) is written as `sysId`, like `viz.*` and `dataLayer.*`; it was written as a property.
+- CartoSym-CSS and CS-JSON: a conditional expression whose branches are colors (`color: class = 'european' ? #d0483a : #9a958b;`) is read and written as a CQL2-JSON expression, and written back as CartoSym-CSS.
+- CartoSym-CSS and CS-JSON: an expression as the value of `zOrder` (`zOrder: z_order;`, `zOrder: 0 - z_order;`) and a bare property as the value of `opacity` are read and written as CQL2-JSON instead of text or dropped.
 
 ## [0.6.6] - 2026-11-18
 
@@ -247,7 +252,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `Font` accepts `color`, `opacity` and `outline`, as the CartoSym-JSON schema defines.
 
-[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/maxcollombin/pycartosym/compare/v0.6.7...HEAD
+[0.6.7]: https://github.com/maxcollombin/pycartosym/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/maxcollombin/pycartosym/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/maxcollombin/pycartosym/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/maxcollombin/pycartosym/compare/v0.6.3...v0.6.4
