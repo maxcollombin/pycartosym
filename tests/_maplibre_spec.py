@@ -18,7 +18,11 @@ import subprocess
 
 import pytest
 
-_PACKAGE = "@maplibre/maplibre-gl-style-spec"
+# Pinned, so that npx finds the package in its cache (`--prefer-offline`)
+# instead of asking the registry for the latest version on every call, and so
+# that a new release of the specification cannot change the result unnoticed.
+# The CI caches ~/.npm under this version (.github/workflows/ci.yml).
+_PACKAGE = "@maplibre/maplibre-gl-style-spec@26.6.0"
 _BIN = "gl-style-validate"
 
 
@@ -43,7 +47,16 @@ def assert_maplibre_valid(style: dict) -> None:
 
     try:
         proc = subprocess.run(
-            [npx, "--yes", "-p", _PACKAGE, _BIN, "--json", "/dev/stdin"],
+            [
+                npx,
+                "--yes",
+                "--prefer-offline",
+                "-p",
+                _PACKAGE,
+                _BIN,
+                "--json",
+                "/dev/stdin",
+            ],
             input=json.dumps(style),
             capture_output=True,
             text=True,
