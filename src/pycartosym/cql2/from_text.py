@@ -1252,33 +1252,9 @@ class ExpressionParser:
             # GEOMETRYCOLLECTION(POINT(...), LINESTRING(...))
             # Return list of GeometryLiteral sub-geometries
             sub_geoms = []
-            # Use a simple state machine to split top-level sub-geometries
-            depth = 0
-            current = []
-            for ch in args_str:
-                if ch == "(":
-                    depth += 1
-                    current.append(ch)
-                elif ch == ")":
-                    depth -= 1
-                    current.append(ch)
-                elif ch == "," and depth == 0:
-                    sub_text = "".join(current).strip()
-                    if sub_text:
-                        parsed = ExpressionParser._try_parse_cql2_function(
-                            sub_text + ")"[0:0] if False else sub_text
-                        )
-                        # Re-parse as full expression — it's a WKT sub-geometry
-                        parsed = ExpressionParser._try_parse_cql2_function(sub_text)
-                        if parsed and isinstance(parsed, GeometryLiteral):
-                            sub_geoms.append(parsed)
-                    current = []
-                else:
-                    current.append(ch)
-            last = "".join(current).strip()
-            if last:
-                parsed = ExpressionParser._try_parse_cql2_function(last)
-                if parsed and isinstance(parsed, GeometryLiteral):
+            for sub_text in ExpressionParser._split_args(args_str):
+                parsed = ExpressionParser._try_parse_cql2_function(sub_text)
+                if isinstance(parsed, GeometryLiteral):
                     sub_geoms.append(parsed)
             return sub_geoms
 
