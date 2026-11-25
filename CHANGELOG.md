@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
+- CartoSym-CSS reader: a conditional (`c ? a : b`) given as an argument of a function call with several arguments, such as `concatenate(class = 'european' ? 'E' : 'F', number)`, is read as a conditional; its condition took in the rest as a string (#242).
 
 ## [0.6.7] - 2026-11-24
 
