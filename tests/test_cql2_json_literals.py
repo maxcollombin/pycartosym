@@ -63,3 +63,44 @@ def test_array_literal_in_a_selector_is_a_json_array():
         "op": "a_overlaps",
         "args": [{"property": "tags"}, ["water", "river"]],
     } in selector["args"]
+
+
+_COND = {
+    "op": "?:",
+    "args": [{"op": "=", "args": [{"property": "class"}, "european"]}, "E", "F"],
+}
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "concatenate(class = 'european' ? 'E' : 'F', number)",
+            {"op": "concatenate", "args": [_COND, {"property": "number"}]},
+        ),
+        (
+            "concatenate(number, class = 'european' ? 'E' : 'F')",
+            {"op": "concatenate", "args": [{"property": "number"}, _COND]},
+        ),
+        (
+            "concatenate(x > 1 ? 1 : 2, 'F')",
+            {
+                "op": "concatenate",
+                "args": [
+                    {
+                        "op": "?:",
+                        "args": [{"op": ">", "args": [{"property": "x"}, 1]}, 1, 2],
+                    },
+                    "F",
+                ],
+            },
+        ),
+    ],
+)
+def test_conditional_argument_of_a_call_with_several_arguments(text, expected):
+    """A `?:` argument is a conditional, not a comparison with a string (#242)."""
+    style = CartoSymParser().parse_string_to_pydantic(
+        f"R {{ label: {{ elements: [ Text {{ text: {text} }} ] }}; }}"
+    )
+    label = style.to_dict()["stylingRules"][0]["symbolizer"]["label"]
+    assert label["elements"][0]["text"] == expected

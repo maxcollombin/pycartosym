@@ -850,6 +850,15 @@ class ExpressionParser:
         """Parse a single expression without logical operators."""
         text = text.strip()
 
+        # `c ? a : b` (an argument of a known CQL2 call reaches this text
+        # scan, which has no `?:`): the CartoSym-CSS grammar reads it.
+        if any(ch == "?" for _, ch in ExpressionParser._iter_top_level(text)):
+            ctx = ExpressionParser._text_to_expr_ctx(text)
+            if ctx is not None:
+                walked = ExpressionParser.parse_expression_ctx(ctx)
+                if isinstance(walked, ConditionalExpression):
+                    return walked
+
         # An array literal: [1, 2, 3] / ['a', 'b'] (the ANTLR path reads the
         # parenthesised form; this scan sees the bracketed one in arguments)
         if text.startswith("[") and text.endswith("]"):
