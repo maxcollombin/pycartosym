@@ -65,6 +65,23 @@ def test_array_literal_in_a_selector_is_a_json_array():
     } in selector["args"]
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("5 in ()", {"op": "in", "args": [5, []]}),
+        ("null in ()", {"op": "in", "args": [None, []]}),
+        (
+            "null not in ()",
+            {"op": "not", "args": [{"op": "in", "args": [None, []]}]},
+        ),
+        ("5 in (1, null)", {"op": "in", "args": [5, [1, None]]}),
+    ],
+)
+def test_in_list_is_a_json_array_even_when_empty(text, expected):
+    """An empty `in` list is `[]`, not `{}` (CartoSym allows it, CQL2 doesn't)."""
+    assert to_cql2_json(parse_text(text)) == expected
+
+
 _COND = {
     "op": "?:",
     "args": [{"op": "=", "args": [{"property": "class"}, "european"]}, "E", "F"],
