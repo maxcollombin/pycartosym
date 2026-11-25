@@ -458,7 +458,35 @@ class TestMetadataParsing:
             "https://ex.org/b",
         ]
         back = self.converter.style_to_cscss(Style.from_dict(result))
-        assert ".geoDataClasses 'https://ex.org/a, https://ex.org/b'" in back
+        assert (
+            ".geoDataClass 'https://ex.org/a'\n.geoDataClass 'https://ex.org/b'"
+        ) in back
+
+    def test_list_metadata_one_line_per_value_roundtrip(self):
+        """`.author`, `.keyword` and `.geoDataClass` hold one value per line,
+        commas included, and the writer emits them the same way.
+        """
+        cscss = (
+            ".title 'T'\n"
+            ".author 'Doe, Jane'\n"
+            ".author 'Roe, Rick'\n"
+            ".keyword 'Protected area'\n"
+            ".keyword 'Norway'\n"
+            ".geoDataClass 'https://ex.org/a'\n"
+            "[Base]\n{ visibility: true; }"
+        )
+        result = self.converter.cscss_to_csjson(cscss)
+        meta = result["metadata"]
+        assert meta["authors"] == ["Doe, Jane", "Roe, Rick"]
+        assert meta["keywords"] == ["Protected area", "Norway"]
+        assert meta["geoDataClasses"] == ["https://ex.org/a"]
+        back = self.converter.style_to_cscss(Style.from_dict(result))
+        assert (
+            ".author 'Doe, Jane'\n.author 'Roe, Rick'\n"
+            ".keyword 'Protected area'\n.keyword 'Norway'\n"
+            ".geoDataClass 'https://ex.org/a'"
+        ) in back
+        assert self.converter.cscss_to_csjson(back)["metadata"] == meta
 
     def test_include_directive_writeback(self):
         """A CS-JSON-authored $include must reach CSCSS write-back.

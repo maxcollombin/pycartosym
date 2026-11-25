@@ -699,13 +699,24 @@ class AstToPydanticConverter:
             metadata = None
             if ast_stylesheet.metadata:
                 metadata_dict: dict[str, Any] = {}
+                # Each `.author` / `.keyword` / `.geoDataClass` line holds one
+                # value. The plural keys hold a comma-separated list, still
+                # read for styles written before the singular form.
+                _single_value_fields = {
+                    "author": "authors",
+                    "keyword": "keywords",
+                    "geoDataClass": "geoDataClasses",
+                }
                 _list_fields = {"keywords", "authors", "geoDataClasses"}
                 _multiline_fields = {"abstract", "description", "title"}
                 for meta in ast_stylesheet.metadata:
                     if not (hasattr(meta, "key") and hasattr(meta, "value")):
                         continue
                     key, value = meta.key, meta.value
-                    if key in _list_fields:
+                    if key in _single_value_fields:
+                        key = _single_value_fields[key]
+                        metadata_dict[key] = metadata_dict.get(key, []) + [value]
+                    elif key in _list_fields:
                         if isinstance(value, str):
                             items = [v.strip() for v in value.split(",") if v.strip()]
                         elif isinstance(value, list):
