@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Metadata: the specification has a `title` and a `description`, no `abstract` (opengeospatial/cartographic-symbology#137). SLD/SE reads a style's `Abstract` as the `description` and writes the `description` as the `Abstract`; a style with both an `abstract` and a `description` is refused, as SLD/SE has one `Abstract`. The `abstract` field is still read and written back as given, so a file that has one still converts. The examples use `.description`.
 - CS-JSON writer: a stroke's center line is written as `center`, the name in the specification text, the UML and the revised schema (it was written `centerLine`, the name of the earlier schema). `centerLine` is still read.
 
+### Fixed
+
+- CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
+
 ## [0.6.7] - 2026-11-24
 
 ### Added
