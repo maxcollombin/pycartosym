@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - CartoSym-CSS metadata: `.author`, `.keyword` and `.geoDataClass` take one value per line, as in opengeospatial/cartographic-symbology#259. The reader refused these lines (a style written with authors did not read back), and the writer now emits one line per value instead of a comma-separated `.keywords` / `.geoDataClasses`. The plural lines are still read.
 - CS-JSON writer: a stroke's center line is written as `center`, the name in the specification text, the UML and the revised schema (it was written `centerLine`, the name of the earlier schema). `centerLine` is still read.
 
+### Fixed
+
+- CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
+
 ## [0.6.7] - 2026-11-24
 
 ### Added

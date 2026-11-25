@@ -301,13 +301,14 @@ def expression_to_json(expression: Any) -> Any:
     if isinstance(expression, NullLiteral):
         return None
 
-    if not expression:
-        return {}
-
     # Nested operand lists (e.g. the value list of an `in` predicate:
-    # inListOperands = [scalarExpression, [scalarExpression, ...]]).
+    # inListOperands = [scalarExpression, [scalarExpression, ...]]). Checked
+    # before the falsy test below: an empty list (`x in ()`) stays `[]`.
     if isinstance(expression, list):
         return [expression_to_json(item) for item in expression]
+
+    if not expression:
+        return {}
 
     # Handle ANTLR context objects (from grammar)
     if hasattr(expression, "getRuleIndex"):
