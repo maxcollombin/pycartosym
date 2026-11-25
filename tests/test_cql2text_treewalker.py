@@ -1,9 +1,9 @@
 """``cql2.from_cql2text`` — the CQL2-Text tree-walker built on ``CQL2Text.g4``.
 
 Structural unit tests per construct, plus a full run over the official
-120-example corpus (``tests/fixtures/cql2/text/``, see
-``test_cql2text_grammar_corpus.py`` for provenance) already used to
-grammar-conformance-test ``CQL2Text.g4`` itself.
+120-example corpus (``tests/fixtures/cql2/text/``, provenance in its
+``README.md``), which also checks that ``CQL2Text.g4`` reads each example
+without a syntax error.
 
 This module is also exercised indirectly via ``pycartosym.cql2.parse_text``
 (``cql2/from_text.py``), which now tries this tree-walker first — see
@@ -52,16 +52,37 @@ _CORPUS = Path(__file__).parent / "fixtures" / "cql2" / "text"
 _FIXTURES = sorted(_CORPUS.glob("*.txt"))
 
 
+def test_corpus_is_not_empty():
+    assert _FIXTURES, "no CQL2-Text fixtures vendored under tests/fixtures/cql2/text/"
+
+
 @pytest.mark.parametrize("path", _FIXTURES, ids=[p.name for p in _FIXTURES])
 def test_official_corpus(path: Path):
+    """Each official example parses (a syntax error raises) and walks to a model."""
     text = path.read_text(encoding="utf-8")
     model = parse_cql2_text(text)
     assert model is not None
 
 
-def test_invalid_syntax_raises():
+@pytest.mark.parametrize(
+    "text",
+    [
+        "a = b =",
+        "a AND",
+        "(a",
+        "a IN ()",
+        "S_INTERSECTS(a)",
+        "1 +",
+        '"unterminated',
+        "'unterminated",
+        "a LIKE",
+        "BETWEEN 1 AND 2",
+    ],
+)
+def test_invalid_syntax_raises(text: str):
+    """The grammar rejects malformed input, not just accepts valid input."""
     with pytest.raises(Cql2TextSyntaxError):
-        parse_cql2_text("a = b =")
+        parse_cql2_text(text)
 
 
 # ── boolean layer: AND / OR / NOT precedence ────────────────────────────────
