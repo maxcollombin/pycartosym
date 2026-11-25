@@ -2,7 +2,7 @@
 
 The official CQL2-Text examples published alongside the OGC 21-065r2
 (Common Query Language 2) standard. Used by
-`tests/test_cql2text_grammar_corpus.py` as a conformance corpus for the
+`tests/test_cql2text_treewalker.py` as a conformance corpus for the
 standalone `CQL2Text.g4` grammar (`vendor/cartosymcss-grammar/CQL2Text.g4`)
 — every file here must parse without a syntax error.
 
