@@ -207,19 +207,14 @@ class Converter:
                 header_lines.append(
                     f".description {quote_string(style.metadata.description)}"
                 )
-            if style.metadata.authors:
-                for author in style.metadata.authors:
-                    header_lines.append(f'.author "{author}"')
-            if style.metadata.keywords:
-                kw = style.metadata.keywords
-                kw_str = ", ".join(kw) if isinstance(kw, list) else kw
-                header_lines.append(f".keywords {quote_string(kw_str)}")
-            # Model field is ``geo_data_classes`` (alias ``geoDataClasses``);
-            # the CSCSS directive keeps the camelCase spelling.
-            if style.metadata.geo_data_classes:
-                gc = style.metadata.geo_data_classes
-                gc_str = ", ".join(gc) if isinstance(gc, list) else gc
-                header_lines.append(f".geoDataClasses {quote_string(gc_str)}")
+            # One line per value: `.author`, `.keyword`, `.geoDataClass`.
+            for directive, values in (
+                ("author", style.metadata.authors),
+                ("keyword", style.metadata.keywords),
+                ("geoDataClass", style.metadata.geo_data_classes),
+            ):
+                for value in values or []:
+                    header_lines.append(f".{directive} {quote_string(value)}")
         if style.include:
             includes = (
                 style.include if isinstance(style.include, list) else [style.include]
