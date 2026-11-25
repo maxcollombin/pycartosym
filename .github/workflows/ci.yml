@@ -46,4 +46,10 @@ jobs:
           cache-dependency-glob: uv.lock
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-extras --locked
-      - run: uv run pytest
+      # The MapLibre tests run gl-style-validate through npx, pinned in
+      # tests/_maplibre_spec.py; caching ~/.npm saves the download.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('tests/_maplibre_spec.py') }}
+      - run: uv run pytest -n auto
