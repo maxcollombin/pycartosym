@@ -87,10 +87,8 @@ def post_process_selector(selector: Any) -> Any:
     """Post-process a selector: fix parsing issues, ensure proper JSON structure.
 
     Returns a dict for well-formed selectors. ``None`` and lists pass
-    through unchanged; a string is parsed into a selector dict.
+    through unchanged; a bare string is a property reference.
     """
-    left_arg: Any
-    right_arg: Any
     if isinstance(selector, _StringLiteral):
         return str(selector)  # an expression that is just 'abc' is the text abc
     if isinstance(selector, dict):
@@ -155,105 +153,12 @@ def post_process_selector(selector: Any) -> Any:
                     processed_args.append(post_process_selector(arg))
             selector["args"] = processed_args
             return selector
-        elif "sysId" in selector:
-            sysid = selector["sysId"]
-            # Check if sysId contains an embedded expression
-            split = split_on_comparison_operator(sysid)
-            if split is not None:
-                op, left_part, right_part = split
-                # Convert right part
-                if right_part.isdigit():
-                    right_arg = int(right_part)
-                elif right_part.replace(".", "").isdigit():
-                    right_arg = float(right_part)
-                else:
-                    right_arg = right_part.strip("'\"")
-
-                return {"op": op, "args": [{"sysId": left_part}, right_arg]}
-        elif "property" in selector:
-            prop = selector["property"]
-            # Check if property is actually an unparsed CQL2 expression
-            # (e.g. T_DURING(...))
-            if ("(" in prop and prop.endswith(")")) or (
-                "{" in prop and prop.endswith("}")
-            ):
-                try:
-                    from .from_text import ExpressionParser
-
-                    parsed = ExpressionParser._parse_expression_text(prop)
-                    converted = expression_to_json(parsed)
-                    if (
-                        converted
-                        and converted != prop
-                        and converted != {"property": prop}
-                    ):
-                        return post_process_selector(converted)
-                except Exception:
-                    pass
-            # Check if property contains an embedded expression
-            split = split_on_comparison_operator(prop)
-            if split is not None:
-                op, left_part, right_part = split
-                # Determine if left part is system property or regular property
-                if "." in left_part and _is_system_name(left_part):
-                    left_arg = {"sysId": left_part}
-                # Special case: certain properties are known system identifiers
-                elif left_part in [
-                    "featuresGeometryDimensions",
-                    "featuresGeometry",
-                    "geometryDimensions",
-                ]:
-                    left_arg = {"sysId": f"dataLayer.{left_part}"}
-                else:
-                    left_arg = {"property": left_part}
-
-                # Convert right part
-                if right_part.isdigit():
-                    right_arg = int(right_part)
-                elif right_part.replace(".", "").replace("-", "").isdigit():
-                    right_arg = float(right_part)
-                else:
-                    right_arg = right_part.strip("'\"")
-
-                return {"op": op, "args": [left_arg, right_arg]}
         return selector
     elif isinstance(selector, str):
-        # Handle string selectors that should be expressions
-        return convert_string_to_json_selector(selector)
+        # A bare word left by the parsers is a property reference.
+        return {"property": selector}
     else:
         return selector
-
-
-def convert_string_to_json_selector(selector_str: str) -> dict[str, Any]:
-    """Convert string selector to proper JSON structure."""
-    left_arg: Any
-    right_arg: Any
-    # Handle expressions embedded in strings
-    split = split_on_comparison_operator(selector_str)
-    if split is not None:
-        op, left_part, right_part = split
-        right_part = right_part.strip("'\"")
-        # Determine if left part is system property or regular property
-        if "." in left_part and _is_system_name(left_part):
-            left_arg = {"sysId": left_part}
-        elif left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
-            left_arg = {"property": left_part}
-        else:
-            left_arg = left_part
-        # Convert right part (handle sysId for dot notation)
-        if right_part.isdigit():
-            right_arg = int(right_part)
-        elif right_part.replace(".", "").isdigit():
-            right_arg = float(right_part)
-        elif "." in right_part and _is_system_name(right_part):
-            right_arg = {"sysId": right_part}
-        elif right_part in ["validDate", "FunctionCode", "FunctionTitle"]:
-            right_arg = {"property": right_part}
-        else:
-            right_arg = right_part
-        return {"op": op, "args": [left_arg, right_arg]}
-    # If no operator found, treat as property
-    return {"property": selector_str}
 
 
 def _unit_of(arg: Any) -> tuple[str, Any] | None:
@@ -612,34 +517,6 @@ def convert_antlr_expression(expr_ctx: Any, rule_name: str) -> Any:
 
 def convert_identifier(name: str) -> Any:
     """Convert an identifier to a JSON selector part, mapping system properties."""
-    left_arg: Any
-    right_arg: Any
-    # Handle embedded operators first
-    split = split_on_comparison_operator(name)
-    if split is not None:
-        op, left_part, right_part = split
-        # Convert left part (property)
-        if "." in left_part:
-            if _is_system_name(left_part):
-                # Map system properties correctly
-                mapped_prop = _map_system_property(left_part)
-                left_arg = {"sysId": mapped_prop}
-            else:
-                left_arg = {"property": left_part}
-        else:
-            if left_part in ["validDate", "FunctionCode", "FunctionTitle"]:
-                left_arg = {"property": left_part}
-            elif _is_system_name(left_part):
-                mapped_prop = _map_system_property(left_part)
-                left_arg = {"sysId": mapped_prop}
-            else:
-                left_arg = left_part
-
-        # Convert right part (value)
-        right_arg = convert_literal_value(right_part)
-
-        return {"op": op, "args": [left_arg, right_arg]}
-
     # `@name` is a reference to a style variable
     if name.startswith("@") and name[1:].isidentifier():
         return {"$ref": f"#/$variables/{name[1:]}"}
