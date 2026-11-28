@@ -81,6 +81,25 @@ def _parse_resource_string(inner: str) -> dict:
     return result
 
 
+def _character_value(text: str, expr_ctx: Any = None) -> Any:
+    """Convert a CartoSym-CSS character value to CS-JSON.
+
+    A quoted literal (``'a.svg'``) becomes the plain string, a bare
+    identifier (``kind``) a property reference, and anything else
+    (``concatenate('symbols/', kind, '.svg')``) the CQL2-JSON of the
+    expression. When the parser already stripped the quotes of *text*, its
+    ANTLR context *expr_ctx* tells that it was a literal.
+    """
+    t = text.strip()
+    if expr_ctx is not None and expr_ctx.getText()[:1] in ("'", '"'):
+        return text
+    if len(t) >= 2 and t[0] == t[-1] and t[0] in "'\"":
+        return t[1:-1]
+    if _IDENTIFIER_RE.match(t):
+        return {"property": t}
+    return convert_property_expression(t) or {"property": t}
+
+
 def _parse_hotspot_string(s: str) -> Any:
     """Convert ``'N unit N unit'`` (e.g. ``'50 pc 50 pc'``) to a unitPoint array.
 
@@ -578,16 +597,8 @@ def _normalize_graphic_element(el: dict) -> None:
             if text_ctx is not None and text_ctx.getText().startswith("'"):
                 # the parser stripped the quotes: a quoted literal, not a property
                 el["text"] = el["text"]
-            elif (t.startswith("'") and t.endswith("'")) or (
-                t.startswith('"') and t.endswith('"')
-            ):
-                el["text"] = t[1:-1]  # strip quotes → literal string
-            elif _IDENTIFIER_RE.match(t):
-                # bare identifier → property reference
-                el["text"] = {"property": t}
             else:
-                # e.g. upperCase(name): an expression, not a property name
-                el["text"] = convert_property_expression(t) or {"property": t}
+                el["text"] = _character_value(t)
 
         # alignment: "left middle"  OR  { left, middle }  → ["left", "middle"]
         if "alignment" in el and isinstance(el["alignment"], str):
@@ -630,6 +641,14 @@ def _normalize_graphic_element(el: dict) -> None:
     elif el_type == "Image":
         # Convert image resource string "{uri: '...'; path: '...'; ...}" to a
         # proper resource dict as required by the schema.
+        if "image" in el and isinstance(el["image"], dict):
+            resource = el["image"]
+            res_ctx = resource.pop("_expr_ctx", {})
+            for rk, rv in list(resource.items()):
+                if rk == "alter" and isinstance(rv, str):
+                    resource[rk] = rv.strip().lower() == "true"
+                elif isinstance(rv, str):
+                    resource[rk] = _character_value(rv, res_ctx.get(rk))
         if "image" in el and isinstance(el["image"], str):
             img_str = el["image"].strip()
             if img_str.startswith("{") and img_str.endswith("}"):

@@ -1470,6 +1470,11 @@ def _build_graphic_content(
                 "Resource without uri or path (id/ext/sprite only) has no "
                 "SLD/SE mapping — se:OnlineResource needs an xlink:href"
             )
+        if not isinstance(href, str):
+            raise NotImplementedError(
+                f"Resource uri/path given by an expression ({href!r}) has no "
+                "SLD/SE mapping — se:OnlineResource's xlink:href is a fixed URI"
+            )
         mime_type = _g(resource, "type") or mimetypes.guess_type(href)[0]
         if mime_type is None:
             raise NotImplementedError(

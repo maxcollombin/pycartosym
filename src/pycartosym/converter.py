@@ -974,8 +974,10 @@ class Converter:
             res_parts = []
             for k in ("uri", "path", "id", "type", "ext", "sprite"):
                 v = _get(image, k)
-                if v is not None:
+                if isinstance(v, str):
                     res_parts.append(f"{k}: {quote_string(v)}")
+                elif v is not None:
+                    res_parts.append(f"{k}: {self._format_value(v)}")
             if res_parts:
                 prop_lines.append(f"image: {{{'; '.join(res_parts)}}}")
 

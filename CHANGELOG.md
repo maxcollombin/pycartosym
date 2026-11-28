@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
 - CartoSym-CSS reader: a conditional (`c ? a : b`) given as an argument of a function call with several arguments, such as `concatenate(class = 'european' ? 'E' : 'F', number)`, is read as a conditional; its condition took in the rest as a string (#242).
+- CartoSym-CSS reader: a resource member of an Image given by an expression, such as `uri: concatenate('symbols/', kind, '.svg')` or `uri: kind`, is converted to CQL2-JSON; it was written as the text of the expression, which named a file `concatenate(...)` and still passed `--validate`. The CartoSym-CSS writer writes it back as an expression, and the SLD/SE writer refuses it with a clear message, as `xlink:href` is a fixed URI (#255).
 
 ## [0.6.7] - 2026-11-24
 
