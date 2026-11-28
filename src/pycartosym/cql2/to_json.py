@@ -83,6 +83,15 @@ def split_on_comparison_operator(
     return None
 
 
+def _interval_bound_json(bound: Any) -> Any:
+    """Write a bound of ``INTERVAL(...)`` that is an expression as CQL2-JSON.
+
+    A bare identifier becomes ``{"property": ...}`` (or a ``sysId``), not the
+    text of its name, which would read as an instant string.
+    """
+    return post_process_selector(expression_to_json(bound))
+
+
 def post_process_selector(selector: Any) -> Any:
     """Post-process a selector: fix parsing issues, ensure proper JSON structure.
 
@@ -321,7 +330,7 @@ def expression_to_json(expression: Any) -> Any:
         elif expression.temporal_type == "interval":
             return {
                 "interval": [
-                    v if isinstance(v, str) else expression_to_json(v)
+                    v if isinstance(v, str) else _interval_bound_json(v)
                     for v in expression.interval
                 ]
             }

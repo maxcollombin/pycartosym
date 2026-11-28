@@ -462,3 +462,27 @@ class TestParseToJsonRoundTrip:
         geojson = result.to_geojson()
         assert geojson == {"type": "Point", "coordinates": [3.5, 48.8]}
         assert writeback(geojson) == "POINT(3.5 48.8)"
+
+
+class TestIntervalBoundsThatAreExpressions:
+    """An unquoted bound of INTERVAL(...) is a property, not an instant string."""
+
+    _SELECTOR = "t_intersects(INTERVAL(plannedStart, plannedEnd), viz.timeInterval)"
+    _BOUNDS = [{"property": "plannedStart"}, {"property": "plannedEnd"}]
+
+    def test_cscss_selector(self):
+        csjson = Converter().cscss_to_csjson(f"[{self._SELECTOR}] {{ opacity: 0.5; }}")
+        selector = csjson["stylingRules"][0]["selector"]
+        assert selector["args"][0] == {"interval": self._BOUNDS}
+
+    def test_quoted_bounds_stay_instants(self):
+        csjson = Converter().cscss_to_csjson(
+            "[t_intersects(INTERVAL('2026-01-01', '..'), viz.timeInterval)]"
+            " { opacity: 0.5; }"
+        )
+        selector = csjson["stylingRules"][0]["selector"]
+        assert selector["args"][0] == {"interval": ["2026-01-01", ".."]}
+
+    def test_writeback(self):
+        d = {"interval": [{"property": "plannedStart"}, ".."]}
+        assert writeback(d) == "INTERVAL(plannedStart, '..')"

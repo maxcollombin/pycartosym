@@ -163,11 +163,11 @@ class TemporalLiteral(TemporalExpression):
     def to_cql2_json(self) -> dict[str, Any]:
         """Serialise as CQL2-JSON temporal literal."""
         if self.temporal_type == "interval" and self.interval:
-            from .to_json import expression_to_json
+            from .to_json import _interval_bound_json
 
             return {
                 "interval": [
-                    v if isinstance(v, str) else expression_to_json(v)
+                    v if isinstance(v, str) else _interval_bound_json(v)
                     for v in self.interval
                 ]
             }
