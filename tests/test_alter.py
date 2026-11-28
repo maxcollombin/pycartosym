@@ -213,3 +213,53 @@ class TestAlterFlag:
             assert (
                 sym.stroke.alter is True
             ), f"nestedRules[{i}].stroke should have alter=True"
+
+
+class TestArrayElementMember:
+    """``marker.elements[N].member: value`` alters one member of one element."""
+
+    _CSCSS = """\
+R
+{
+   marker: { elements: [ Dot { size: 4 px; color: blue },
+                         Image { image: { uri: 'a_N.svg' }; tint: green } ] };
+   [a = 2] { marker.elements[1].tint: purple; }
+   [a = 3] { marker.elements[0].color: red; marker.elements[0].opacity: 0.5; }
+   [a = 4] { marker.elements[1].image.uri: 'a_NE.svg'; }
+}
+"""
+
+    def _markers(self):
+        style = CartoSymParser().parse_string_to_pydantic(self._CSCSS)
+        rules = style.to_dict()["stylingRules"][0]["nestedRules"]
+        return [rule["symbolizer"]["marker"] for rule in rules]
+
+    def test_member_of_an_element(self):
+        assert self._markers()[0] == {
+            "alter": True,
+            "elements": {
+                "index": 1,
+                "value": {"type": "Image", "alter": True, "tint": "purple"},
+            },
+        }
+
+    def test_several_members_of_the_same_element(self):
+        assert self._markers()[1]["elements"] == {
+            "index": 0,
+            "value": {"type": "Dot", "alter": True, "color": "red", "opacity": 0.5},
+        }
+
+    def test_member_of_a_member_of_an_element(self):
+        value = self._markers()[2]["elements"]["value"]
+        assert value["type"] == "Image"
+        assert value["image"]["uri"] == "a_NE.svg"
+        assert value["image"]["alter"] is True
+
+    def test_element_that_is_not_a_graphic_warns(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            CartoSymParser().parse_string_to_pydantic(
+                "R { [a = 1] { marker.elements[0]: 5; } }"
+            )
+        assert any("marker.elements[0]" in r.message for r in caplog.records)

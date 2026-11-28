@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
 - CartoSym-CSS reader: a conditional (`c ? a : b`) given as an argument of a function call with several arguments, such as `concatenate(class = 'european' ? 'E' : 'F', number)`, is read as a conditional; its condition took in the rest as a string (#242).
+- CartoSym-CSS reader: assigning a member of a marker element, such as `marker.elements[1].tint: purple` or `marker.elements[1].image.uri: 'a.svg'`, alters only that member of the element (`{"index": 1, "value": {"type": "Image", "alter": true, "tint": "purple"}}`), the `type` taken from the enclosing rule's marker; the rule lost its whole symbolizer without a warning. A `marker.elements[N]` value that is not a graphic is now reported (#257).
 
 ## [0.6.7] - 2026-11-24
 

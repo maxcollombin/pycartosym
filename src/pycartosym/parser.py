@@ -1027,6 +1027,23 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         else:
             self._pending_marker_element_assignments = {}
 
+    def _inherited_marker_element_type(self, idx: int) -> str | None:
+        """Find the type of marker element *idx* set by an enclosing rule.
+
+        ``marker.elements[1].tint: purple`` alters one member of a graphic
+        whose ``type`` (``Image``...) the CS-JSON element needs; it is taken
+        from the nearest enclosing rule that sets the whole ``marker``.
+        """
+        for state in reversed(self.rule_stack):
+            for assignment in state["assignments"]:
+                ctx = getattr(assignment, "_antlr_expr_ctx", None)
+                if assignment.property_name != "marker" or ctx is None:
+                    continue
+                elements = self._extract_elements_from_antlr(ctx)
+                if idx < len(elements) and elements[idx].get("type"):
+                    return str(elements[idx]["type"])
+        return None
+
     def exitStylingRule(self, ctx):
         """Finalise the current styling rule when its ``stylingRule`` subtree closes."""
         # Always create a new symbolizer for each rule, even if nested
@@ -1093,6 +1110,10 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
             for idx, el_props in sorted(pending.items()):
                 from .models.symbolizers import Marker as PydanticMarker
 
+                if "type" not in el_props:
+                    el_type = self._inherited_marker_element_type(idx)
+                    if el_type is not None:
+                        el_props = {"type": el_type, **el_props}
                 effective_sym.marker = PydanticMarker(
                     alter=True, elements={"index": idx, "value": el_props}
                 )
@@ -1328,21 +1349,37 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
         # Handle marker.elements[N]: ... assignments
         import re
 
-        m = re.match(r"marker\.elements\[(\d+)\]", prop_name)
+        m = re.match(r"marker\.elements\[(\d+)\](?:\.(.+))?$", prop_name)
         if m:
             idx = int(m.group(1))
+            member = m.group(2)
+            if (
+                not hasattr(self, "_pending_marker_element_assignments")
+                or self._pending_marker_element_assignments is None
+            ):
+                self._pending_marker_element_assignments = {}
+            pending = self._pending_marker_element_assignments
+            if member is not None:
+                # marker.elements[N].tint: purple — alter one member only
+                if expr_ctx is None:
+                    logger.warning("%s: cannot read the value, ignored", prop_name)
+                    return
+                el = pending.setdefault(idx, {"alter": True})
+                *parents, leaf = member.split(".")
+                for name in parents:
+                    el = el.setdefault(name, {"alter": True})
+                el[leaf] = self._expression_source_text(expr_ctx)
+                el.setdefault("_expr_ctx", {})[leaf] = expr_ctx
+                return
             props = None
             if expr_ctx is not None:
                 extracted = self._extract_elements_from_antlr(expr_ctx)
                 if extracted:
                     props = extracted[0]  # Single element from marker.elements[N]
             if props:
-                if (
-                    not hasattr(self, "_pending_marker_element_assignments")
-                    or self._pending_marker_element_assignments is None
-                ):
-                    self._pending_marker_element_assignments = {}
-                self._pending_marker_element_assignments[idx] = props
+                pending[idx] = props
+            else:
+                logger.warning("%s: not a graphic, ignored", prop_name)
             return
         # A vendor extension property: `vendor.<vendorName>.<propertyName>: value`
         if prop_name.startswith("vendor.") and prop_name.count(".") >= 2:
