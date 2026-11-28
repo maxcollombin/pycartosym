@@ -83,6 +83,19 @@ def split_on_comparison_operator(
     return None
 
 
+def _is_enumerated_sys_id(sys_id: Any) -> bool:
+    """Tell whether a bare word compared with a System Identifier is a value.
+
+    In Part 1 these are ``dataLayer.type`` (``vector``, ``coverage``...), the
+    ``month`` members of the date System Identifiers (``may``...), and
+    ``dataLayer.id``, whose values are data layer names (``Rivers``, as in
+    the short-hand selector).
+    """
+    return isinstance(sys_id, str) and (
+        sys_id in ("dataLayer.id", "dataLayer.type") or sys_id.endswith(".month")
+    )
+
+
 def post_process_selector(selector: Any) -> Any:
     """Post-process a selector: fix parsing issues, ensure proper JSON structure.
 
@@ -119,13 +132,16 @@ def post_process_selector(selector: Any) -> Any:
                 if isinstance(arg, _StringLiteral):
                     processed_args.append(str(arg))
                 elif isinstance(arg, _Identifier):
-                    # Against a system identifier a bare word is an enumeration
-                    # value (`dataLayer.type = vector`), not a property.
+                    # Compared with an enumerated system identifier a bare
+                    # word is an enumeration value (`dataLayer.type = vector`,
+                    # `viz.date.month = may`), not a property; anywhere else
+                    # (`viz.sd / scale`, `viz.sd > scale`) it is a property.
                     if (
                         i > 0
+                        and is_comparison
                         and not isinstance(arg, _QuotedIdentifier)
                         and isinstance(processed_args[0], dict)
-                        and ("sysId" in processed_args[0])
+                        and _is_enumerated_sys_id(processed_args[0].get("sysId"))
                     ):
                         processed_args.append(str(arg))
                     else:
