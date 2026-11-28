@@ -1442,6 +1442,8 @@ class CartoSymStyleSheetListener(CartoSymCSSGrammarListener):
                     symbolizer.color_map = self._parse_color_map(prop_value.strip())
                 elif prop_name_lower in ("opacitymap", "opacity_map"):
                     symbolizer.opacity_map = self._parse_opacity_map(prop_value.strip())
+                else:
+                    logger.warning("unknown symbolizer property %r, ignored", prop_name)
         # Remove outer braces only (not all braces at start/end)
         content = prop_value
         if content.startswith("{") and content.endswith("}"):

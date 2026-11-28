@@ -1019,9 +1019,15 @@ class AstToPydanticConverter:
 
             if getattr(ast_symbolizer, "comment", None):
                 symbolizer_data["comment"] = ast_symbolizer.comment
-            # vendor.<vendorName>.<propertyName> extensions
+            # vendor.<vendorName>.<propertyName> extensions; any other unknown
+            # property is ignored on its own (core clause, Vendor Extensions),
+            # not with the whole symbolizer.
             extra = getattr(ast_symbolizer, "__pydantic_extra__", None) or {}
-            symbolizer_data.update(extra)
+            for name, value in extra.items():
+                if name.startswith("vendor.") and name.count(".") >= 2:
+                    symbolizer_data[name] = value
+                else:
+                    logger.warning("unknown symbolizer property %r, ignored", name)
             return Symbolizer(**symbolizer_data) if symbolizer_data else None
 
         except Exception as e:
