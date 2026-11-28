@@ -39,3 +39,32 @@ def test_hex_colour_with_3_6_or_8_digits_is_accepted(color):
 )
 def test_identifier_versus_literal(text, expected):
     assert to_cql2_json(parse_text(text)) == expected
+
+
+def _first_rule(cscss: str) -> dict:
+    from pycartosym import Converter
+
+    return Converter().cscss_to_csjson(cscss)["stylingRules"][0]
+
+
+@pytest.mark.parametrize("op", ["/", "-", "*"])
+def test_property_after_arithmetic_on_a_system_identifier(op):
+    rule = _first_rule(f"L {{ opacity: viz.sd {op} scale; }}")
+    assert rule["symbolizer"]["opacity"] == {
+        "op": op,
+        "args": [{"sysId": "viz.sd"}, {"property": "scale"}],
+    }
+
+
+def test_property_compared_with_a_numeric_system_identifier():
+    rule = _first_rule("[viz.sd > scale] { opacity: 0.5; }")
+    assert rule["selector"]["args"] == [{"sysId": "viz.sd"}, {"property": "scale"}]
+
+
+@pytest.mark.parametrize(
+    ("selector", "value"),
+    [("dataLayer.type = vector", "vector"), ("viz.date.month = may", "may")],
+)
+def test_bare_word_compared_with_an_enumerated_system_identifier(selector, value):
+    rule = _first_rule(f"[{selector}] {{ opacity: 0.5; }}")
+    assert rule["selector"]["args"][1] == value

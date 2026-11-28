@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
 - CartoSym-CSS reader: a conditional (`c ? a : b`) given as an argument of a function call with several arguments, such as `concatenate(class = 'european' ? 'E' : 'F', number)`, is read as a conditional; its condition took in the rest as a string (#242).
+- CQL2-JSON: a bare word in an operation on a System Identifier, such as `viz.sd / scale` or `viz.sd > scale`, is a property reference; it was written as the text `"scale"`, which changed the meaning without a warning. Only a bare word compared with `dataLayer.id`, `dataLayer.type` or a `month` System Identifier is a value (`dataLayer.type = vector`) (#253).
 
 ## [0.6.7] - 2026-11-24
 
