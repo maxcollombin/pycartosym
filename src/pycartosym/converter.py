@@ -953,13 +953,13 @@ class Converter:
                             elif isinstance(ov, bool):
                                 ovf = str(ov).lower()
                             else:
-                                ovf = ov
+                                ovf = self._format_value(ov)
                             out_parts.append(f"{ok}: {ovf}")
                         fv = "{" + "; ".join(out_parts) + "}"
                     elif isinstance(v, bool):
                         fv = str(v).lower()
                     else:
-                        fv = v
+                        fv = self._format_value(v)
                     fp.append(f"{k}: {fv}")
                 font_inner = (";\n" + inner_pad + "   ").join(fp)
                 prop_lines.append(

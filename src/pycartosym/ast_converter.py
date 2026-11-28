@@ -209,6 +209,24 @@ def _color_value(text: str) -> Any:
     return parsed
 
 
+def _opacity_value(text: str) -> float | dict | None:
+    """Parse an ``opacity`` value: a number, or an expression as CQL2-JSON.
+
+    Returns ``None`` (with a warning) for anything else, so the opacity is not
+    dropped without a trace.
+    """
+    try:
+        return float(text)
+    except ValueError:
+        pass
+    expr = convert_property_expression(text)
+    if expr is None and _IDENTIFIER_RE.match(text.strip()):
+        return {"property": text.strip()}  # a bare name is a property
+    if expr is None:
+        logger.warning("opacity: cannot parse %r, ignored", text)
+    return expr
+
+
 def _coerce_font_dict(font: dict) -> None:
     """Coerce font dict string values to proper Python types in-place.
 
@@ -230,10 +248,7 @@ def _coerce_font_dict(font: dict) -> None:
         elif k in ("bold", "italic", "underline"):
             font[k] = v.lower() == "true"
         elif k == "opacity":
-            try:
-                font[k] = float(v)
-            except ValueError:
-                font[k] = v
+            font[k] = _opacity_value(v)
         elif k == "color":
             font[k] = _parse_color_value(v)
         elif k == "outline" and v.startswith("{") and v.endswith("}"):
@@ -264,10 +279,7 @@ def _coerce_outline_dict(outline: dict) -> None:
                 except ValueError:
                     outline[k] = v
         elif k == "opacity":
-            try:
-                outline[k] = float(v)
-            except ValueError:
-                outline[k] = v
+            outline[k] = _opacity_value(v)
         elif k == "color":
             outline[k] = _parse_color_value(v)
         else:
@@ -519,12 +531,9 @@ def _normalize_graphic_element(el: dict) -> None:
 
     _coerce_transform(el)
 
-    # Convert opacity string to float for any element type
+    # Convert an opacity string to a number, or an expression to CQL2-JSON
     if "opacity" in el and isinstance(el["opacity"], str):
-        try:
-            el["opacity"] = float(el["opacity"])
-        except ValueError:
-            pass
+        el["opacity"] = _opacity_value(el["opacity"])
 
     # Convert alter string to bool for any element type — every graphic
     # element inherits AlterMixin's alter: bool | None (models/symbolizers.py).

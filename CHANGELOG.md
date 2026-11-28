@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - CQL2-JSON: an empty `in` list (`x in ()`, allowed by CartoSym though not by CQL2) is written `[]`; it was written `{}` (#241).
 - CartoSym-CSS reader: a conditional (`c ? a : b`) given as an argument of a function call with several arguments, such as `concatenate(class = 'european' ? 'E' : 'F', number)`, is read as a conditional; its condition took in the rest as a string (#242).
+- CartoSym-CSS reader: an expression for the `opacity` of a graphic (`Dot { opacity: confidence * 0.5 }`), of a font or of a font outline is converted to CQL2-JSON; it was written as the text of the expression, which the schema rejects for a font. The CartoSym-CSS writer writes a font or outline expression back as CartoSym-CSS instead of a Python dict (#252).
 
 ## [0.6.7] - 2026-11-24
 
