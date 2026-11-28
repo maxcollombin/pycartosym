@@ -1122,7 +1122,7 @@ class ExpressionParser:
         # ── INTERVAL('start', 'end') ──
         if func_lower == "interval":
             parts = ExpressionParser._split_args(args_str)
-            interval = [p.strip().strip("'").strip('"') for p in parts]
+            interval = [ExpressionParser._interval_bound(p) for p in parts]
             return TemporalLiteral(temporal_type="interval", interval=interval)
 
         # ── BBOX(x1, y1, x2, y2[, x3, y3]) ──
@@ -1393,6 +1393,22 @@ class ExpressionParser:
         return found
 
     @staticmethod
+    def _interval_bound(text: str) -> Any:
+        """Read one bound of ``INTERVAL(...)``.
+
+        A quoted instant (``'2026-01-01'``) or ``'..'`` is kept as its text;
+        anything else (``plannedStart``, ``viz.dateTime``) is an expression,
+        as CQL2-JSON's ``intervalArray`` allows a property, a System
+        Identifier or a function call as a bound.
+        """
+        t = text.strip()
+        if len(t) >= 2 and t[0] == t[-1] and t[0] in "'\"":
+            return t[1:-1]
+        if t == "..":
+            return t
+        return ExpressionParser._parse_expression_text(t)
+
+    @staticmethod
     def _split_args(text: str) -> list:
         """Split comma-separated arguments respecting brackets, braces and quotes."""
         args = []
@@ -1452,6 +1468,6 @@ class ExpressionParser:
             return TemporalLiteral(temporal_type="timestamp", value=value)
         elif func_lower == "interval":
             parts = ExpressionParser._split_args(inner)
-            interval = [p.strip().strip("'").strip('"') for p in parts]
+            interval = [ExpressionParser._interval_bound(p) for p in parts]
             return TemporalLiteral(temporal_type="interval", interval=interval)
         return None

@@ -152,7 +152,10 @@ def expression_to_text(expr, quote_bare_strings: bool = True) -> str:
     # Handle interval literal
     if "interval" in expr and len(expr) == 1:
         parts = expr["interval"]
-        args = ", ".join(quote_string(p) for p in parts)
+        args = ", ".join(
+            quote_string(p) if isinstance(p, str) else expression_to_text(p)
+            for p in parts
+        )
         return f"INTERVAL({args})"
     # Handle BBOX literal
     if "bbox" in expr and len(expr) == 1:
