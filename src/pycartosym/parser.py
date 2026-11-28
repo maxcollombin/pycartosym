@@ -29,6 +29,7 @@ from .ast_converter import (
     _coerce_transform,
     _coerce_unit_scalar,
     _normalize_graphic_element,
+    _opacity_value,
     convert_ast_to_pydantic,
     split_property_block,
 )
@@ -130,24 +131,6 @@ class _CollectingErrorListener(ErrorListener):
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         self.errors.append(f"line {line}:{column} {msg}")
         self.error_tuples.append((line, column, msg))
-
-
-def _opacity_value(text: str) -> float | dict | None:
-    """Parse an ``opacity`` value: a number, or an expression as CQL2-JSON.
-
-    Returns ``None`` (with a warning) for anything else, so the opacity is not
-    dropped without a trace.
-    """
-    try:
-        return float(text)
-    except ValueError:
-        pass
-    expr = convert_property_expression(text)
-    if expr is None and _IDENTIFIER_RE.match(text.strip()):
-        return {"property": text.strip()}  # a bare name is a property
-    if expr is None:
-        logger.warning("opacity: cannot parse %r, ignored", text)
-    return expr
 
 
 def _z_order_value(text: str) -> int | float | dict | None:
